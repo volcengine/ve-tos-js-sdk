@@ -1,0 +1,21 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "start": "webpack serve",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "chengang.07@bytedance.com",
+  "license": "ISC",
+  "devDependencies": {
+    "dotenv": "16.0.0",
+    "node-polyfill-webpack-plugin": "^1.1.4",
+    "source-map-loader": "^3.0.0",
+    "webpack": "^5.50.0",
+    "webpack-cli": "^4.7.2",
+    "webpack-dev-server": "^3.11.2"
+  }
+}

@@ -1,0 +1,19 @@
+*.log
+.DS_Store
+node_modules
+/dist
+/browser
+/coverage
+/example/**/dist
+
+/docs
+/docs.zip
+
+.env*
+.vscode
+
+auto-generated-objects
+auto-generated-checkpoints
+
+# avoid company's domains
+example/yarn.lock
