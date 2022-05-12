@@ -70,4 +70,5 @@ export {
   isCancelError as isCancel,
   CancelError,
 } from './methods/object/multipart/uploadFile';
+export { TOSServerCode } from './codes';
 export { TOS };

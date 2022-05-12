@@ -9,6 +9,11 @@ export interface ListObjectsInput {
   fetchOwner?: string;
   maxKeys?: string | number;
   prefix?: string;
+  marker?: string;
+
+  /**
+   * use `marker` instead of `startAfter`
+   */
   startAfter?: string;
   versions?: string;
   listType?: string;
