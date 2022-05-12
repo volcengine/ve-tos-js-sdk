@@ -8,10 +8,17 @@ if (!process.env.ACCESS_KEY_ID || !process.env.ACCESS_KEY_SECRET) {
   );
 }
 
-export const testBucketName = 'test-cg-bucket-name';
+export const testBucketNameBase = 'test-cg-bucket-name';
+export const testBucketName = `${testBucketNameBase}-${new Date().valueOf()}`;
+
 // because one account has at most 100 buckets,
 // we delete some bucket when there can't create more buckets.
-export const deleteBucketNames = [testBucketName, 'aaaa'];
+const deleteBucketNames = [testBucketName, 'aaaa'];
+export const isNeedDeleteBucket = (bucket: string) => {
+  return (
+    deleteBucketNames.includes(bucket) || bucket.includes(testBucketNameBase)
+  );
+};
 
 export const tosOptions: TOSConstructorOptions = {
   accessKeyId: process.env.ACCESS_KEY_ID || '',

@@ -3,7 +3,7 @@ import TOS, { isCancel } from '../../src/browser-index';
 import { deleteBucket, sleepCache, NEVER_TIMEOUT } from '../utils';
 import {
   testBucketName,
-  deleteBucketNames,
+  isNeedDeleteBucket,
   tosOptions,
 } from '../utils/options';
 import fs from 'fs';
@@ -45,7 +45,7 @@ describe('uploadFile in node.js environment', () => {
     // clear all bucket
     const { data: buckets } = await client.listBuckets();
     for (const bucket of buckets.Buckets) {
-      if (deleteBucketNames.includes(bucket.Name)) {
+      if (isNeedDeleteBucket(bucket.Name)) {
         try {
           await deleteBucket(client, bucket.Name);
         } catch (err) {

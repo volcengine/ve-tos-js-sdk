@@ -5,7 +5,7 @@ import { Readable } from 'stream';
 import { deleteBucket, sleepCache, NEVER_TIMEOUT } from '../utils';
 import {
   testBucketName,
-  deleteBucketNames,
+  isNeedDeleteBucket,
   tosOptions,
 } from '../utils/options';
 
@@ -18,7 +18,7 @@ describe('TOS', () => {
     // clear all bucket
     const { data: buckets } = await client.listBuckets();
     for (const bucket of buckets.Buckets) {
-      if (deleteBucketNames.includes(bucket.Name)) {
+      if (isNeedDeleteBucket(bucket.Name)) {
         try {
           await deleteBucket(client, bucket.Name);
         } catch (err) {
