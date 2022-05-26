@@ -70,7 +70,7 @@ export class TOSBase {
       throw new Error(`lack params: ${mustKeysErrorStr}.`);
     }
 
-    opts.endpoint = getEndpoint(opts.region);
+    opts.endpoint = opts.endpoint || getEndpoint(opts.region);
     if (!opts.endpoint) {
       throw new Error(
         `the value of param region is invalid, correct values are cn-beijing, cn-nantong etc.`

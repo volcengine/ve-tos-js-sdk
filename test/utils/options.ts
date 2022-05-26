@@ -20,9 +20,13 @@ export const isNeedDeleteBucket = (bucket: string) => {
   );
 };
 
+const region = 'cn-beijing';
+const bucket = testBucketName;
+const endpoint = '';
 export const tosOptions: TOSConstructorOptions = {
   accessKeyId: process.env.ACCESS_KEY_ID || '',
   accessKeySecret: process.env.ACCESS_KEY_SECRET || '',
-  region: 'cn-beijing',
-  bucket: testBucketName,
+  region,
+  bucket,
+  endpoint,
 };
