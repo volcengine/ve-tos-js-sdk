@@ -12,10 +12,6 @@ export interface GetPreSignedUrlInput {
    * unit: second, default: 1800
    */
   expires?: number;
-  /**
-   * default: true
-   */
-  subdomain?: boolean;
   response?: {
     contentType?: string;
   };
@@ -27,7 +23,7 @@ export function getPreSignedUrl(
   input: GetPreSignedUrlInput | string
 ) {
   const normalizedInput = typeof input === 'string' ? { key: input } : input;
-  const { subdomain = true } = normalizedInput;
+  const subdomain = true;
   const bucket = normalizedInput.bucket || this.opts.bucket;
   if (!bucket) {
     throw Error('Must Provide bucket param');
