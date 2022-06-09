@@ -15,10 +15,15 @@ function p(relativeSrcPath) {
 module.exports = {
   // This function will run for each entry/format/env combination
   rollup(config, opts) {
+    if (!config.treeshake) {
+      config.treeshake = {};
+    }
+    config.treeshake.pureExternalModules = true;
+
     {
       // overwrite replace options to prevent warning message
       const replacePluginIdx = config.plugins.findIndex(
-        (it) => it.name === 'replace'
+        it => it.name === 'replace'
       );
       config.plugins[replacePluginIdx] = replace({
         'process.env.NODE_ENV': JSON.stringify(opts.env),
@@ -32,7 +37,7 @@ module.exports = {
       //   https://github.com/formium/tsdx/blob/462af2d002987f985695b98400e0344b8f2754b7/src/createRollupConfig.ts#L187-L197
       const MIN_NODE_VERSION = '10';
       const babelPluginIdx = config.plugins.findIndex(
-        (it) => it.name === 'babel'
+        it => it.name === 'babel'
       );
       config.plugins[babelPluginIdx] = babelPluginTsdx({
         exclude: 'node_modules/**',
@@ -60,7 +65,7 @@ module.exports = {
 
       {
         const resolverPluginIdx = config.plugins.findIndex(
-          (it) => it.name === 'node-resolve'
+          it => it.name === 'node-resolve'
         );
         config.plugins[resolverPluginIdx] = nodeResolve.default({
           browser: true,
@@ -70,28 +75,7 @@ module.exports = {
       }
 
       if (opts.format === 'umd') {
-        config.plugins.unshift(
-          alias({
-            entries: [
-              {
-                find: 'safer-buffer',
-                replacement: p('browser/node-package/safer-buffer/safer.js'),
-              },
-            ],
-          })
-        );
-
-        {
-          const commonjsPluginIdx = config.plugins.findIndex(
-            (it) => it.name === 'commonjs'
-          );
-          config.plugins[commonjsPluginIdx] = commonjs({
-            include: [/\/node_modules\//, /safer-buffer/],
-          });
-        }
-
         config.external = () => false;
-        config.plugins.push(globals(), builtins({ crypto: true }));
       }
     }
 

@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import { hashMd5 } from '../universal/crypto';
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import { ISigV4Credentials, SignersV4 } from '../signatureV4';
 import { Headers } from '../interface';
@@ -103,11 +103,7 @@ export class TOSBase {
     const needMd5 = opts?.needMd5 || false;
 
     if (body && needMd5) {
-      const md5String = crypto
-        .createHash('md5')
-        .update(JSON.stringify(body))
-        .digest()
-        .toString('base64');
+      const md5String = hashMd5(JSON.stringify(body), 'base64');
       headers['Content-MD5'] = md5String;
     }
 

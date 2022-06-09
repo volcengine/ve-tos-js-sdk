@@ -1,5 +1,5 @@
 // @ts-nocheck
-import crypto from 'crypto';
+import { hashSha256, hmacSha256 } from './universal/crypto';
 import qs from 'querystring';
 import { getSortedQueryString } from './utils';
 
@@ -274,10 +274,7 @@ export class SignersV4 implements ISign {
     //  'sign:',
     //  this.stringToSign(opt.datetime, opt)
     //  );
-    return crypto
-      .createHmac('sha256', signingKey)
-      .update(this.stringToSign(opt.datetime, opt))
-      .digest('hex');
+    return hmacSha256(signingKey, this.stringToSign(opt.datetime, opt), 'hex');
   };
 
   private getDataTime = () => {
@@ -303,22 +300,11 @@ export class SignersV4 implements ISign {
   };
 
   private getSigningKey = (credentials: ISigCredentials, date) => {
-    const kDate = crypto
-      .createHmac('sha256', credentials.GetSecretKey())
-      .update(date)
-      .digest();
-    const kRegion = crypto
-      .createHmac('sha256', kDate)
-      .update(this.options.region as string)
-      .digest();
-    const kService = crypto
-      .createHmac('sha256', kRegion)
-      .update(this.options.serviceName as string)
-      .digest();
-    const signingKey = crypto
-      .createHmac('sha256', kService)
-      .update(v4Identifier)
-      .digest();
+    const kDate = hmacSha256(credentials.GetSecretKey(), date);
+    const kRegion = hmacSha256(kDate, this.options.region as string);
+    const kService = hmacSha256(kRegion, this.options.serviceName as string);
+    const signingKey = hmacSha256(kService, v4Identifier);
+
     return signingKey;
   };
 
@@ -338,10 +324,7 @@ export class SignersV4 implements ISign {
   };
 
   private hexEncodedHash = string => {
-    return crypto
-      .createHash('sha256')
-      .update(string)
-      .digest('hex');
+    return hashSha256(string, 'hex');
   };
 
   private canonicalString = (opt: ISigOptions) => {

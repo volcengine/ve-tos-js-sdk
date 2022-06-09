@@ -11,6 +11,8 @@ import { uploadPart, UploadPartOutput } from './uploadPart';
 import ResponseError from '../../../responseError';
 import { completeMultipartUpload } from './completeMultipartUpload';
 import { CancelToken } from 'axios';
+import * as fs from '../../../nodejs/fs-promises';
+import path from 'path';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -188,7 +190,6 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
       process.env.TARGET_ENVIRONMENT === 'node' &&
       typeof input.file === 'string'
     ) {
-      const fs = require('@/nodejs/fs-promises');
       return fs.stat(input.file);
     }
     return null;
@@ -211,8 +212,6 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
   const checkpointRichInfo = await (async (): Promise<CheckpointRichInfo> => {
     if (process.env.TARGET_ENVIRONMENT === 'node') {
       if (typeof input.checkpoint === 'string') {
-        const fs = require('@/nodejs/fs-promises');
-        const path = require('path');
         const { checkpoint } = input;
         // file doesn't exist when stat is null
         let checkpointStat: Stats | null = null;
@@ -362,7 +361,6 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
       process.env.TARGET_ENVIRONMENT === 'node' &&
       checkpointRichInfo.filePath
     ) {
-      const fs = require('@/nodejs/fs-promises');
       const content = JSON.stringify(getCheckpointContent(), null, 2);
       await fs.writeFile(checkpointRichInfo.filePath, content, 'utf-8');
     }
@@ -372,7 +370,6 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
       process.env.TARGET_ENVIRONMENT === 'node' &&
       checkpointRichInfo.filePath
     ) {
-      const fs = require('@/nodejs/fs-promises');
       await fs.rm(checkpointRichInfo.filePath).catch((err: any) => {
         // eat err
         console.warn(

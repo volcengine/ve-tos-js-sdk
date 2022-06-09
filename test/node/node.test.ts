@@ -7,7 +7,7 @@ import {
   tosOptions,
 } from '../utils/options';
 import fs from 'fs';
-import fsPromises from '../../src/nodejs/fs-promises';
+import * as fsPromises from '../../src/nodejs/fs-promises';
 import path from 'path';
 import {
   CheckpointRecord,

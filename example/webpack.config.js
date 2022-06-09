@@ -1,4 +1,3 @@
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const path = require('path');
 const { createTosProxyMiddleware } = require('../dist/proxy');
 const { DefinePlugin } = require('webpack');
@@ -19,7 +18,6 @@ module.exports = {
     ],
   },
   plugins: [
-    new NodePolyfillPlugin(),
     new DefinePlugin({
       'process.env.ACCESS_KEY_ID': JSON.stringify(process.env.ACCESS_KEY_ID),
       'process.env.ACCESS_KEY_SECRET': JSON.stringify(

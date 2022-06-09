@@ -29,7 +29,6 @@
     "postpublish": "node ./scripts/publish.js",
     "prepare": "yarn build"
   },
-  "peerDependencies": {},
   "husky": {
     "hooks": {
       "pre-commit": "tsdx lint"
@@ -66,6 +65,7 @@
   "author": "chengang.07@bytedance.com",
   "devDependencies": {
     "@rollup/plugin-alias": "^3.1.5",
+    "@types/crypto-js": "^4.1.1",
     "@types/express": "^4.17.13",
     "@types/lodash": "^4.14.172",
     "@types/node": "^17.0.24",
@@ -83,6 +83,7 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
+    "crypto-js": "^4.1.1",
     "http-proxy-middleware": "^2.0.1",
     "lodash": "^4.17.21"
   },
