@@ -71,6 +71,7 @@
     "@types/node": "^17.0.24",
     "dotenv": "16.0.0",
     "execa": "^5.1.1",
+    "form-data": "^4.0.0",
     "fs-extra": "^10.0.0",
     "husky": "^7.0.1",
     "istanbul-api": "^3.0.0",
