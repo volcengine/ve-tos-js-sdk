@@ -26,7 +26,7 @@ export function getPreSignedUrl(
   const subdomain = true;
   const bucket = normalizedInput.bucket || this.opts.bucket;
   if (!bucket) {
-    throw Error('Must Provide bucket param');
+    throw Error('Must provide bucket param');
   }
 
   const [newHost, newPath, signingPath] = (() => {

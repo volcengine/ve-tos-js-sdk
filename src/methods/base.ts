@@ -59,6 +59,8 @@ export class TOSBase {
 
   userAgent: string;
 
+  readonly endpoint: string;
+
   constructor(_opts: TOSConstructorOptions) {
     const opts = { ..._opts };
     const mustKeys = ['accessKeyId', 'accessKeySecret', 'region'];
@@ -71,6 +73,8 @@ export class TOSBase {
     }
 
     opts.endpoint = opts.endpoint || getEndpoint(opts.region);
+    this.endpoint = opts.endpoint!;
+
     if (!opts.endpoint) {
       throw new Error(
         `the value of param region is invalid, correct values are cn-beijing, cn-nantong etc.`
@@ -207,7 +211,7 @@ export class TOSBase {
   ): Promise<TosResponse<Data>> {
     const actualBucket = bucket || this.opts.bucket;
     if (!actualBucket) {
-      throw Error('Must Provide bucket param');
+      throw Error('Must provide bucket param');
     }
     return this.fetch(method, '/', query, headers, body, {
       ...opts,
@@ -227,7 +231,7 @@ export class TOSBase {
       (typeof input !== 'string' && input.bucket) || this.opts.bucket;
     const actualKey = typeof input === 'string' ? input : input.key;
     if (!actualBucket) {
-      throw Error('Must Provide bucket param');
+      throw Error('Must provide bucket param');
     }
     return this.fetch(
       method,
@@ -282,7 +286,7 @@ export class TOSBase {
       (typeof opts !== 'string' && opts.bucket) || this.opts.bucket;
     const actualKey = typeof opts === 'string' ? opts : opts.key;
     if (!actualBucket) {
-      throw Error('Must Provide bucket param');
+      throw Error('Must provide bucket param');
     }
     return `/${actualBucket}/${encodeURIComponent(actualKey)}`;
   };

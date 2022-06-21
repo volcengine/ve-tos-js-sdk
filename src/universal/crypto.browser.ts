@@ -3,13 +3,27 @@ import cryptoHashSha256 from 'crypto-js/sha256';
 import cryptoHashMd5 from 'crypto-js/md5';
 import cryptoEncBase64 from 'crypto-js/enc-base64';
 import cryptoEncHex from 'crypto-js/enc-hex';
+import cryptoEncUtf8 from 'crypto-js/enc-utf8';
+
+function getEnc(coding: 'utf-8' | 'base64' | 'hex') {
+  switch (coding) {
+    case 'utf-8':
+      return cryptoEncUtf8;
+    case 'base64':
+      return cryptoEncBase64;
+    case 'hex':
+      return cryptoEncHex;
+    default:
+      throw Error('不支持的编码');
+  }
+}
 
 function decode(v: any, decoding?: 'base64' | 'hex'): string {
   if (!decoding) {
     return v;
   }
 
-  return v.toString(decoding === 'base64' ? cryptoEncBase64 : cryptoEncHex);
+  return v.toString(getEnc(decoding));
 }
 
 export const hmacSha256 = function hmacSha256(
@@ -32,4 +46,18 @@ export const hashMd5 = function hashMd5(
   decoding?: 'base64' | 'hex'
 ) {
   return decode(cryptoHashMd5(message), decoding);
+};
+
+export const parse = function parse(
+  str: string,
+  encoding: 'utf-8' | 'base64' | 'hex'
+) {
+  return getEnc(encoding).parse(str);
+};
+
+export const stringify = function stringify(
+  str: CryptoJS.lib.WordArray,
+  decoding: 'utf-8' | 'base64' | 'hex'
+) {
+  return getEnc(decoding).stringify(str);
 };

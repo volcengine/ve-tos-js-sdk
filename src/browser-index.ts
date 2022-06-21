@@ -26,6 +26,7 @@ import appendObject from './methods/object/appendObject';
 import setObjectMeta from './methods/object/setObjectMeta';
 import { uploadPartCopy } from './methods/object/multipart/uploadPartCopy';
 import uploadFile from './methods/object/multipart/uploadFile';
+import { calculatePostSignature } from './methods/object/calculatePostSignature';
 
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
 class TOS extends TOSBase {
@@ -61,6 +62,7 @@ class TOS extends TOSBase {
   // object others
   uploadFile = uploadFile;
   getPreSignedUrl = getPreSignedUrl;
+  calculatePostSignature = calculatePostSignature;
 }
 
 export default TOS;

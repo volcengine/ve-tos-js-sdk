@@ -28,3 +28,17 @@ export const hashMd5 = function hashMd5(
 ) {
   return digest(crypto.createHash('md5').update(message), decoding);
 };
+
+export const parse = function parse(
+  str: string,
+  encoding: 'utf-8' | 'base64' | 'hex'
+) {
+  return Buffer.from(str, encoding);
+};
+
+export const stringify = function stringify(
+  str: Buffer,
+  decoding: 'utf-8' | 'base64' | 'hex'
+) {
+  return str.toString(decoding);
+};

@@ -8,6 +8,7 @@ import {
   isNeedDeleteBucket,
   tosOptions,
 } from '../utils/options';
+import FormData from 'form-data';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
 
@@ -118,7 +119,6 @@ describe('TOS', () => {
         const url = client.getPreSignedUrl({
           bucket: testBucketName,
           key: testObjectName,
-          subdomain: true,
         });
 
         const res = await axios(url, { responseType: 'arraybuffer' });
@@ -174,7 +174,6 @@ describe('TOS', () => {
           const url = client.getPreSignedUrl({
             bucket: testBucketName,
             key: testObjectName,
-            subdomain: true,
           });
 
           expect(url.includes(`/${testObjectName}`)).toBeTruthy();
@@ -242,7 +241,6 @@ describe('TOS', () => {
         const url = client.getPreSignedUrl({
           bucket: testBucketName,
           key: testObjectName,
-          subdomain: true,
         });
 
         const res = await axios(url, { responseType: 'arraybuffer' });
@@ -253,7 +251,6 @@ describe('TOS', () => {
         const url = client.getPreSignedUrl({
           // no bucket param
           key: testObjectName,
-          subdomain: true,
         });
 
         const res = await axios(url, { responseType: 'arraybuffer' });
@@ -343,7 +340,6 @@ describe('TOS', () => {
         });
         const url = client.getPreSignedUrl({
           key: objectKey,
-          subdomain: true,
         });
 
         const res = await axios(url);
@@ -357,7 +353,6 @@ describe('TOS', () => {
         });
         const url = client.getPreSignedUrl({
           key: objectKey,
-          subdomain: true,
         });
 
         const res = await axios(url);
@@ -384,6 +379,38 @@ describe('TOS', () => {
 
       expect(res.data.Deleted.length).toBe(4);
       expect(res.data.Error.length).toBe(0);
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'post object',
+    async () => {
+      const client = new TOS(tosOptions);
+
+      const key = 'post-object-key';
+      const content = 'abcd';
+      const form = await client.calculatePostSignature({ key });
+      const formData = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      formData.append('file', content, {
+        filename: 'test.abcd',
+      });
+
+      await axios.post(
+        `https://${client.opts.bucket!}.${client.endpoint}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': `multipart/form-data; boundary=${formData.getBoundary()}`,
+          },
+        }
+      );
+
+      const { data } = await client.getObject(key);
+      expect(data.toString()).toEqual(content);
     },
     NEVER_TIMEOUT
   );
