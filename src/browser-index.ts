@@ -5,6 +5,7 @@ import {
   deleteBucket,
   headBucket,
 } from './methods/bucket/base';
+import axios from 'axios';
 import { ResponseError } from './responseError';
 import {
   isCancelError as isCancel,
@@ -34,6 +35,7 @@ import { uploadPartCopy } from './methods/object/multipart/uploadPartCopy';
 import uploadFile from './methods/object/multipart/uploadFile';
 import { calculatePostSignature } from './methods/object/calculatePostSignature';
 
+const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
 class TOS extends TOSBase {
   // for umd bundle
@@ -41,6 +43,7 @@ class TOS extends TOSBase {
   static isCancel = isCancel;
   static CancelError = CancelError;
   static TOSServerCode = TOSServerCode;
+  static CancelToken = CancelToken;
 
   // bucket base
   createBucket = createBucket;
@@ -80,7 +83,7 @@ class TOS extends TOSBase {
 export default TOS;
 
 export { TOS };
-export { ResponseError, isCancel, CancelError, TOSServerCode };
+export { ResponseError, isCancel, CancelError, TOSServerCode, CancelToken };
 
 // TODO: hack for umd
 if (

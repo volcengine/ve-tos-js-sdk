@@ -28,7 +28,7 @@
       // 创建并填写Blob数据。
       // const data = new Blob(['Hello TOS']);
 
-      const upload = document.getElementById("upload");
+      const upload = document.getElementById('upload');
 
       const headers = {
         // 指定该Object被下载时网页的缓存行为。
@@ -39,15 +39,15 @@
         // 'x-tos-storage-class': 'Standard',
         // 指定Object的访问权限。
         // 'x-tos-acl': 'private',
-   };
+      };
 
-       async function putObject (data) {
-         try {
-           // 填写 Object 完整路径。Object 完整路径中不能包含 Bucket 名称。
-           // 您可以通过自定义文件名（例如 exampleobject.txt）或文件完整路径（例如 exampledir/exampleobject.txt）的形式实现将数据上传到当前 Bucket 或 Bucket 中的指定目录。
-           // data 对象可以自定义为 File 对象、Blob 数据。
+      async function putObject(data) {
+        try {
+          // 填写 Object 完整路径。Object 完整路径中不能包含 Bucket 名称。
+          // 您可以通过自定义文件名（例如 exampleobject.txt）或文件完整路径（例如 exampledir/exampleobject.txt）的形式实现将数据上传到当前 Bucket 或 Bucket 中的指定目录。
+          // data 对象可以自定义为 File 对象、Blob 数据。
           const result = await client.putObject({
-            key: "exampledir/exampleobject.txt",
+            key: 'exampledir/exampleobject.txt',
             body: data,
             // headers,
           });
@@ -57,8 +57,8 @@
         }
       }
 
-      upload.addEventListener("click", () => {
-        data = document.getElementById("file").files[0];
+      upload.addEventListener('click', () => {
+        data = document.getElementById('file').files[0];
         putObject(data);
       });
     </script>

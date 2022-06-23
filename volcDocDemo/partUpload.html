@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <button id="submit">上传</button>
+    <input id="file" type="file" />
+    <!-- 导入sdk文件 -->
+    <script src="https://cdn.jsdelivr.net/npm/@volcengine/tos-sdk@latest/browser/tos-sdk.umd.production.min.js"></script>
+    <script type="text/javascript">
+      const client = new TOS({
+        // yourRegion 填写 Bucket 所在地域。以华北2（北京)为例，yourRegion 填写为 cn-beijing。
+        region: 'yourRegion',
+        // 从 STS 服务获取的临时访问密钥（AccessKey ID 和 AccessKey Secret）。
+        accessKeyId: 'yourAccessKeyId',
+        accessKeySecret: 'yourAccessKeySecret',
+        // 从 STS 服务获取的安全令牌（SecurityToken）。
+        stsToken: 'yourSecurityToken',
+        // 填写 Bucket 名称。
+        bucket: 'examplebucket',
+      });
+
+      // 指定上传到 examplebucket 的 Object 名称，例如 exampleobject.txt。
+      const name = 'exampleobject.txt';
+      // 获取DOM。
+      const submit = document.getElementById('submit');
+
+      // 监听按钮。
+      submit.addEventListener('click', async () => {
+        const file = document.getElementById('file').files[0];
+        let uploadId = null;
+        try {
+          const {
+            data: { UploadId },
+          } = await client.createMultipartUpload({
+            key: name,
+          });
+          uploadId = UploadId;
+
+          // 每个 Part 的大小是 8M
+          const PART_SIZE = 8 * 1024 * 1024;
+          const uploadPartRes = [];
+
+          // 串行上传每个 Part
+          for (let i = 0; i * PART_SIZE < file.size; ++i) {
+            const { data } = await client.uploadPart({
+              key: name,
+              partNumber: i + 1,
+              body: file.slice(
+                i * PART_SIZE,
+                Math.min((i + 1) * PART_SIZE, file.size)
+              ),
+              uploadId: UploadId,
+            });
+            uploadPartRes[i] = data.ETag;
+          }
+
+          await client.completeMultipartUpload({
+            key: name,
+            parts: uploadPartRes.map((eTag, idx) => ({
+              eTag,
+              partNumber: idx + 1,
+            })),
+            uploadId: UploadId,
+          });
+        } catch (err) {
+          console.log(err);
+          if (uploadId) {
+            // 出错后取消分片
+            await client.abortMultipartUpload({
+              key: name,
+              uploadId,
+            });
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
