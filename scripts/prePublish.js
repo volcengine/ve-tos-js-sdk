@@ -9,11 +9,11 @@ async function prePublish() {
     return;
   }
 
-  const { stdout: branch } = await execa(
-    'git',
-    ['rev-parse', '--abbrev-ref', 'HEAD'],
-    { stdio: 'inherit' }
-  );
+  const { stdout: branch } = await execa('git', [
+    'rev-parse',
+    '--abbrev-ref',
+    'HEAD',
+  ]);
 
   if (branch !== 'main' && packageJson.version.match(/^\d+\.\d+\.\d+$/)) {
     throw new Error(
