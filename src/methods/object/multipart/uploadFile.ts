@@ -4,7 +4,7 @@ import {
   CreateMultipartUploadInput,
 } from './createMultipartUpload';
 
-import { isBlob } from '../utils';
+import { isBlob, isBuffer } from '../utils';
 import { calculateSafePartSize } from './listParts';
 import { Stats } from 'fs';
 import { uploadPart, UploadPartOutput } from './uploadPart';
@@ -200,7 +200,7 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
     if (fileStats) {
       return fileStats.size;
     }
-    if (Buffer.isBuffer(file)) {
+    if (isBuffer(file)) {
       return file.length;
     }
     if (isBlob(file)) {
@@ -649,7 +649,7 @@ function getBody(file: UploadFileInput['file'], task: Task) {
   if (isBlob(file)) {
     return file.slice(start, end);
   }
-  if (Buffer.isBuffer(file)) {
+  if (isBuffer(file)) {
     return file.slice(start, end);
   }
   throw Error(FILE_PARAM_CHECK_MSG);

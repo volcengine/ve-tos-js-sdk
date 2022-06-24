@@ -18,7 +18,7 @@
     "start": "tsdx watch",
     "build": "node ./scripts/build.js",
     "build:node": "tsdx build --target node",
-    "build:browser": "tsdx build --format cjs,esm,umd",
+    "build:browser": "tsdx build --format cjs,esm,umd --name TOS",
     "build:proxy": "tsc --esModuleInterop --declaration --outDir ./out ./src/proxy.ts",
     "test": "yarn test:node && cp ./coverage/coverage-final.json ./coverage/coverage-node-final.json && yarn test:browser && cp ./coverage/coverage-final.json ./coverage/coverage-browser-final.json && node ./scripts/mapCoverage.js",
     "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --testEnvironment=node -t \"\"",

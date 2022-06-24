@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Document</title>
+  </head>
+  <body>
+    <button id="submit">上传</button>
+    <button id="pause">暂停</button>
+    <button id="resume">恢复上传</button>
+    <input id="file" type="file" />
+    <!-- 导入SDK文件 -->
+    <script src="https://cdn.jsdelivr.net/npm/@volcengine/tos-sdk@latest/browser/tos-sdk.umd.production.min.js"></script>
+    <script type="text/javascript">
+      const client = new TOS({
+        // yourRegion 填写 Bucket 所在地域。以华北2（北京)为例，yourRegion 填写为 cn-beijing。
+        region: 'yourRegion',
+        // 从 STS 服务获取的临时访问密钥（AccessKey ID 和 AccessKey Secret）。
+        accessKeyId: 'yourAccessKeyId',
+        accessKeySecret: 'yourAccessKeySecret',
+        // 从 STS 服务获取的安全令牌（SecurityToken）。
+        stsToken: 'yourSecurityToken',
+        // 填写 Bucket 名称。
+        bucket: 'examplebucket',
+      });
+
+      // 上传至 Bucket 内 Object 的完整路径，例如 exampledir/exampleobject.txt。
+      const name = 'test.txt';
+      // 定义中断点。
+      let abortCheckpoint;
+      // 获取上传和中断 DOM。
+      const submit = document.getElementById('submit');
+      const pause = document.getElementById('pause');
+      // 获取续传 DOM。
+      const resume = document.getElementById('resume');
+      let cancelToken = null;
+      const partSize = 6 * 1024 * 1024;
+
+      // 监听上传按钮，单击「上传」后开始上传。
+      submit.addEventListener('click', async () => {
+        const file = document.getElementById('file').files[0];
+        cancelToken = TOS.CancelToken.source();
+        await client.uploadFile({
+          key: name,
+          file,
+          partSize,
+          cancelToken: cancelToken.token,
+          progress: (p, cpt, res) => {
+            // 为中断点赋值。
+            abortCheckpoint = cpt;
+            console.log(abortCheckpoint);
+            // 获取上传进度。
+            console.log(p * 100);
+          },
+        });
+      });
+      // 监听暂停按钮。
+      pause.addEventListener('click', () => {
+        // 暂停上传。
+        cancelToken.cancel('click pause btn');
+      });
+
+      const resumeUpload = async () => {
+        const file = document.getElementById('file').files[0];
+        cancelToken = TOS.CancelToken.source();
+        try {
+          await client.uploadFile({
+            key: name,
+            file,
+            partSize,
+            checkpoint: abortCheckpoint,
+            cancelToken: cancelToken.token,
+            progress: (p, cpt, res) => {
+              abortCheckpoint = cpt;
+              // 获取上传进度。
+              console.log(p * 100);
+            },
+          });
+        } catch (e) {
+          console.log(e);
+        }
+      };
+
+      // 监听续传按钮，单击「恢复上传」后继续上传。
+      resume.addEventListener('click', async () => {
+        await resumeUpload();
+      });
+    </script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-export const enum TOSServerCode {
+export enum TOSServerCode {
   NoSuchBucket = 'NoSuchBucket',
   NoSuchKey = 'NoSuchKey',
   AccessDenied = 'AccessDenied',

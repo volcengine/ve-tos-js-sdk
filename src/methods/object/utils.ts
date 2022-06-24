@@ -35,6 +35,10 @@ function lookupMimeType(key: string) {
   return mimeTypes[extName];
 }
 
-export function isBlob(obj: string | File | Blob | Buffer): obj is Blob {
+export function isBlob(obj: unknown): obj is Blob {
   return typeof Blob !== 'undefined' && obj instanceof Blob;
+}
+
+export function isBuffer(obj: unknown): obj is Buffer {
+  return typeof Buffer !== 'undefined' && obj instanceof Buffer;
 }

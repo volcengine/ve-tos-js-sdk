@@ -60,6 +60,13 @@ module.exports = {
       })
     );
 
+    config.plugins.push(
+      replace({
+        'process.env.BUILD_FORMAT': `'${opts.format}'`,
+        preventAssignment: true,
+      })
+    );
+
     if (opts.target === 'browser') {
       config.input = p('browser-index.ts');
 

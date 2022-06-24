@@ -1,3 +1,4 @@
+import { isBlob, isBuffer } from '../utils';
 import TOSBase from '../../base';
 
 export interface UploadPartInput {
@@ -20,11 +21,25 @@ export interface UploadPartOutput {
   ETag: string;
 }
 
+function getSize(body: unknown) {
+  if (isBuffer(body)) {
+    return body.length;
+  }
+  if (isBlob(body)) {
+    return body.size;
+  }
+  return null;
+}
+
 export async function uploadPart(this: TOSBase, input: UploadPartInput) {
   const { uploadId, partNumber, body } = input;
   const headers = input.headers || {};
-  if (Buffer.isBuffer(body) && headers['Content-Length'] == null) {
-    headers['Content-Length'] = body.length.toFixed(0);
+  const size = getSize(body);
+  if (size && headers['Content-Length'] == null) {
+    // browser will error: Refused to set unsafe header "Content-Length"
+    if (process.env.TARGET_ENVIRONMENT === 'node') {
+      headers['Content-Length'] = size.toFixed(0);
+    }
   }
 
   return this.fetchObject<UploadPartOutput>(

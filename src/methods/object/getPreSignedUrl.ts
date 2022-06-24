@@ -1,4 +1,4 @@
-import { normalizeProxy } from '../../utils';
+import { covertCamelCase2Kebab, normalizeProxy } from '../../utils';
 import TOSBase from '../base';
 
 export interface GetPreSignedUrlInput {
@@ -14,6 +14,7 @@ export interface GetPreSignedUrlInput {
   expires?: number;
   response?: {
     contentType?: string;
+    contentDisposition?: string;
   };
   versionId?: string;
 }
@@ -51,9 +52,12 @@ export function getPreSignedUrl(
   })();
 
   const nextQuery: Record<string, any> = {};
-  if (normalizedInput.response?.contentType) {
-    nextQuery['response-content-type'] = normalizedInput.response?.contentType;
-  }
+  const response = normalizedInput.response || {};
+  Object.keys(response).forEach(_key => {
+    const key = _key as keyof typeof response;
+    const kebabKey = covertCamelCase2Kebab(key);
+    nextQuery[`response-${kebabKey}`] = response?.[key];
+  });
   if (normalizedInput.versionId) {
     nextQuery.versionId = normalizedInput.versionId;
   }
