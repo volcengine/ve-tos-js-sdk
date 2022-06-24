@@ -9,7 +9,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/volcengine/ve-tos-js-sdk"
   },
   "engines": {
     "node": ">=10"
@@ -17,7 +17,7 @@
   "scripts": {
     "start": "tsdx watch",
     "build": "node ./scripts/build.js",
-    "build:node": "tsdx build --target node",
+    "build:node": "tsdx build --target node --name TOS",
     "build:browser": "tsdx build --format cjs,esm,umd --name TOS",
     "build:proxy": "tsc --esModuleInterop --declaration --outDir ./out ./src/proxy.ts",
     "test": "yarn test:node && cp ./coverage/coverage-final.json ./coverage/coverage-node-final.json && yarn test:browser && cp ./coverage/coverage-final.json ./coverage/coverage-browser-final.json && node ./scripts/mapCoverage.js",
@@ -57,10 +57,10 @@
   },
   "typings": "dist/index.d.ts",
   "main": "dist/index.js",
-  "module": "dist/universal-sdk-by-tsdx.esm.js",
+  "module": "dist/tos.esm.js",
   "browser": {
     "dist/index.js": "./browser/index.js",
-    "dist/universal-sdk-by-tsdx.esm.js": "./browser/tos-sdk.esm.js"
+    "dist/tos.esm.js": "./browser/tos.esm.js"
   },
   "author": "chengang.07@bytedance.com",
   "devDependencies": {
