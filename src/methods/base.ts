@@ -81,7 +81,7 @@ export class TOSBase {
       );
     }
 
-    opts.secure = opts.secure == null ? true : false;
+    opts.secure = opts.secure == null ? true : opts.secure;
 
     this.opts = opts;
 

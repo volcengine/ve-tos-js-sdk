@@ -6,6 +6,7 @@ import { Acl } from '../../../interface';
 export interface CreateMultipartUploadInput {
   bucket?: string;
   key: string;
+  acl?: Acl;
 
   headers?: {
     [key: string]: string | undefined;
@@ -38,6 +39,12 @@ export async function createMultipartUpload(
   input: CreateMultipartUploadInput
 ) {
   const headers = normalizeHeaders(input.headers);
+  if (input.acl) {
+    if (!headers['x-tos-acl']) {
+      headers['x-tos-acl'] = input.acl;
+    }
+  }
+
   setContentTypeHeader(input, headers);
 
   return this.fetchObject<CreateMultipartUploadOutput>(

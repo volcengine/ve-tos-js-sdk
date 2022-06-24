@@ -75,46 +75,19 @@ describe('uploadFile in node.js environment', () => {
       const client = new TOS(tosOptions);
       await client.uploadFile({ file: objectPath1K, key });
       const { data } = await client.getObject(key);
-      expect(data.length === 1024);
+      expect(data.length === 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
-
-  let needTimeOneTask = 0;
-  let needTimeFourTask = 0;
 
   it(
     'without checkpoint',
     async () => {
       const key = `${objectKey100M}-without-checkpoint`;
       const client = new TOS(tosOptions);
-      const startDate = new Date();
       await client.uploadFile({ file: objectPath100M, key });
-      const endDate = new Date();
-      needTimeOneTask = endDate.valueOf() - startDate.valueOf();
       const { data } = await client.headObject(key);
-      expect(+data['content-length'] === 100 * 1024 * 1024);
-    },
-    NEVER_TIMEOUT
-  );
-
-  it(
-    'taskNum is four and partSize is 25MB',
-    async () => {
-      const key = `${objectKey100M}_parallel_4`;
-      const client = new TOS(tosOptions);
-      const startDate = new Date();
-      await client.uploadFile({
-        file: objectPath100M,
-        key,
-        partSize: 25 * 1024 * 1024,
-        taskNum: 4,
-      });
-      const endDate = new Date();
-      needTimeFourTask = endDate.valueOf() - startDate.valueOf();
-      expect(2 * needTimeFourTask < needTimeOneTask);
-      const { data } = await client.headObject(key);
-      expect(+data['content-length'] === 100 * 1024 * 1024);
+      expect(+data['content-length'] === 100 * 1024 * 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -149,7 +122,7 @@ describe('uploadFile in node.js environment', () => {
       expect(progressFn.mock.calls[1][0]).toBe(1);
 
       const { data } = await client.getObject(key);
-      expect(data.length === 1024);
+      expect(data.length === 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -249,7 +222,7 @@ describe('uploadFile in node.js environment', () => {
       ).toBe(1);
 
       const { data } = await client.headObject(key);
-      expect(+data['content-length'] === 100 * 1024 * 1024);
+      expect(+data['content-length'] === 100 * 1024 * 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -326,7 +299,7 @@ describe('uploadFile in node.js environment', () => {
       ).toBe(1);
 
       const { data } = await client.headObject(key);
-      expect(+data['content-length'] === 100 * 1024 * 1024);
+      expect(+data['content-length'] === 100 * 1024 * 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -380,7 +353,7 @@ describe('uploadFile in node.js environment', () => {
       });
 
       const { data } = await client.headObject(key);
-      expect(+data['content-length'] === 100 * 1024 * 1024);
+      expect(+data['content-length'] === 100 * 1024 * 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
