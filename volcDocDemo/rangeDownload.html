@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Document</title>
+  </head>
+  <body>
+    <button id="download">下载</button>
+    <!-- 导入SDK文件 -->
+    <script src="https://cdn.jsdelivr.net/npm/@volcengine/tos-sdk@latest/browser/tos-sdk.umd.production.min.js"></script>
+    <script type="text/javascript">
+      const client = new TOS({
+        // yourRegion 填写 Bucket 所在地域。以华北2（北京)为例，yourRegion 填写为 cn-beijing。
+        region: 'yourRegion',
+        // 从 STS 服务获取的临时访问密钥（AccessKey ID 和 AccessKey Secret）。
+        accessKeyId: 'yourAccessKeyId',
+        accessKeySecret: 'yourAccessKeySecret',
+        // 从 STS 服务获取的安全令牌（SecurityToken）。
+        stsToken: 'yourSecurityToken',
+        // 填写 Bucket 名称。
+        bucket: 'examplebucket',
+      });
+
+      // 获取 DOM。
+      const download = document.getElementById('download');
+      // 对于大小为 1000 字节的文件，正常的字节范围为 0~999。
+      // 如果指定的范围无效（比如开始或结束位置的指定值为负数，或指定值大于文件大小），则下载整个文件。
+      const start = 0,
+        end = 999;
+      // 监听按钮。
+      download.addEventListener('click', () => {
+        client
+          .getObject({
+            key: 'exampleobject.txt',
+            headers: {
+              Range: `bytes=${start}-${end}`,
+            },
+          })
+          .then(r => {
+            // 将返回的数据通过 Blob 的形式转为可下载的 Object。
+            const newBlob = new Blob([r.data], {
+              type: r.headers['content-type'],
+            });
+            // 创建标签。
+            const link = document.createElement('a');
+            // 将标签绑定 href 属性。
+            link.href = window.URL.createObjectURL(newBlob);
+            // 指定下载后的本地文件名称。
+            link.download = 'exampleobject.txt';
+            // 下载Object。
+            link.click();
+            // 移除绑定的 URL。
+            window.URL.revokeObjectURL(link.href);
+          });
+      });
+    </script>
+  </body>
+</html>
