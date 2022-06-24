@@ -1,5 +1,17 @@
 # tos-sdk
 
+## 0.0.4
+
+### Feature Changes
+
+- add `CompleteMultipartUploadOutput` type
+- add `acl` param for `createMultipartUpload`
+
+### Patch Changes
+
+- fix: `taskNum` of `uploadFile` does not work
+- use `secure` when it's not nullish
+
 ## 0.0.3
 
 ### Feature Changes
