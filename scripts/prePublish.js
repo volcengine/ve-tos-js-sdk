@@ -1,9 +1,10 @@
 const execa = require('execa');
+const packageJson = require('../package.json');
 
 require('dotenv').config();
 
 async function prePublish() {
-  if (!process.env.SKIP_BUILD) {
+  if (process.env.SKIP_BUILD) {
     console.log('prePublish: skip build');
     return;
   }
@@ -14,8 +15,10 @@ async function prePublish() {
     { stdio: 'inherit' }
   );
 
-  if (branch !== 'main') {
-    throw new Error('Must publish on main branch');
+  if (branch !== 'main' && packageJson.version.match(/^\d+\.\d+\.\d+$/)) {
+    throw new Error(
+      'Must publish release version on main branch, you can publish beta version.'
+    );
   }
 
   await execa('yarn', ['build'], { stdio: 'inherit' });
@@ -24,7 +27,11 @@ async function prePublish() {
     console.log('publish to local npm registry');
     await execa(
       'yarn',
-      [`--registry=${process.env.LOCAL_NPM_REGISTRY}`, 'publish'],
+      [
+        `--registry=${process.env.LOCAL_NPM_REGISTRY}`,
+        'publish',
+        `--new-version=${packageJson.version}`,
+      ],
       { stdio: 'inherit', env: { SKIP_BUILD: 'true' } }
     );
   }

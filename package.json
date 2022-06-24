@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "0.0.3",
+  "version": "0.0.5-beta-2",
   "license": "MIT",
   "files": [
     "browser",
@@ -27,7 +27,7 @@
     "deploy:docs": "./scripts/deployDocs.sh",
     "lint": "tsdx lint",
     "prepublish": "node ./scripts/prePublish",
-    "postpublish": "node ./scripts/postPublish" 
+    "postpublish": "node ./scripts/postPublish"
   },
   "husky": {
     "hooks": {

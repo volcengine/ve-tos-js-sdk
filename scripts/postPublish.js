@@ -2,7 +2,7 @@ const execa = require('execa');
 const packageJson = require('../package.json');
 
 async function postPublish() {
-  if (!process.env.SKIP_BUILD) {
+  if (process.env.SKIP_BUILD) {
     console.log('postPublish: skip build');
     return;
   }
