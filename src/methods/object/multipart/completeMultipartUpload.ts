@@ -10,11 +10,20 @@ export interface CompleteMultipartUploadInput {
   }[];
 }
 
+export interface CompleteMultipartUploadOutput {
+  Bucket: string;
+  Key: string;
+  ETag: string;
+  Location: string;
+  VersionID?: string;
+  HashCrc64ecma?: number;
+}
+
 export async function completeMultipartUpload(
   this: TOSBase,
   input: CompleteMultipartUploadInput
 ) {
-  return this.fetchObject<undefined>(
+  return this.fetchObject<CompleteMultipartUploadOutput>(
     input,
     'POST',
     {
@@ -26,6 +35,14 @@ export async function completeMultipartUpload(
         ETag: it.eTag,
         PartNumber: it.partNumber,
       })),
+    },
+    {
+      handleResponse(response) {
+        return {
+          ...response.data,
+          VersionID: response.headers['x-tos-version-id'],
+        };
+      },
     }
   );
 }

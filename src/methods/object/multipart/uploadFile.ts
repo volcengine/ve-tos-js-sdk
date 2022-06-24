@@ -1,4 +1,4 @@
-import TOSBase from '../../base';
+import TOSBase, { TosResponse } from '../../base';
 import {
   createMultipartUpload,
   CreateMultipartUploadInput,
@@ -9,7 +9,10 @@ import { calculateSafePartSize } from './listParts';
 import { Stats } from 'fs';
 import { uploadPart, UploadPartOutput } from './uploadPart';
 import ResponseError from '../../../responseError';
-import { completeMultipartUpload } from './completeMultipartUpload';
+import {
+  completeMultipartUpload,
+  CompleteMultipartUploadOutput,
+} from './completeMultipartUpload';
 import { CancelToken } from 'axios';
 import * as fs from '../../../nodejs/fs-promises';
 import path from 'path';
@@ -63,6 +66,8 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
    */
   cancelToken?: CancelToken;
 }
+
+export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
 
 export interface DataTransferStatus {
   /**
@@ -181,7 +186,10 @@ export class CancelError extends Error {
   }
 }
 
-export async function uploadFile(this: TOSBase, input: UploadFileInput) {
+export async function uploadFile(
+  this: TOSBase,
+  input: UploadFileInput
+): Promise<TosResponse<UploadFileOutput>> {
   const { cancelToken } = input;
   const isCancel = () => cancelToken && !!cancelToken.reason;
 
@@ -494,11 +502,11 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
   // handle tasks
   return (async () => {
     let firstErr: Error | null = null;
-    let remainSuccessTaskCount = tasks.length;
     let index = 0;
 
+    // TODO: how to test parallel does work, measure time is not right
     await Promise.all(
-      new Array({ length: input.taskNum || 1 }).map(async () => {
+      Array.from({ length: input.taskNum || 1 }).map(async () => {
         while (true) {
           const currentIndex = index++;
           if (currentIndex >= tasks.length) {
@@ -508,7 +516,7 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
           const curTask = tasks[currentIndex];
           try {
             // TODO(P0): backend is not stable, so I loop three time
-            const LOOP = 10;
+            const LOOP = 3;
             const uploadPartRes = await (async () => {
               let lastErr = null;
               for (let i = 0; i < LOOP && !isCancel(); ++i) {
@@ -545,40 +553,7 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
               throw new CancelError('cancel uploadFile');
             }
 
-            let shouldTriggerCompleteEvent = false;
-            if (remainSuccessTaskCount === 1) {
-              shouldTriggerCompleteEvent = true;
-              // last task need call completeMultipart
-              const parts = (getCheckpointContent().parts_info || []).map(
-                it => ({
-                  eTag: it.etag,
-                  partNumber: it.part_number,
-                })
-              );
-              parts.push({
-                eTag: uploadPartRes.ETag,
-                partNumber: curTask.partNumber,
-              });
-
-              await completeMultipartUpload.call(this, {
-                bucket,
-                key,
-                uploadId,
-                parts,
-              });
-              if (isCancel()) {
-                throw new CancelError('cancel uploadFile');
-              }
-            }
-
-            --remainSuccessTaskCount;
             await updateAfterUploadPart(curTask, uploadPartRes);
-            if (shouldTriggerCompleteEvent) {
-              await triggerUploadEvent({
-                type: UploadEventType.completeMultipartUploadSucceed,
-              });
-              await rmCheckpointFile();
-            }
           } catch (_err) {
             const err = _err as any;
             if (isCancelError(err)) {
@@ -597,6 +572,25 @@ export async function uploadFile(this: TOSBase, input: UploadFileInput) {
     if (firstErr) {
       throw firstErr;
     }
+
+    const parts = (getCheckpointContent().parts_info || []).map(it => ({
+      eTag: it.etag,
+      partNumber: it.part_number,
+    }));
+
+    const res = await completeMultipartUpload.call(this, {
+      bucket,
+      key,
+      uploadId,
+      parts,
+    });
+
+    await triggerUploadEvent({
+      type: UploadEventType.completeMultipartUploadSucceed,
+    });
+    await rmCheckpointFile();
+
+    return res;
   })();
 }
 
@@ -643,7 +637,7 @@ function getBody(file: UploadFileInput['file'], task: Task) {
     return fs.createReadStream(file, {
       encoding: 'binary',
       start,
-      end,
+      end: end - 1,
     }) as NodeJS.ReadableStream;
   }
   if (isBlob(file)) {

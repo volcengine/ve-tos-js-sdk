@@ -227,7 +227,7 @@ describe('TOS', () => {
           uploadPartRes[i] = (await createPromise(i)).data;
         }
 
-        await client.completeMultipartUpload({
+        const res = await client.completeMultipartUpload({
           key: testObjectName,
           uploadId: UploadId,
           parts: uploadPartRes.map((it, idx) => ({
@@ -235,6 +235,9 @@ describe('TOS', () => {
             partNumber: idx + 1,
           })),
         });
+
+        expect(res.data.Location.includes(client.endpoint)).toBeTruthy();
+        expect(res.data.Location.includes(testObjectName)).toBeTruthy();
       }
 
       {
