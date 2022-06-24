@@ -7,4 +7,5 @@ const { promisify } = require('util');
 export const stat = promisify(fs.stat);
 export const mkdir = promisify(fs.mkdir);
 export const writeFile = promisify(fs.writeFile);
-export const rm = promisify(fs.rm);
+// fs.rm was added v14.14.0, so use fs.unlink
+export const rm = promisify(fs.unlink);
