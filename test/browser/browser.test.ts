@@ -139,6 +139,33 @@ describe('TOS', () => {
   );
 
   it(
+    'object name includes dot',
+    async () => {
+      const testObjectName = './aa/bb/cc';
+      const client = new TOS(tosOptions);
+      await client.putObject({
+        bucket: testBucketName,
+        key: testObjectName,
+        body: new Readable({
+          read() {
+            this.push(Buffer.from([0, 0]));
+            this.push(null);
+          },
+        }),
+      });
+
+      {
+        const { data } = await client.listObjects({
+          prefix: testObjectName,
+        });
+        expect(data.Contents.length).toEqual(1);
+        expect(data.Contents[0].Size).toEqual(2);
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
     'create/list folder',
     async () => {
       const client = new TOS(tosOptions);

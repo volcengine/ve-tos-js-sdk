@@ -5,6 +5,7 @@ import { Headers } from '../interface';
 import ResponseError, { ResponseErrorData } from '../responseError';
 import { getEndpoint, getSortedQueryString, normalizeProxy } from '../utils';
 import version from '../version';
+import { TosAgent } from '../nodejs/TosAgent';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -13,7 +14,7 @@ export interface TOSConstructorOptions {
   bucket?: string;
   endpoint?: string;
   /**
-   * 默认为 true
+   * default value: true
    */
   secure?: boolean;
   region: string;
@@ -23,6 +24,57 @@ export interface TOSConstructorOptions {
         url: string;
         needProxyParams?: boolean;
       };
+
+  /**
+   * default value: true
+   */
+  enableVerifySSL?: boolean;
+
+  /**
+   * default value: true
+   */
+  autoRecognizeContentType?: boolean;
+
+  /**
+   * not implement
+   * unit: ms
+   * default value: 30s
+   */
+  socketTimeout?: number;
+
+  /**
+   * unit: ms
+   * default value: 60s
+   */
+  requestTimeout?: number;
+
+  /**
+   * unit: ms
+   * default value: 10s
+   */
+  connectionTimeout?: number;
+
+  /**
+   * default value: 1024
+   */
+  maxConnections?: number;
+
+  /**
+   * unit: ms
+   * default value: 60s
+   */
+  idleConnectionTime?: number;
+}
+
+interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
+  endpoint: string;
+  enableVerifySSL: boolean;
+  autoRecognizeContentType: boolean;
+  socketTimeout: number;
+  requestTimeout: number;
+  connectionTimeout: number;
+  maxConnections: number;
+  idleConnectionTime: number;
 }
 
 interface GetSignatureQueryInput {
@@ -55,37 +107,59 @@ export interface TosResponse<T> {
 }
 
 export class TOSBase {
-  opts: TOSConstructorOptions;
+  opts: NormalizedTOSConstructorOptions;
 
   userAgent: string;
 
-  readonly endpoint: string;
+  private httpAgent: unknown;
+  private httpsAgent: unknown;
 
   constructor(_opts: TOSConstructorOptions) {
-    const opts = { ..._opts };
+    this.opts = this.normalizeOpts(_opts);
+
+    if (process.env.TARGET_ENVIRONMENT === 'node') {
+      this.httpAgent = TosAgent({ tosOpts: { ...this.opts, isHttps: false } });
+      this.httpsAgent = TosAgent({ tosOpts: { ...this.opts, isHttps: true } });
+    }
+
+    this.userAgent = this.getUserAgent();
+  }
+
+  private normalizeOpts(_opts: TOSConstructorOptions) {
     const mustKeys = ['accessKeyId', 'accessKeySecret', 'region'];
     const mustKeysErrorStr = mustKeys
-      .filter(key => !(opts as any)[key])
+      .filter(key => !(_opts as any)[key])
       .join(', ');
 
     if (mustKeysErrorStr) {
       throw new Error(`lack params: ${mustKeysErrorStr}.`);
     }
 
-    opts.endpoint = opts.endpoint || getEndpoint(opts.region);
-    this.endpoint = opts.endpoint!;
-
-    if (!opts.endpoint) {
+    const endpoint = _opts.endpoint || getEndpoint(_opts.region);
+    if (!endpoint) {
       throw new Error(
         `the value of param region is invalid, correct values are cn-beijing, cn-nantong etc.`
       );
     }
 
-    opts.secure = opts.secure == null ? true : !!opts.secure;
+    const secure = _opts.secure == null ? true : !!_opts.secure;
+    const _default = <T extends unknown>(
+      v: T | undefined | null,
+      defaultValue: T
+    ) => (v == null ? defaultValue : v);
 
-    this.opts = opts;
-
-    this.userAgent = this.getUserAgent();
+    return {
+      ..._opts,
+      endpoint,
+      secure,
+      enableVerifySSL: _default(_opts.enableVerifySSL, true),
+      autoRecognizeContentType: _default(_opts.autoRecognizeContentType, true),
+      socketTimeout: _default(_opts.socketTimeout, 30_000),
+      requestTimeout: _default(_opts.requestTimeout, 60_000),
+      connectionTimeout: _default(_opts.connectionTimeout, 10_000),
+      maxConnections: _default(_opts.maxConnections, 1024),
+      idleConnectionTime: _default(_opts.idleConnectionTime, 60_000),
+    };
   }
 
   private getUserAgent() {
@@ -147,7 +221,7 @@ export class TOSBase {
     const signatureHeaders = sig.signatureHeader(signOpt);
     const reqHeaders = { ...headers };
 
-    const reqOpts = {
+    const reqOpts: AxiosRequestConfig = {
       method,
       baseURL: `http${this.opts.secure ? 's' : ''}://${endpoint}`,
       url: path,
@@ -172,7 +246,15 @@ export class TOSBase {
     if (process.env.TARGET_ENVIRONMENT === 'node') {
       reqHeaders['user-agent'] = this.userAgent;
     } else {
+      // the browser xhr doesn't set the host and user-agent
       delete reqHeaders['host'];
+    }
+
+    reqOpts.timeout = this.opts.requestTimeout;
+
+    if (process.env.TARGET_ENVIRONMENT === 'node') {
+      reqOpts.httpAgent = this.httpAgent;
+      reqOpts.httpsAgent = this.httpsAgent;
     }
 
     try {
