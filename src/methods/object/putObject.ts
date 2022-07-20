@@ -1,5 +1,4 @@
 import TOSBase from '../base';
-import { setContentTypeHeader, validateObjectName } from './utils';
 import { normalizeHeaders } from '../../utils';
 import { Acl } from '../../interface';
 
@@ -38,10 +37,9 @@ export interface PutObjectOutput {
 }
 
 export async function putObject(this: TOSBase, input: PutObjectInput | string) {
-  validateObjectName(input);
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeaders(input.headers);
-  setContentTypeHeader(input, headers);
+  this.setObjectContentTypeHeader(input, headers);
 
   await this.fetchObject<PutObjectOutput>(
     input,

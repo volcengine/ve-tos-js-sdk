@@ -1,30 +1,13 @@
 import TosClientError from '../../TosClientError';
-import { Headers } from '../../interface';
 import mimeTypes from '../../mime-types';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
 };
 
-const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
+export const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 
-export const setContentTypeHeader = (
-  input: string | { key: string },
-  headers: Headers
-): void => {
-  if (headers['content-type'] != null) {
-    return;
-  }
-
-  const key = getObjectInputKey(input);
-
-  const mimeType = lookupMimeType(key) || DEFAULT_CONTENT_TYPE;
-  if (mimeType) {
-    headers['content-type'] = mimeType;
-  }
-};
-
-function lookupMimeType(key: string) {
+export function lookupMimeType(key: string) {
   const lastDotIndex = key.lastIndexOf('.');
 
   if (lastDotIndex <= 0) {
@@ -44,7 +27,7 @@ export function isBuffer(obj: unknown): obj is Buffer {
   return typeof Buffer !== 'undefined' && obj instanceof Buffer;
 }
 
-// only for uploading object
+// for all object methods
 export function validateObjectName(input: { key: string } | string) {
   const key = typeof input === 'string' ? input : input.key;
   if (key.length < 1 || key.length > 696) {

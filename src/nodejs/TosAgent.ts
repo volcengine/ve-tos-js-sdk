@@ -18,7 +18,6 @@ declare module 'http' {
 interface TosAgentOptions extends http.AgentOptions {
   tosOpts: {
     enableVerifySSL: boolean;
-    socketTimeout: number;
     connectionTimeout: number;
     maxConnections: number;
     idleConnectionTime: number;
@@ -71,8 +70,6 @@ export function TosAgent(opts: TosAgentOptions) {
     });
 
     return socket;
-
-    // TODO: set socketTimeout
   };
 
   return agent;

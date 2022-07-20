@@ -14,7 +14,7 @@ import {
   tosOptions,
 } from '../utils/options';
 import FormData from 'form-data';
-import { ACLType } from '../../src/tosExportEnum';
+import { ACLType } from '../../src/TosExportEnum';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
 
@@ -67,23 +67,6 @@ describe('TOS', () => {
   );
 
   it(
-    'check bucket name',
-    async () => {
-      const client = new TOS(tosOptions);
-      testCheckErr(() => client.createBucket({ bucket: 'a' }), 'length');
-      testCheckErr(
-        () => client.createBucket({ bucket: 'a'.repeat(64) }),
-        'length'
-      );
-      testCheckErr(() => client.createBucket({ bucket: 'ab@cd' }), 'character');
-      testCheckErr(() => client.createBucket({ bucket: 'ab!cd' }), 'character');
-      testCheckErr(() => client.createBucket({ bucket: '-abcd' }), '-');
-      testCheckErr(() => client.createBucket({ bucket: 'abcd-' }), '-');
-    },
-    NEVER_TIMEOUT
-  );
-
-  it(
     'check object name',
     async () => {
       const client = new TOS(tosOptions);
@@ -95,8 +78,13 @@ describe('TOS', () => {
 
       // ensure these methods execute the validating logic
       testCheckErr(() => client.appendObject('/abcd'), '/');
-      testCheckErr(() => client.uploadFile({ key: '/abcd', file: '' }), '/');
+      testCheckErr(
+        () => client.uploadFile({ key: '/abcd', file: Buffer.from([]) }),
+        '/'
+      );
       testCheckErr(() => client.createMultipartUpload({ key: '/abcd' }), '/');
+      testCheckErr(() => client.getPreSignedUrl('/abcd'), '/');
+      testCheckErr(() => client.calculatePostSignature('/abcd'), '/');
     },
     NEVER_TIMEOUT
   );

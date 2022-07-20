@@ -15,6 +15,9 @@ import fs from 'fs';
 import { Agent, OutgoingMessage, Server } from 'http';
 import { AddressInfo } from 'net';
 import path from 'path';
+import { Readable } from 'stream';
+import axios from 'axios';
+import { DEFAULT_CONTENT_TYPE } from '../../src/methods/object/utils';
 
 describe('nodejs connection params', () => {
   beforeAll(async done => {
@@ -44,6 +47,32 @@ describe('nodejs connection params', () => {
     deleteBucket(client, testBucketName);
     done();
   }, NEVER_TIMEOUT);
+
+  it(
+    'autoRecognizeContentType',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+        autoRecognizeContentType: false,
+      });
+
+      const objectKey = 'c/d/a.png';
+      await client.putObject({
+        key: objectKey,
+        body: new Readable({
+          read() {
+            this.push(Buffer.from([0, 0]));
+            this.push(null);
+          },
+        }),
+      });
+      const url = client.getPreSignedUrl(objectKey);
+      const res = await axios(url);
+      expect(res.headers['content-type']).toBe(DEFAULT_CONTENT_TYPE);
+      await client.deleteObject(objectKey);
+    },
+    NEVER_TIMEOUT
+  );
 
   it(
     'connection Timeout',
@@ -98,6 +127,7 @@ describe('nodejs connection params', () => {
 
       const { data } = await clientNoVerify.listBuckets();
       expect(data.Buckets.length).toEqual(0);
+      server.close();
 
       function startServer(): Promise<Server> {
         const options = {

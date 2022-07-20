@@ -161,7 +161,7 @@ describe('uploadFile in node.js environment', () => {
         checkpointsDir,
         'pause-and-resume-checkpoint.json'
       );
-      await fsPromises.rm(cpFilepath, { force: true });
+      await fsPromises.rm(cpFilepath).catch(() => {});
 
       let resolve = (_v?: unknown) => {};
       const p = new Promise(r => (resolve = r));
@@ -236,7 +236,7 @@ describe('uploadFile in node.js environment', () => {
         checkpointsDir,
         'pause-and-resume-checkpoint-when-partNum-is-3.json'
       );
-      await fsPromises.rm(cpFilepath, { force: true });
+      await fsPromises.rm(cpFilepath).catch(() => {});
 
       let resolve = (_v?: unknown) => {};
       const p = new Promise(r => (resolve = r));

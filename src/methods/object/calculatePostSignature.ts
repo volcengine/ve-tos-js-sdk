@@ -1,6 +1,7 @@
 import TOSBase from '../base';
 import { parse, stringify, hmacSha256 } from '../../universal/crypto';
 import TosClientError from '../../TosClientError';
+import { validateObjectName } from './utils';
 
 export type PostSignatureCondition =
   | {
@@ -21,8 +22,10 @@ export interface CalculatePostSignatureInput {
 
 export async function calculatePostSignature(
   this: TOSBase,
-  input: CalculatePostSignatureInput
+  input: CalculatePostSignatureInput | string
 ) {
+  validateObjectName(input);
+  input = this.normalizeObjectInput(input);
   const { expiresIn = 3600, key } = input;
   const bucket = input.bucket || this.opts.bucket;
   const fields = { ...input.fields };
