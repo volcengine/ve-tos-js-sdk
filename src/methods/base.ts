@@ -7,6 +7,12 @@ import { getEndpoint, getSortedQueryString, normalizeProxy } from '../utils';
 import version from '../version';
 import { TosAgent } from '../nodejs/TosAgent';
 import TosClientError from '../TosClientError';
+import {
+  DEFAULT_CONTENT_TYPE,
+  getObjectInputKey,
+  lookupMimeType,
+  validateObjectName,
+} from './object/utils';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -37,13 +43,6 @@ export interface TOSConstructorOptions {
   autoRecognizeContentType?: boolean;
 
   /**
-   * not implement
-   * unit: ms
-   * default value: 30s
-   */
-  socketTimeout?: number;
-
-  /**
    * unit: ms
    * default value: 60s
    */
@@ -71,7 +70,6 @@ interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
   endpoint: string;
   enableVerifySSL: boolean;
   autoRecognizeContentType: boolean;
-  socketTimeout: number;
   requestTimeout: number;
   connectionTimeout: number;
   maxConnections: number;
@@ -161,7 +159,6 @@ export class TOSBase {
       secure,
       enableVerifySSL: _default(_opts.enableVerifySSL, true),
       autoRecognizeContentType: _default(_opts.autoRecognizeContentType, true),
-      socketTimeout: _default(_opts.socketTimeout, 30_000),
       requestTimeout: _default(_opts.requestTimeout, 60_000),
       connectionTimeout: _default(_opts.connectionTimeout, 10_000),
       maxConnections: _default(_opts.maxConnections, 1024),
@@ -325,6 +322,8 @@ export class TOSBase {
     if (!actualBucket) {
       throw new TosClientError('Must provide bucket param');
     }
+    validateObjectName(actualKey);
+
     return this.fetch(
       method,
       `/${encodeURIComponent(actualKey)}`,
@@ -393,6 +392,26 @@ export class TOSBase {
   ): T {
     return (typeof input === 'string' ? { key: input } : input) as T;
   }
+
+  protected setObjectContentTypeHeader = (
+    input: string | { key: string },
+    headers: Headers
+  ): void => {
+    if (headers['content-type'] != null) {
+      return;
+    }
+
+    let mimeType = DEFAULT_CONTENT_TYPE;
+    const key = getObjectInputKey(input);
+
+    if (this.opts.autoRecognizeContentType) {
+      mimeType = lookupMimeType(key) || mimeType;
+    }
+
+    if (mimeType) {
+      headers['content-type'] = mimeType;
+    }
+  };
 }
 
 export default TOSBase;

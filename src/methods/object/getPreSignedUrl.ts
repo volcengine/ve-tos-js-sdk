@@ -1,6 +1,7 @@
 import TosClientError from '../../TosClientError';
 import { covertCamelCase2Kebab, normalizeProxy } from '../../utils';
 import TOSBase from '../base';
+import { validateObjectName } from './utils';
 
 export interface GetPreSignedUrlInput {
   bucket?: string;
@@ -24,6 +25,7 @@ export function getPreSignedUrl(
   this: TOSBase,
   input: GetPreSignedUrlInput | string
 ) {
+  validateObjectName(input);
   const normalizedInput = typeof input === 'string' ? { key: input } : input;
   const subdomain = true;
   const bucket = normalizedInput.bucket || this.opts.bucket;

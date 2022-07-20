@@ -4,7 +4,7 @@ import {
   CreateMultipartUploadInput,
 } from './createMultipartUpload';
 
-import { isBlob, isBuffer, validateObjectName } from '../utils';
+import { isBlob, isBuffer } from '../utils';
 import { calculateSafePartSize } from './listParts';
 import { Stats } from 'fs';
 import { uploadPart, UploadPartOutput } from './uploadPart';
@@ -191,7 +191,6 @@ export async function uploadFile(
   this: TOSBase,
   input: UploadFileInput
 ): Promise<TosResponse<UploadFileOutput>> {
-  validateObjectName(input);
   const { cancelToken } = input;
   const isCancel = () => cancelToken && !!cancelToken.reason;
 

@@ -1,5 +1,4 @@
 import TOSBase from '../../base';
-import { setContentTypeHeader, validateObjectName } from '../utils';
 import { normalizeHeaders } from '../../../utils';
 import { Acl } from '../../../interface';
 
@@ -38,7 +37,6 @@ export async function createMultipartUpload(
   this: TOSBase,
   input: CreateMultipartUploadInput | string
 ) {
-  validateObjectName(input);
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeaders(input.headers);
   if (input.acl) {
@@ -47,7 +45,7 @@ export async function createMultipartUpload(
     }
   }
 
-  setContentTypeHeader(input, headers);
+  this.setObjectContentTypeHeader(input, headers);
 
   return this.fetchObject<CreateMultipartUploadOutput>(
     input,

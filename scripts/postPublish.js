@@ -1,14 +1,13 @@
 const execa = require('execa');
 const packageJson = require('../package.json');
+const { getBranch } = require('./utils');
 
 async function postPublish() {
   if (process.env.SKIP_BUILD) {
     console.log('postPublish: skip build');
     return;
   }
-
   const version = `v${packageJson.version}`;
-
   try {
     // 忽略 commit 时出错
     await execa('git', ['add', '.']);
@@ -18,10 +17,13 @@ async function postPublish() {
       `${version}. auto commit when publish`,
     ]);
   } catch (err) {}
-
   await execa('git', ['tag', version]);
   await execa('git', ['push', 'origin', version]);
-  await execa('git', ['push', 'origin', 'main']);
+
+  const branch = await getBranch();
+  if (branch === 'main') {
+    await execa('git', ['push', 'origin', 'main']);
+  }
 }
 
 postPublish();
