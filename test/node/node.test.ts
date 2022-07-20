@@ -1,5 +1,10 @@
 import TOS from '../../src/browser-index';
-import { deleteBucket, NEVER_TIMEOUT, sleepCache } from '../utils';
+import {
+  deleteBucket,
+  NEVER_TIMEOUT,
+  sleepCache,
+  testCheckErr,
+} from '../utils';
 import {
   testBucketName,
   isNeedDeleteBucket,
@@ -89,12 +94,7 @@ describe('nodejs connection params', () => {
         enableVerifySSL: false,
       });
 
-      try {
-        await clientVerify.listBuckets();
-        expect(false).toBeTruthy(); // never go here
-      } catch (err) {
-        expect(err).toBeTruthy();
-      }
+      testCheckErr(() => clientVerify.listBuckets());
 
       const { data } = await clientNoVerify.listBuckets();
       expect(data.Buckets.length).toEqual(0);
@@ -126,19 +126,13 @@ describe('nodejs connection params', () => {
   it(
     'requestTimeout',
     async () => {
-      try {
-        const client = new TOS({ ...tosOptions, requestTimeout: 50 });
-        await client.listBuckets();
-        expect(false).toBeTruthy(); // never go here
-      } catch (_err) {
-        const err = _err as any;
-        expect(
-          err
-            .toString()
-            .toLowerCase()
-            .includes('timeout')
-        ).toBeTruthy();
-      }
+      testCheckErr(
+        async () => {
+          const client = new TOS({ ...tosOptions, requestTimeout: 50 });
+          await client.listBuckets();
+        },
+        msg => msg.toLowerCase().includes('timeout')
+      );
 
       const client = new TOS({ ...tosOptions, requestTimeout: 2000 });
       const { data } = await client.listBuckets();

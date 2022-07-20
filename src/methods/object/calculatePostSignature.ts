@@ -1,5 +1,6 @@
 import TOSBase from '../base';
 import { parse, stringify, hmacSha256 } from '../../universal/crypto';
+import TosClientError from '../../TosClientError';
 
 export type PostSignatureCondition =
   | {
@@ -28,7 +29,7 @@ export async function calculatePostSignature(
   const conditions = [...(input.conditions || [])];
 
   if (!bucket) {
-    throw Error('Must provide bucket param');
+    throw new TosClientError('Must provide bucket param');
   }
 
   const accessKeySecret = this.opts.accessKeySecret;

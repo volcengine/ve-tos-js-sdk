@@ -4,6 +4,7 @@ import cryptoHashMd5 from 'crypto-js/md5';
 import cryptoEncBase64 from 'crypto-js/enc-base64';
 import cryptoEncHex from 'crypto-js/enc-hex';
 import cryptoEncUtf8 from 'crypto-js/enc-utf8';
+import TosClientError from '../TosClientError';
 
 function getEnc(coding: 'utf-8' | 'base64' | 'hex') {
   switch (coding) {
@@ -14,7 +15,7 @@ function getEnc(coding: 'utf-8' | 'base64' | 'hex') {
     case 'hex':
       return cryptoEncHex;
     default:
-      throw Error('不支持的编码');
+      throw new TosClientError('The coding is not supported');
   }
 }
 

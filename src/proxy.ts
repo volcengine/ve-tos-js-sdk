@@ -34,11 +34,11 @@ export function createTosProxyMiddleware(
       const urlObj = url.parse((req as any).originalUrl, true);
       proxyReq.setHeader('host', urlObj.query[proxyParamKey] as string);
     },
-    router: function (req) {
+    router: function(req) {
       let originHost = req.query[proxyParamKey] as string;
 
       if (!originHost) {
-        throw Error(`proxy misses ${proxyParamKey} param`);
+        throw new Error(`proxy misses ${proxyParamKey} param`);
       }
 
       if (opts?.destHost) {

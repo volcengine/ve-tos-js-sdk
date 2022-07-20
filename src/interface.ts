@@ -1,3 +1,5 @@
+import { ACLType, StorageClassType } from './TosExportEnum';
+
 export type Headers = { [key: string]: string | undefined };
 
 export interface AclInterface {
@@ -12,14 +14,7 @@ export interface AclInterface {
   }[];
 }
 
-export type Acl =
-  | 'private'
-  | 'public-read'
-  | 'public-read-write'
-  | 'authenticated-read'
-  | 'bucket-owner-read'
-  | 'bucket-owner-full-control';
-
-export type StorageClass = 'STANDARD' | 'IA';
+export type Acl = ACLType;
+export type StorageClass = StorageClassType;
 
 export type ServerSideEncryption = 'AES256';

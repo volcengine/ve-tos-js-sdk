@@ -39,3 +39,24 @@ export async function sleepCache() {
 }
 
 export const NEVER_TIMEOUT = 10 * 60 * 60 * 1000;
+
+export async function testCheckErr(
+  f: () => void,
+  msg?: string | ((msg: string) => boolean)
+) {
+  try {
+    await f();
+    expect(false).toBeTruthy(); // never go here
+  } catch (_err) {
+    const err = _err as any;
+    if (!msg) {
+      return;
+    }
+
+    if (typeof msg === 'string') {
+      expect(err.toString().includes(msg)).toBeTruthy();
+    } else {
+      expect(msg(err.toString())).toBeTruthy();
+    }
+  }
+}

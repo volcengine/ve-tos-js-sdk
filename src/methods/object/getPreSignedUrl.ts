@@ -1,3 +1,4 @@
+import TosClientError from '../../TosClientError';
 import { covertCamelCase2Kebab, normalizeProxy } from '../../utils';
 import TOSBase from '../base';
 
@@ -27,7 +28,7 @@ export function getPreSignedUrl(
   const subdomain = true;
   const bucket = normalizedInput.bucket || this.opts.bucket;
   if (!bucket) {
-    throw Error('Must provide bucket param');
+    throw new TosClientError('Must provide bucket param');
   }
 
   const [newHost, newPath, signingPath] = (() => {

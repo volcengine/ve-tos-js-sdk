@@ -358,6 +358,25 @@ describe('uploadFile in node.js environment', () => {
     NEVER_TIMEOUT
   );
 
+  it(
+    'fileSize is 0',
+    async () => {
+      const client = new TOS(tosOptions);
+      const progressFn = jest.fn();
+
+      await client.uploadFile({
+        key: 'test-fileSize-0',
+        file: Buffer.from([]),
+        progress: progressFn,
+      });
+
+      expect(progressFn.mock.calls.length).toBe(2);
+      expect(progressFn.mock.calls[0][0]).toBe(0);
+      expect(progressFn.mock.calls[1][0]).toBe(1);
+    },
+    NEVER_TIMEOUT
+  );
+
   it('modify file after pause', async () => {}, NEVER_TIMEOUT);
 
   it(

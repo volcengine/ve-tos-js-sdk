@@ -1,6 +1,7 @@
 import TOSBase from '../base';
 import { Headers, Acl, StorageClass } from '../../interface';
 import { makeArrayProp } from '../../utils';
+import TosClientError from '../../TosClientError';
 
 export interface Bucket {
   // '2021-07-20T09:22:05.000Z'
@@ -40,6 +41,26 @@ export async function listBuckets(this: TOSBase) {
 }
 
 export async function createBucket(this: TOSBase, input: PutBucketInput) {
+  const actualBucket = input.bucket || this.opts.bucket;
+  // these errors are only for creating bucket
+  if (actualBucket) {
+    if (actualBucket.length < 3 || actualBucket.length > 63) {
+      throw new TosClientError(
+        'invalid bucket name, the length must be [3, 63]'
+      );
+    }
+    if (!/^([a-z]|-|\d)+$/.test(actualBucket)) {
+      throw new TosClientError(
+        'invalid bucket name, the character set is illegal'
+      );
+    }
+    if (/^-/.test(actualBucket) || /-$/.test(actualBucket)) {
+      throw new TosClientError(
+        `invalid bucket name, the bucket name can be neither starting with '-' nor ending with '-'`
+      );
+    }
+  }
+
   const headers: Headers = input.headers || {};
 
   if (input.acl) {

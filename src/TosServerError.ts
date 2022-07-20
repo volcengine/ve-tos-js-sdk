@@ -1,4 +1,63 @@
-export enum TOSServerCode {
+import { AxiosResponse } from 'axios';
+import { Headers } from './interface';
+
+export interface TosServerErrorData {
+  Code: string;
+  HostId: string;
+  Message: string;
+  RequestId: string;
+}
+
+export class TosServerError extends Error {
+  /**
+   * is original from backend, equals `data.Code`
+   */
+  public code: string;
+
+  /**
+   * the body when backend errors
+   */
+  public data: TosServerErrorData;
+  /**
+   * status code
+   */
+  public statusCode: number;
+  /**
+   * response headers
+   */
+  public headers: Headers;
+
+  /**
+   * identifies the errored request, equals to headers['x-tos-request-id'].
+   * If you has any question about the request, please send the requestId and id2 to TOS worker.
+   */
+  public requestId: string;
+
+  /**
+   * identifies the errored request, equals to headers['x-tos-id-2'].
+   * If you has any question about the request, please send the requestId and id2 to TOS worker.
+   */
+  public id2: string;
+
+  constructor(response: AxiosResponse<TosServerErrorData>) {
+    const { data } = response;
+    super(data.Message);
+
+    // https://www.dannyguo.com/blog/how-to-fix-instanceof-not-working-for-custom-errors-in-typescript/
+    Object.setPrototypeOf(this, TosServerError.prototype);
+
+    this.data = data;
+    this.code = data.Code;
+    this.statusCode = response.status;
+    this.headers = response.headers;
+    this.requestId = response.headers['x-tos-request-id'];
+    this.id2 = response.headers['x-tos-id-2'];
+  }
+}
+
+export default TosServerError;
+
+export enum TosServerCode {
   NoSuchBucket = 'NoSuchBucket',
   NoSuchKey = 'NoSuchKey',
   AccessDenied = 'AccessDenied',

@@ -2,10 +2,11 @@ import { hashMd5 } from '../universal/crypto';
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import { ISigV4Credentials, SignersV4 } from '../signatureV4';
 import { Headers } from '../interface';
-import ResponseError, { ResponseErrorData } from '../responseError';
+import TosServerError, { TosServerErrorData } from '../TosServerError';
 import { getEndpoint, getSortedQueryString, normalizeProxy } from '../utils';
 import version from '../version';
 import { TosAgent } from '../nodejs/TosAgent';
+import TosClientError from '../TosClientError';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -101,9 +102,15 @@ export interface TosResponse<T> {
   headers: Headers;
   /**
    * identifies the errored request, equals to headers['x-tos-request-id'].
-   * If you has any question about the request, please send the requestId to TOS worker.
+   * If you has any question about the request, please send the requestId and id2 to TOS worker.
    */
   requestId: string;
+
+  /**
+   * identifies the errored request, equals to headers['x-tos-id-2'].
+   * If you has any question about the request, please send the requestId and id2 to TOS worker.
+   */
+  id2: string;
 }
 
 export class TOSBase {
@@ -132,12 +139,12 @@ export class TOSBase {
       .join(', ');
 
     if (mustKeysErrorStr) {
-      throw new Error(`lack params: ${mustKeysErrorStr}.`);
+      throw new TosClientError(`lack params: ${mustKeysErrorStr}.`);
     }
 
     const endpoint = _opts.endpoint || getEndpoint(_opts.region);
     if (!endpoint) {
-      throw new Error(
+      throw new TosClientError(
         `the value of param region is invalid, correct values are cn-beijing, cn-nantong etc.`
       );
     }
@@ -270,15 +277,18 @@ export class TOSBase {
         statusCode: res.status,
         headers: res.headers,
         requestId: res.headers['x-tos-request-id'],
+        id2: res.headers['x-tos-id-2'],
       };
     } catch (err) {
       // console.log('err response: ', (err as any).response.data);
-      if (axios.isAxiosError(err) && err.response) {
-        const response: AxiosResponse<ResponseErrorData> = err.response;
-        const err2 = new ResponseError(response);
+      if (axios.isAxiosError(err) && err.response?.data?.RequestId) {
+        // it's ServerError only if `RequestId` exists
+        const response: AxiosResponse<TosServerErrorData> = err.response;
+        const err2 = new TosServerError(response);
         throw err2;
       }
 
+      // it is neither ServerError nor ClientError, it's other error
       throw err;
     }
   }
@@ -293,7 +303,7 @@ export class TOSBase {
   ): Promise<TosResponse<Data>> {
     const actualBucket = bucket || this.opts.bucket;
     if (!actualBucket) {
-      throw Error('Must provide bucket param');
+      throw new TosClientError('Must provide bucket param');
     }
     return this.fetch(method, '/', query, headers, body, {
       ...opts,
@@ -313,7 +323,7 @@ export class TOSBase {
       (typeof input !== 'string' && input.bucket) || this.opts.bucket;
     const actualKey = typeof input === 'string' ? input : input.key;
     if (!actualBucket) {
-      throw Error('Must provide bucket param');
+      throw new TosClientError('Must provide bucket param');
     }
     return this.fetch(
       method,
@@ -368,22 +378,10 @@ export class TOSBase {
       (typeof opts !== 'string' && opts.bucket) || this.opts.bucket;
     const actualKey = typeof opts === 'string' ? opts : opts.key;
     if (!actualBucket) {
-      throw Error('Must provide bucket param');
+      throw new TosClientError('Must provide bucket param');
     }
     return `/${actualBucket}/${encodeURIComponent(actualKey)}`;
   };
-
-  protected getNormalDataFromError<T>(
-    data: T,
-    err: ResponseError
-  ): TosResponse<T> {
-    return {
-      data,
-      statusCode: err.statusCode,
-      headers: err.headers,
-      requestId: err.requestId,
-    };
-  }
 
   protected normalizeBucketInput<T extends { bucket: string }>(
     input: T | string

@@ -1,5 +1,5 @@
 import TOSBase from '../base';
-import { setContentTypeHeader } from './utils';
+import { setContentTypeHeader, validateObjectName } from './utils';
 import { normalizeHeaders } from '../../utils';
 import { Acl } from '../../interface';
 
@@ -33,6 +33,7 @@ export async function appendObject(
   this: TOSBase,
   input: AppendObjectInput | string
 ) {
+  validateObjectName(input);
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeaders(input.headers);
   setContentTypeHeader(input, headers);
