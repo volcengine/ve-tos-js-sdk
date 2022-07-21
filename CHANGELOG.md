@@ -1,5 +1,19 @@
 # tos-sdk
 
+## 2.0.0
+
+### Feature Changes
+
+- rename `ResponseError` to `TosServerError`
+- add `TosClientError`, many enum values
+- add constructor params: `enableVerifySSL`, `autoRecognizeContentType`, `requestTimeout`, `connectionTimeout`, `maxConnections`, `idleConnectionTime`
+
+### Patch Changes
+
+- fix `NaN` value when `uploadFile` with an empty file
+
+### Patch Changes
+
 ## 0.0.6
 
 ### Patch Changes
