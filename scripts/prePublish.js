@@ -1,5 +1,6 @@
 const execa = require('execa');
 const packageJson = require('../package.json');
+const { getBranch } = require('./utils');
 
 require('dotenv').config();
 
@@ -9,11 +10,7 @@ async function prePublish() {
     return;
   }
 
-  const { stdout: branch } = await execa('git', [
-    'rev-parse',
-    '--abbrev-ref',
-    'HEAD',
-  ]);
+  const branch = await getBranch();
 
   if (branch !== 'main' && packageJson.version.match(/^\d+\.\d+\.\d+$/)) {
     throw new Error(
