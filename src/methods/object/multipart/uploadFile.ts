@@ -8,7 +8,7 @@ import { isBlob, isBuffer } from '../utils';
 import { calculateSafePartSize } from './listParts';
 import { Stats } from 'fs';
 import { uploadPart, UploadPartOutput } from './uploadPart';
-import ResponseError from '../../../responseError';
+import TosServerError from '../../../TosServerError';
 import {
   completeMultipartUpload,
   CompleteMultipartUploadOutput,
@@ -16,6 +16,7 @@ import {
 import { CancelToken } from 'axios';
 import * as fs from '../../../nodejs/fs-promises';
 import path from 'path';
+import TosClientError from '../../../TosClientError';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -214,7 +215,7 @@ export async function uploadFile(
     if (isBlob(file)) {
       return file.size;
     }
-    throw Error(FILE_PARAM_CHECK_MSG);
+    throw new TosClientError(FILE_PARAM_CHECK_MSG);
   })();
 
   const checkpointRichInfo = await (async (): Promise<CheckpointRichInfo> => {
@@ -358,11 +359,22 @@ export async function uploadFile(
 
     input.uploadEventChange(event);
   };
+  let isTriggerProcessZero = false;
   const triggerProgressEvent = () => {
     if (!input.progress) {
       return;
     }
-    input.progress(consumedBytes / fileSize, getCheckpointContent());
+    const ret = (() => {
+      if (fileSize > 0) {
+        return consumedBytes / fileSize;
+      }
+      if (!isTriggerProcessZero) {
+        isTriggerProcessZero = true;
+        return 0;
+      }
+      return 1;
+    })();
+    input.progress(ret, getCheckpointContent());
   };
   const writeCheckpointFile = async () => {
     if (
@@ -427,7 +439,7 @@ export async function uploadFile(
       const err = uploadPartRes;
       let type: UploadEventType = UploadEventType.uploadPartFailed;
 
-      if (err instanceof ResponseError) {
+      if (err instanceof TosServerError) {
         if (ABORT_ERROR_STATUS_CODE.includes(err.statusCode)) {
           type = UploadEventType.uploadPartAborted;
         }
@@ -646,5 +658,5 @@ function getBody(file: UploadFileInput['file'], task: Task) {
   if (isBuffer(file)) {
     return file.slice(start, end);
   }
-  throw Error(FILE_PARAM_CHECK_MSG);
+  throw new TosClientError(FILE_PARAM_CHECK_MSG);
 }

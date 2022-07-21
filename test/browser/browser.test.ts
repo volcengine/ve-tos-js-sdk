@@ -2,13 +2,19 @@ import axios from 'axios';
 import TOS from '../../src/browser-index';
 import { UploadPartOutput } from '../../src/methods/object/multipart';
 import { Readable } from 'stream';
-import { deleteBucket, sleepCache, NEVER_TIMEOUT } from '../utils';
+import {
+  deleteBucket,
+  sleepCache,
+  NEVER_TIMEOUT,
+  testCheckErr,
+} from '../utils';
 import {
   testBucketName,
   isNeedDeleteBucket,
   tosOptions,
 } from '../utils/options';
 import FormData from 'form-data';
+import { ACLType } from '../../src/TosExportEnum';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
 
@@ -42,6 +48,46 @@ describe('TOS', () => {
     deleteBucket(client, testBucketName);
     done();
   }, NEVER_TIMEOUT);
+
+  it(
+    'check bucket name',
+    async () => {
+      const client = new TOS(tosOptions);
+      testCheckErr(() => client.createBucket({ bucket: 'a' }), 'length');
+      testCheckErr(
+        () => client.createBucket({ bucket: 'a'.repeat(64) }),
+        'length'
+      );
+      testCheckErr(() => client.createBucket({ bucket: 'ab@cd' }), 'character');
+      testCheckErr(() => client.createBucket({ bucket: 'ab!cd' }), 'character');
+      testCheckErr(() => client.createBucket({ bucket: '-abcd' }), '-');
+      testCheckErr(() => client.createBucket({ bucket: 'abcd-' }), '-');
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'check object name',
+    async () => {
+      const client = new TOS(tosOptions);
+      testCheckErr(() => client.putObject('/abcd'), '/');
+      testCheckErr(() => client.putObject('\\abcd'), '\\');
+      testCheckErr(() => client.putObject('\t'), 'name');
+      testCheckErr(() => client.putObject(''), 'length');
+      testCheckErr(() => client.putObject('a'.repeat(700)), 'length');
+
+      // ensure these methods execute the validating logic
+      testCheckErr(() => client.appendObject('/abcd'), '/');
+      testCheckErr(
+        () => client.uploadFile({ key: '/abcd', file: Buffer.from([]) }),
+        '/'
+      );
+      testCheckErr(() => client.createMultipartUpload({ key: '/abcd' }), '/');
+      testCheckErr(() => client.getPreSignedUrl('/abcd'), '/');
+      testCheckErr(() => client.calculatePostSignature('/abcd'), '/');
+    },
+    NEVER_TIMEOUT
+  );
 
   it(
     'list bucket',
@@ -104,7 +150,7 @@ describe('TOS', () => {
       await client.putObjectAcl({
         bucket: testBucketName,
         key: testObjectName,
-        acl: 'public-read-write',
+        acl: ACLType.ACLPublicReadWrite,
       });
 
       {
@@ -133,6 +179,39 @@ describe('TOS', () => {
       {
         const { data } = await client.listObjects();
         expect(data.Contents.length).toEqual(0);
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'object name includes dot',
+    async () => {
+      await runTest('./aa/bb/cc');
+      await runTest('.');
+
+      async function runTest(testObjectName: string) {
+        const client = new TOS(tosOptions);
+        await client.putObject({
+          bucket: testBucketName,
+          key: testObjectName,
+          body: new Readable({
+            read() {
+              this.push(Buffer.from([0, 0]));
+              this.push(null);
+            },
+          }),
+        });
+
+        {
+          const { data } = await client.listObjects({
+            prefix: testObjectName,
+          });
+          expect(data.Contents.length).toEqual(1);
+          expect(data.Contents[0].Size).toEqual(2);
+        }
+
+        await client.deleteObject(testObjectName);
       }
     },
     NEVER_TIMEOUT
@@ -205,7 +284,7 @@ describe('TOS', () => {
         } = await client.createMultipartUpload({
           key: testObjectName,
           headers: {
-            'x-tos-acl': 'private',
+            'x-tos-acl': ACLType.ACLPrivate,
           },
         });
 
@@ -236,7 +315,7 @@ describe('TOS', () => {
           })),
         });
 
-        expect(res.data.Location.includes(client.endpoint)).toBeTruthy();
+        expect(res.data.Location.includes(client.opts.endpoint)).toBeTruthy();
         expect(res.data.Location.includes(testObjectName)).toBeTruthy();
       }
 
@@ -403,7 +482,7 @@ describe('TOS', () => {
       });
 
       await axios.post(
-        `https://${client.opts.bucket!}.${client.endpoint}`,
+        `https://${client.opts.bucket!}.${client.opts.endpoint}`,
         formData,
         {
           headers: {

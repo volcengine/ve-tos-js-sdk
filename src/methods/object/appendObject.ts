@@ -1,5 +1,4 @@
 import TOSBase from '../base';
-import { setContentTypeHeader } from './utils';
 import { normalizeHeaders } from '../../utils';
 import { Acl } from '../../interface';
 
@@ -35,7 +34,7 @@ export async function appendObject(
 ) {
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeaders(input.headers);
-  setContentTypeHeader(input, headers);
+  this.setObjectContentTypeHeader(input, headers);
 
   await this.fetchObject<AppendObjectOutput>(
     input,

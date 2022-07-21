@@ -2,9 +2,17 @@ import { hashMd5 } from '../universal/crypto';
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import { ISigV4Credentials, SignersV4 } from '../signatureV4';
 import { Headers } from '../interface';
-import ResponseError, { ResponseErrorData } from '../responseError';
+import TosServerError, { TosServerErrorData } from '../TosServerError';
 import { getEndpoint, getSortedQueryString, normalizeProxy } from '../utils';
 import version from '../version';
+import { TosAgent } from '../nodejs/TosAgent';
+import TosClientError from '../TosClientError';
+import {
+  DEFAULT_CONTENT_TYPE,
+  getObjectInputKey,
+  lookupMimeType,
+  validateObjectName,
+} from './object/utils';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -13,7 +21,7 @@ export interface TOSConstructorOptions {
   bucket?: string;
   endpoint?: string;
   /**
-   * 默认为 true
+   * default value: true
    */
   secure?: boolean;
   region: string;
@@ -23,6 +31,49 @@ export interface TOSConstructorOptions {
         url: string;
         needProxyParams?: boolean;
       };
+
+  /**
+   * default value: true
+   */
+  enableVerifySSL?: boolean;
+
+  /**
+   * default value: true
+   */
+  autoRecognizeContentType?: boolean;
+
+  /**
+   * unit: ms
+   * default value: 60s
+   */
+  requestTimeout?: number;
+
+  /**
+   * unit: ms
+   * default value: 10s
+   */
+  connectionTimeout?: number;
+
+  /**
+   * default value: 1024
+   */
+  maxConnections?: number;
+
+  /**
+   * unit: ms
+   * default value: 60s
+   */
+  idleConnectionTime?: number;
+}
+
+interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
+  endpoint: string;
+  enableVerifySSL: boolean;
+  autoRecognizeContentType: boolean;
+  requestTimeout: number;
+  connectionTimeout: number;
+  maxConnections: number;
+  idleConnectionTime: number;
 }
 
 interface GetSignatureQueryInput {
@@ -49,43 +100,70 @@ export interface TosResponse<T> {
   headers: Headers;
   /**
    * identifies the errored request, equals to headers['x-tos-request-id'].
-   * If you has any question about the request, please send the requestId to TOS worker.
+   * If you has any question about the request, please send the requestId and id2 to TOS worker.
    */
   requestId: string;
+
+  /**
+   * identifies the errored request, equals to headers['x-tos-id-2'].
+   * If you has any question about the request, please send the requestId and id2 to TOS worker.
+   */
+  id2: string;
 }
 
 export class TOSBase {
-  opts: TOSConstructorOptions;
+  opts: NormalizedTOSConstructorOptions;
 
   userAgent: string;
 
-  readonly endpoint: string;
+  private httpAgent: unknown;
+  private httpsAgent: unknown;
 
   constructor(_opts: TOSConstructorOptions) {
-    const opts = { ..._opts };
+    this.opts = this.normalizeOpts(_opts);
+
+    if (process.env.TARGET_ENVIRONMENT === 'node') {
+      this.httpAgent = TosAgent({ tosOpts: { ...this.opts, isHttps: false } });
+      this.httpsAgent = TosAgent({ tosOpts: { ...this.opts, isHttps: true } });
+    }
+
+    this.userAgent = this.getUserAgent();
+  }
+
+  private normalizeOpts(_opts: TOSConstructorOptions) {
     const mustKeys = ['accessKeyId', 'accessKeySecret', 'region'];
     const mustKeysErrorStr = mustKeys
-      .filter(key => !(opts as any)[key])
+      .filter(key => !(_opts as any)[key])
       .join(', ');
 
     if (mustKeysErrorStr) {
-      throw new Error(`lack params: ${mustKeysErrorStr}.`);
+      throw new TosClientError(`lack params: ${mustKeysErrorStr}.`);
     }
 
-    opts.endpoint = opts.endpoint || getEndpoint(opts.region);
-    this.endpoint = opts.endpoint!;
-
-    if (!opts.endpoint) {
-      throw new Error(
+    const endpoint = _opts.endpoint || getEndpoint(_opts.region);
+    if (!endpoint) {
+      throw new TosClientError(
         `the value of param region is invalid, correct values are cn-beijing, cn-nantong etc.`
       );
     }
 
-    opts.secure = opts.secure == null ? true : !!opts.secure;
+    const secure = _opts.secure == null ? true : !!_opts.secure;
+    const _default = <T extends unknown>(
+      v: T | undefined | null,
+      defaultValue: T
+    ) => (v == null ? defaultValue : v);
 
-    this.opts = opts;
-
-    this.userAgent = this.getUserAgent();
+    return {
+      ..._opts,
+      endpoint,
+      secure,
+      enableVerifySSL: _default(_opts.enableVerifySSL, true),
+      autoRecognizeContentType: _default(_opts.autoRecognizeContentType, true),
+      requestTimeout: _default(_opts.requestTimeout, 60_000),
+      connectionTimeout: _default(_opts.connectionTimeout, 10_000),
+      maxConnections: _default(_opts.maxConnections, 1024),
+      idleConnectionTime: _default(_opts.idleConnectionTime, 60_000),
+    };
   }
 
   private getUserAgent() {
@@ -147,7 +225,7 @@ export class TOSBase {
     const signatureHeaders = sig.signatureHeader(signOpt);
     const reqHeaders = { ...headers };
 
-    const reqOpts = {
+    const reqOpts: AxiosRequestConfig = {
       method,
       baseURL: `http${this.opts.secure ? 's' : ''}://${endpoint}`,
       url: path,
@@ -172,7 +250,15 @@ export class TOSBase {
     if (process.env.TARGET_ENVIRONMENT === 'node') {
       reqHeaders['user-agent'] = this.userAgent;
     } else {
+      // the browser xhr doesn't set the host and user-agent
       delete reqHeaders['host'];
+    }
+
+    reqOpts.timeout = this.opts.requestTimeout;
+
+    if (process.env.TARGET_ENVIRONMENT === 'node') {
+      reqOpts.httpAgent = this.httpAgent;
+      reqOpts.httpsAgent = this.httpsAgent;
     }
 
     try {
@@ -188,15 +274,18 @@ export class TOSBase {
         statusCode: res.status,
         headers: res.headers,
         requestId: res.headers['x-tos-request-id'],
+        id2: res.headers['x-tos-id-2'],
       };
     } catch (err) {
       // console.log('err response: ', (err as any).response.data);
-      if (axios.isAxiosError(err) && err.response) {
-        const response: AxiosResponse<ResponseErrorData> = err.response;
-        const err2 = new ResponseError(response);
+      if (axios.isAxiosError(err) && err.response?.data?.RequestId) {
+        // it's ServerError only if `RequestId` exists
+        const response: AxiosResponse<TosServerErrorData> = err.response;
+        const err2 = new TosServerError(response);
         throw err2;
       }
 
+      // it is neither ServerError nor ClientError, it's other error
       throw err;
     }
   }
@@ -211,7 +300,7 @@ export class TOSBase {
   ): Promise<TosResponse<Data>> {
     const actualBucket = bucket || this.opts.bucket;
     if (!actualBucket) {
-      throw Error('Must provide bucket param');
+      throw new TosClientError('Must provide bucket param');
     }
     return this.fetch(method, '/', query, headers, body, {
       ...opts,
@@ -231,8 +320,10 @@ export class TOSBase {
       (typeof input !== 'string' && input.bucket) || this.opts.bucket;
     const actualKey = typeof input === 'string' ? input : input.key;
     if (!actualBucket) {
-      throw Error('Must provide bucket param');
+      throw new TosClientError('Must provide bucket param');
     }
+    validateObjectName(actualKey);
+
     return this.fetch(
       method,
       `/${encodeURIComponent(actualKey)}`,
@@ -286,22 +377,10 @@ export class TOSBase {
       (typeof opts !== 'string' && opts.bucket) || this.opts.bucket;
     const actualKey = typeof opts === 'string' ? opts : opts.key;
     if (!actualBucket) {
-      throw Error('Must provide bucket param');
+      throw new TosClientError('Must provide bucket param');
     }
     return `/${actualBucket}/${encodeURIComponent(actualKey)}`;
   };
-
-  protected getNormalDataFromError<T>(
-    data: T,
-    err: ResponseError
-  ): TosResponse<T> {
-    return {
-      data,
-      statusCode: err.statusCode,
-      headers: err.headers,
-      requestId: err.requestId,
-    };
-  }
 
   protected normalizeBucketInput<T extends { bucket: string }>(
     input: T | string
@@ -313,6 +392,26 @@ export class TOSBase {
   ): T {
     return (typeof input === 'string' ? { key: input } : input) as T;
   }
+
+  protected setObjectContentTypeHeader = (
+    input: string | { key: string },
+    headers: Headers
+  ): void => {
+    if (headers['content-type'] != null) {
+      return;
+    }
+
+    let mimeType = DEFAULT_CONTENT_TYPE;
+    const key = getObjectInputKey(input);
+
+    if (this.opts.autoRecognizeContentType) {
+      mimeType = lookupMimeType(key) || mimeType;
+    }
+
+    if (mimeType) {
+      headers['content-type'] = mimeType;
+    }
+  };
 }
 
 export default TOSBase;
