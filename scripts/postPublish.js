@@ -1,5 +1,6 @@
 const execa = require('execa');
 const packageJson = require('../package.json');
+const { getBranch } = require('./utils');
 
 async function postPublish() {
   if (process.env.SKIP_BUILD) {
