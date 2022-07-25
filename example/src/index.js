@@ -31,3 +31,29 @@ uploadObjectDom.addEventListener('click', async () => {
   //   body: file,
   // });
 });
+
+(function() {
+  const inputDom = document.querySelector('#put-getPresignedUrl-file-input');
+  const textDom = document.querySelector('#put-getPresignedUrl-url');
+  const uploadDom = document.querySelector(
+    '#put-getPresignedUrl-upload-object'
+  );
+  let url = null;
+  inputDom.addEventListener('change', () => {
+    const file = inputDom.files[0];
+    console.log('file: ', file);
+    const key = file.name;
+    url = client.getPreSignedUrl({
+      bucket: 'cg-beijing',
+      key,
+      method: 'PUT',
+    });
+    textDom.innerHTML = url;
+  });
+  uploadDom.addEventListener('click', async () => {
+    await axios.request({
+      method: 'PUT',
+      url,
+    });
+  });
+})();
