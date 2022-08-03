@@ -1,5 +1,11 @@
 # tos-sdk
 
+## 2.0.1
+
+### Patch Changes
+
+- fix error of chinese object name
+
 ## 2.0.0
 
 ### Feature Changes
