@@ -45,7 +45,7 @@
           file,
           partSize,
           cancelToken: cancelToken.token,
-          progress: (p, cpt, res) => {
+          progress: (p, cpt) => {
             // 为中断点赋值。
             abortCheckpoint = cpt;
             console.log(abortCheckpoint);
@@ -70,7 +70,7 @@
             partSize,
             checkpoint: abortCheckpoint,
             cancelToken: cancelToken.token,
-            progress: (p, cpt, res) => {
+            progress: (p, cpt) => {
               abortCheckpoint = cpt;
               // 获取上传进度。
               console.log(p * 100);

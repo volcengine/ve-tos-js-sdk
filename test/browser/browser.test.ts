@@ -70,6 +70,9 @@ describe('TOS', () => {
     'check object name',
     async () => {
       const client = new TOS(tosOptions);
+      // 测试中文名不报错
+      await client.putObject('控制台.png');
+      await client.deleteObject('控制台.png');
       testCheckErr(() => client.putObject('/abcd'), '/');
       testCheckErr(() => client.putObject('\\abcd'), '\\');
       testCheckErr(() => client.putObject('\t'), 'name');
