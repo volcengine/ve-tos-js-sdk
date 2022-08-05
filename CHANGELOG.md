@@ -1,5 +1,11 @@
 # tos-sdk
 
+## 2.0.2
+
+### Patch Changes
+
+- fix: this object doesn't exist after progress 100% while using uploadFile
+
 ## 2.0.1
 
 ### Patch Changes
