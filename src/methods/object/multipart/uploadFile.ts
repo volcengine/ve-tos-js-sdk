@@ -359,22 +359,34 @@ export async function uploadFile(
 
     input.uploadEventChange(event);
   };
-  let isTriggerProcessZero = false;
-  const triggerProgressEvent = () => {
+  enum TriggerProgressEventType {
+    createMultipartUploadSucceed = 1,
+    uploadPartSucceed = 2,
+    completeMultipartUploadSucceed = 3,
+  }
+  const triggerProgressEvent = (type: TriggerProgressEventType) => {
     if (!input.progress) {
       return;
     }
-    const ret = (() => {
-      if (fileSize > 0) {
-        return consumedBytes / fileSize;
-      }
-      if (!isTriggerProcessZero) {
-        isTriggerProcessZero = true;
-        return 0;
-      }
-      return 1;
-    })();
-    input.progress(ret, getCheckpointContent());
+    let ret = 0;
+    if (type === TriggerProgressEventType.createMultipartUploadSucceed) {
+      ret = 0;
+    } else if (
+      type === TriggerProgressEventType.completeMultipartUploadSucceed
+    ) {
+      ret = 1;
+    } else {
+      ret = !fileSize ? 1 : consumedBytes / fileSize;
+    }
+
+    if (
+      consumedBytes === fileSize &&
+      type === TriggerProgressEventType.uploadPartSucceed
+    ) {
+      // 100% 仅在 complete 后处理，以便 100% 可以拉取到新对象
+    } else {
+      input.progress(ret, getCheckpointContent());
+    }
   };
   const writeCheckpointFile = async () => {
     if (
@@ -460,7 +472,7 @@ export async function uploadFile(
       type: UploadEventType.uploadPartSucceed,
       uploadPartInfo,
     });
-    triggerProgressEvent();
+    triggerProgressEvent(TriggerProgressEventType.uploadPartSucceed);
   };
 
   if (checkpointRichInfo.record) {
@@ -498,7 +510,9 @@ export async function uploadFile(
       triggerUploadEvent({
         type: UploadEventType.createMultipartUploadSucceed,
       });
-      triggerProgressEvent();
+      triggerProgressEvent(
+        TriggerProgressEventType.createMultipartUploadSucceed
+      );
     } catch (_err) {
       const err = _err as Error;
       triggerUploadEvent({
@@ -600,6 +614,9 @@ export async function uploadFile(
     await triggerUploadEvent({
       type: UploadEventType.completeMultipartUploadSucceed,
     });
+    triggerProgressEvent(
+      TriggerProgressEventType.completeMultipartUploadSucceed
+    );
     await rmCheckpointFile();
 
     return res;
@@ -612,6 +629,9 @@ export function isCancelError(err: any) {
 
 export default uploadFile;
 
+/**
+ * 即使 totalSize 是 0，也需要一个 Part，否则 Server 端会报错 read request body failed
+ */
 function getAllTasks(totalSize: number, partSize: number) {
   const tasks: Task[] = [];
   for (let i = 0; ; ++i) {

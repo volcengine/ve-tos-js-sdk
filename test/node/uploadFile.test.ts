@@ -377,6 +377,41 @@ describe('uploadFile in node.js environment', () => {
     NEVER_TIMEOUT
   );
 
+  it(
+    'fetch this object after progress 100%',
+    async () => {
+      const key = `${objectKey100M}-fetch-after-100%`;
+      const client = new TOS(tosOptions);
+      let p2Resolve: any = null;
+      let p2Reject: any = null;
+      const p2 = new Promise((r1, r2) => {
+        p2Resolve = r1;
+        p2Reject = r2;
+      });
+
+      const p1 = client.uploadFile({
+        file: objectPath100M,
+        key,
+        progress: async p => {
+          try {
+            if (p === 1) {
+              const { data } = await client.headObject(key);
+              expect(
+                +data['content-length'] === 100 * 1024 * 1024
+              ).toBeTruthy();
+              p2Resolve();
+            }
+          } catch (err) {
+            p2Reject(err);
+          }
+        },
+      });
+
+      await Promise.all([p1, p2]);
+    },
+    NEVER_TIMEOUT
+  );
+
   it('modify file after pause', async () => {}, NEVER_TIMEOUT);
 
   it(
