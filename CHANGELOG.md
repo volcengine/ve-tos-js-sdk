@@ -1,5 +1,11 @@
 # tos-sdk
 
+## 2.0.3
+
+### Feature Changes
+
+- add getBucketAcl and putBucketAcl methods
+
 ## 2.0.2
 
 ### Patch Changes
