@@ -103,6 +103,30 @@ describe('TOS', () => {
     NEVER_TIMEOUT
   );
 
+  it(
+    'bucket acl',
+    async () => {
+      const client = new TOS(tosOptions);
+      {
+        const { data } = await client.getBucketAcl(testBucketName);
+        // private
+        expect(data.Grants[0].Grantee.Canned).toBeUndefined();
+      }
+
+      await client.putBucketAcl({
+        bucket: testBucketName,
+        acl: ACLType.ACLPublicReadWrite,
+      });
+
+      {
+        await sleepCache();
+        const { data } = await client.getBucketAcl(testBucketName);
+        expect(data.Grants[0].Grantee.Canned).toBe('AllUsers');
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
   // how to split multiple
   it(
     'upload/list/acl object',

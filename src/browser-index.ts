@@ -5,6 +5,7 @@ import {
   deleteBucket,
   headBucket,
 } from './methods/bucket/base';
+import { getBucketAcl, putBucketAcl } from './methods/bucket/acl';
 import axios from 'axios';
 import { TosServerError, TosServerCode } from './TosServerError';
 import { TosClientError } from './TosClientError';
@@ -69,6 +70,10 @@ class TOS extends TOSBase {
   headBucket = headBucket;
   deleteBucket = deleteBucket;
   listBuckets = listBuckets;
+
+  // bucket acl
+  getBucketAcl = getBucketAcl;
+  putBucketAcl = putBucketAcl;
 
   // object base
   copyObject = copyObject;
