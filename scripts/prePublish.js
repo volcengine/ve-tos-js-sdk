@@ -19,6 +19,7 @@ async function prePublish() {
   }
 
   await execa('yarn', ['build'], { stdio: 'inherit' });
+  await execa('git', ['add', '.']);
 
   if (process.env.LOCAL_NPM_REGISTRY) {
     console.log('publish to local npm registry');

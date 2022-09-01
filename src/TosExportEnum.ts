@@ -8,8 +8,10 @@ export enum ACLType {
 }
 
 export enum StorageClassType {
+  // storage-class will inherit from bucket if uploading object without `x-tos-storage-class` header
   StorageClassStandard = 'STANDARD',
   StorageClassIa = 'IA',
+  StorageClassArchiveFr = 'ARCHIVE_FR',
 }
 
 export enum MetadataDirectiveType {

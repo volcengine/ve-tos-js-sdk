@@ -1,5 +1,11 @@
 # tos-sdk
 
+## 2.0.4
+
+### Feature Changes
+
+- add `ARCHIVE_FR` storage class
+
 ## 2.0.3
 
 ### Feature Changes
