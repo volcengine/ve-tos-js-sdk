@@ -1,5 +1,13 @@
 # tos-sdk
 
+## 2.0.5
+
+### Feature Changes
+
+- add `putObjectFromFile` method
+- add `progress` and `dataTransferStatusChange` for `putObject` method
+- add `maxRetryCount` constructor option
+
 ## 2.0.4
 
 ### Feature Changes

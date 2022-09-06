@@ -40,13 +40,13 @@ describe('nodejs connection params', () => {
     await sleepCache();
     done();
   }, NEVER_TIMEOUT);
-  afterAll(async done => {
-    const client = new TOS(tosOptions);
-    console.log('delete bucket.....');
-    // delete bucket
-    deleteBucket(client, testBucketName);
-    done();
-  }, NEVER_TIMEOUT);
+  // afterAll(async done => {
+  //   const client = new TOS(tosOptions);
+  //   console.log('delete bucket.....');
+  //   // delete bucket
+  //   deleteBucket(client, testBucketName);
+  //   done();
+  // }, NEVER_TIMEOUT);
 
   it(
     'autoRecognizeContentType',

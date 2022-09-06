@@ -14,7 +14,7 @@ import {
   CancelError,
 } from './methods/object/multipart/uploadFile';
 import getObject from './methods/object/getObject';
-import putObject from './methods/object/putObject';
+import putObject, { putObjectFromFile } from './methods/object/putObject';
 import { listObjectVersions, listObjects } from './methods/object/listObjects';
 import getPreSignedUrl from './methods/object/getPreSignedUrl';
 import headObject from './methods/object/headObject';
@@ -86,6 +86,7 @@ class TOS extends TOSBase {
   listObjects = listObjects;
   listObjectVersions = listObjectVersions;
   putObject = putObject;
+  putObjectFromFile = putObjectFromFile;
   putObjectAcl = putObjectAcl;
   setObjectMeta = setObjectMeta;
 

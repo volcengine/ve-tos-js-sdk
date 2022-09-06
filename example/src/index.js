@@ -9,6 +9,8 @@ const client = new TOS({
     url: `${window.location.protocol}//${window.location.host}/api/proxy-tos/`,
     needProxyParams: true,
   },
+  maxRetryCount: 1,
+  requestTimeout: 1000,
 });
 
 const listBucketsDom = document.querySelector('#list-buckets');
@@ -54,6 +56,37 @@ uploadObjectDom.addEventListener('click', async () => {
     await axios.request({
       method: 'PUT',
       url,
+    });
+  });
+})();
+
+(function() {
+  const inputDom = document.querySelector('#upload-progress-input');
+  const textDom = document.querySelector('#upload-progress-text');
+  const putObjectBtn = document.querySelector('#upload-progress-by-putObject');
+
+  putObjectBtn.addEventListener('click', async () => {
+    textDom.innerHTML = '';
+    let content = '';
+    const addContent = line => {
+      content += line + '\n';
+      textDom.innerHTML = content;
+    };
+
+    const file = inputDom.files[0];
+    const key = file.name;
+    client.putObject({
+      bucket: 'cg-beijing',
+      key,
+      body: file,
+      dataTransferStatusChange: status => {
+        addContent(
+          `type: ${status.type}, rwOnceBytes: ${status.rwOnceBytes}, consumedBytes: ${status.consumedBytes}, totalBytes: ${status.totalBytes}`
+        );
+      },
+      progress: p => {
+        addContent(`progress: ${p}`);
+      },
     });
   });
 })();
