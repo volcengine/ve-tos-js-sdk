@@ -1,5 +1,10 @@
 import { hashMd5 } from '../universal/crypto';
-import axios, { AxiosRequestConfig, AxiosResponse, Method } from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  Method,
+} from 'axios';
 import { ISigV4Credentials, SignersV4 } from '../signatureV4';
 import { Headers } from '../interface';
 import TosServerError, { TosServerErrorData } from '../TosServerError';
@@ -13,6 +18,7 @@ import {
   lookupMimeType,
   validateObjectName,
 } from './object/utils';
+import { makeAxiosInst } from '../axios';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -64,6 +70,11 @@ export interface TOSConstructorOptions {
    * default value: 60s
    */
   idleConnectionTime?: number;
+
+  /**
+   * default value: 3
+   */
+  maxRetryCount?: number;
 }
 
 interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
@@ -74,6 +85,7 @@ interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
   connectionTimeout: number;
   maxConnections: number;
   idleConnectionTime: number;
+  maxRetryCount: number;
 }
 
 interface GetSignatureQueryInput {
@@ -114,6 +126,8 @@ export interface TosResponse<T> {
 export class TOSBase {
   opts: NormalizedTOSConstructorOptions;
 
+  axiosInst: AxiosInstance;
+
   userAgent: string;
 
   private httpAgent: unknown;
@@ -128,6 +142,7 @@ export class TOSBase {
     }
 
     this.userAgent = this.getUserAgent();
+    this.axiosInst = makeAxiosInst(this.opts.maxRetryCount);
   }
 
   private normalizeOpts(_opts: TOSConstructorOptions) {
@@ -163,6 +178,7 @@ export class TOSBase {
       connectionTimeout: _default(_opts.connectionTimeout, 10_000),
       maxConnections: _default(_opts.maxConnections, 1024),
       idleConnectionTime: _default(_opts.idleConnectionTime, 60_000),
+      maxRetryCount: _default(_opts.maxRetryCount, 3),
     };
   }
 
@@ -263,7 +279,7 @@ export class TOSBase {
 
     try {
       // console.log('axios: ', reqOpts.method, reqOpts.url, reqOpts.params);
-      const res = await axios({
+      const res = await this.axiosInst({
         ...{ maxBodyLength: Infinity, maxContentLength: Infinity },
         ...reqOpts,
         ...(opts?.axiosOpts || {}),

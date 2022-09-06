@@ -43,6 +43,7 @@
     "Chrome >= 70"
   ],
   "jest": {
+    "roots": ["./test"],
     "moduleNameMapper": {
       "^@/(.+)$": "<rootDir>/src/$1"
     },

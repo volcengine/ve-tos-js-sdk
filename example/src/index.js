@@ -9,6 +9,8 @@ const client = new TOS({
     url: `${window.location.protocol}//${window.location.host}/api/proxy-tos/`,
     needProxyParams: true,
   },
+  maxRetryCount: 1,
+  requestTimeout: 1000,
 });
 
 const listBucketsDom = document.querySelector('#list-buckets');

@@ -8,7 +8,7 @@ import { Stats } from 'fs';
 import { Readable } from 'stream';
 import { isBlob, isBuffer } from './utils';
 
-const fileSizeKey = Symbol('fileSizeKey');
+const fileSizeKey = '__fileSizeKey__';
 export interface PutObjectInput {
   bucket?: string;
   key: string;
@@ -71,7 +71,7 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
       return body.size;
     }
     const bodyAny = body as any;
-    if (bodyAny[fileSizeKey] != null) {
+    if (bodyAny?.[fileSizeKey] != null) {
       return bodyAny[fileSizeKey];
     }
     return -1;
@@ -122,7 +122,7 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
     if (isBlob(body) || isBuffer(body) || body instanceof Readable) {
       newBody = new EmitReadStream(body, totalSize, n =>
         triggerDataTransfer(DataTransferType.Rw, n)
-      );
+      ).stream();
     }
   }
 
@@ -164,11 +164,11 @@ export async function putObjectFromFile(
   }
 
   const fs = require('fs');
-  const stats: Stats = fsp.stat(input.filePath);
+  const stats: Stats = await fsp.stat(input.filePath);
   const stream = fs.createReadStream(input.filePath);
   stream[fileSizeKey] = stats.size;
 
-  return putObjectFromFile.call(this, { ...input, body: stream });
+  return putObject.call(this, { ...input, body: stream });
 }
 
 export default putObject;
