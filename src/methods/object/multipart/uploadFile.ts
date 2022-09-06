@@ -17,6 +17,7 @@ import { CancelToken } from 'axios';
 import * as fs from '../../../nodejs/fs-promises';
 import path from 'path';
 import TosClientError from '../../../TosClientError';
+import { DataTransferStatus } from '../../../interface';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -45,11 +46,7 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
    */
   checkpoint?: string | CheckpointRecord;
 
-  /**
-   * the feature fo progress
-   * not support
-   */
-  // dataTransferStatusChange?: (status: DataTransferStatus) => void;
+  dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
   /**
    * the feature of pause and continue uploading
@@ -69,29 +66,6 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
 }
 
 export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
-
-export interface DataTransferStatus {
-  /**
-   * has read or wrote bytes
-   */
-  consumedBytes: number;
-
-  totalBytes: number;
-
-  /**
-   * transferred bytes in this transfer
-   */
-  rwOnceBytes: number;
-
-  type: DataTransferType;
-}
-
-export enum DataTransferType {
-  Started = 1, // data transfer start
-  Rw = 2, // one transfer
-  Succeed = 3, // data transfer succeed
-  Failed = 4, // data transfer failed
-}
 
 export enum UploadEventType {
   createMultipartUploadSucceed = 1,
@@ -667,7 +641,6 @@ function getBody(file: UploadFileInput['file'], task: Task) {
   if (process.env.TARGET_ENVIRONMENT === 'node' && typeof file === 'string') {
     const fs = require('fs');
     return fs.createReadStream(file, {
-      encoding: 'binary',
       start,
       end: end - 1,
     }) as NodeJS.ReadableStream;
