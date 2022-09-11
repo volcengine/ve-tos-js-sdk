@@ -1,5 +1,13 @@
 # tos-sdk
 
+## 2.1.0
+
+### Feature Changes
+
+- encode/decode http headers
+- add `getObjectToFile` method
+- add `uploadPartFromFile` method
+
 ## 2.0.5
 
 ### Feature Changes
