@@ -4,7 +4,7 @@ import { Acl, DataTransferStatus, DataTransferType } from '../../interface';
 import TosClientError from '../../TosClientError';
 import * as fsp from '../../nodejs/fs-promises';
 import { EmitReadStream } from '../../nodejs/EmitReadStream';
-import { Stats } from 'fs';
+import fs, { Stats } from 'fs';
 import { Readable } from 'stream';
 import { isBlob, isBuffer } from './utils';
 
@@ -163,10 +163,9 @@ export async function putObjectFromFile(
     );
   }
 
-  const fs = require('fs');
   const stats: Stats = await fsp.stat(input.filePath);
   const stream = fs.createReadStream(input.filePath);
-  stream[fileSizeKey] = stats.size;
+  (stream as any)[fileSizeKey] = stats.size;
 
   return putObject.call(this, { ...input, body: stream });
 }

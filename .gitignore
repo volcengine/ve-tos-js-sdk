@@ -12,8 +12,7 @@ node_modules
 .env
 .vscode
 
-auto-generated-objects
-auto-generated-checkpoints
+test/node/tmp
 
 # avoid company's domains
 example/yarn.lock

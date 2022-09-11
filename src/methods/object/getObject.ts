@@ -1,6 +1,8 @@
+import fs from 'fs';
+import TosClientError from '../../TosClientError';
 import { Headers } from '../../interface';
 import { normalizeHeaders } from '../../utils';
-import TOSBase from '../base';
+import TOSBase, { TosResponse } from '../base';
 
 export interface GetObjectInput {
   bucket?: string;
@@ -42,9 +44,48 @@ export async function getObject(this: TOSBase, input: GetObjectInput | string) {
     }
   });
 
+  // TODO: test `stream` in browser environment
+  // maybe add `dataType` options. Developer must pass dataType to `arraybuffer` in environment.
+  const responseType =
+    process.env.TARGET_ENVIRONMENT === 'node' ? 'stream' : 'arraybuffer';
+
   // TODO: maybe need to return response's headers
-  return this.fetchObject<Buffer>(input, 'GET', query, headers, undefined, {
-    axiosOpts: { responseType: 'arraybuffer' },
+  return this.fetchObject<NodeJS.ReadableStream | Buffer>(
+    input,
+    'GET',
+    query,
+    headers,
+    undefined,
+    {
+      axiosOpts: { responseType },
+    }
+  );
+}
+
+interface GetObjectToFileInput extends GetObjectInput {
+  filePath: string;
+}
+
+export async function getObjectToFile(
+  this: TOSBase,
+  input: GetObjectToFileInput
+): Promise<TosResponse<undefined>> {
+  if (process.env.TARGET_ENVIRONMENT !== 'node') {
+    throw new TosClientError(
+      "getObjectToFile doesn't support in browser environment"
+    );
+  }
+
+  return new Promise(async (resolve, reject) => {
+    const getObjectRes = await getObject.call(this, input);
+    const stream = getObjectRes.data as NodeJS.ReadableStream;
+
+    const fsWriteStream = fs.createWriteStream(input.filePath);
+    stream.pipe(fsWriteStream);
+    fsWriteStream.on('error', err => reject(err));
+    fsWriteStream.on('finish', () =>
+      resolve({ ...getObjectRes, data: undefined })
+    );
   });
 }
 

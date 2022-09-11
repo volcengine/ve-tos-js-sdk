@@ -60,3 +60,20 @@ export async function testCheckErr(
     }
   }
 }
+
+export const streamToBuf = async (
+  stream: NodeJS.ReadableStream
+): Promise<Buffer> => {
+  let buf = Buffer.from([]);
+  return new Promise((resolve, reject) => {
+    stream.on('data', data => {
+      buf = Buffer.concat([buf, data]);
+    });
+    stream.on('end', () => {
+      resolve(buf);
+    });
+    stream.on('error', err => {
+      reject(err);
+    });
+  });
+};
