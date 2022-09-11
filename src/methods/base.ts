@@ -205,9 +205,17 @@ export class TOSBase {
       headers['Content-MD5'] = md5String;
     }
 
-    const endpoint = opts?.subdomainBucket
-      ? `${opts?.subdomainBucket}.${this.opts.endpoint}`
-      : this.opts.endpoint;
+    const [endpoint, newPath] = (() => {
+      if (opts?.subdomainBucket) {
+        // endpoint is ip address
+        if (/^(\d|:)/.test(this.opts.endpoint)) {
+          return [this.opts.endpoint, `/${opts.subdomainBucket}${path}`];
+        }
+        return [`${opts?.subdomainBucket}.${this.opts.endpoint}`, path];
+      }
+      return [this.opts.endpoint, path];
+    })();
+    path = newPath;
 
     const signOpt = {
       // TODO: delete endpoints and buckets

@@ -1,5 +1,8 @@
 import { isBlob, isBuffer } from '../utils';
 import TOSBase from '../../base';
+import TosClientError from '../../../TosClientError';
+import fs, { Stats } from 'fs';
+import * as fsp from '../../../nodejs/fs-promises';
 
 export interface UploadPartInput {
   body: Blob | Buffer | ReadableStream | NodeJS.ReadableStream;
@@ -52,4 +55,44 @@ export async function uploadPart(this: TOSBase, input: UploadPartInput) {
       handleResponse: res => ({ ETag: res.headers.etag }),
     }
   );
+}
+
+interface UploadPartFromFileInput extends Omit<UploadPartInput, 'body'> {
+  filePath: string;
+  /**
+   * default: 0
+   */
+  offset?: number;
+
+  /**
+   * default: file size
+   */
+  partSize?: number;
+}
+export async function uploadPartFromFile(
+  this: TOSBase,
+  input: UploadPartFromFileInput
+) {
+  if (process.env.TARGET_ENVIRONMENT !== 'node') {
+    throw new TosClientError(
+      "uploadPartFromFile doesn't support in browser environment"
+    );
+  }
+
+  const stats: Stats = await fsp.stat(input.filePath);
+  const start = input.offset ?? 0;
+  const end = start + (input.partSize ?? stats.size);
+  const stream = fs.createReadStream(input.filePath, {
+    start,
+    end: end - 1,
+  }) as NodeJS.ReadableStream;
+
+  return uploadPart.call(this, {
+    ...input,
+    body: stream,
+    headers: {
+      ...(input.headers || {}),
+      ['Content-Length']: `${end - start}`,
+    },
+  });
 }

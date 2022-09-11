@@ -13,7 +13,7 @@ import {
   isCancelError as isCancel,
   CancelError,
 } from './methods/object/multipart/uploadFile';
-import getObject from './methods/object/getObject';
+import getObject, { getObjectToFile } from './methods/object/getObject';
 import putObject, { putObjectFromFile } from './methods/object/putObject';
 import { listObjectVersions, listObjects } from './methods/object/listObjects';
 import getPreSignedUrl from './methods/object/getPreSignedUrl';
@@ -29,6 +29,7 @@ import {
   listParts,
   uploadPart,
   listMultipartUploads,
+  uploadPartFromFile,
 } from './methods/object/multipart';
 import appendObject from './methods/object/appendObject';
 import setObjectMeta from './methods/object/setObjectMeta';
@@ -80,6 +81,7 @@ class TOS extends TOSBase {
   deleteObject = deleteObject;
   deleteMultiObjects = deleteMultiObjects;
   getObject = getObject;
+  getObjectToFile = getObjectToFile;
   getObjectAcl = getObjectAcl;
   headObject = headObject;
   appendObject = appendObject;
@@ -93,6 +95,7 @@ class TOS extends TOSBase {
   // object multipart
   createMultipartUpload = createMultipartUpload;
   uploadPart = uploadPart;
+  uploadPartFromFile = uploadPartFromFile;
   completeMultipartUpload = completeMultipartUpload;
   abortMultipartUpload = abortMultipartUpload;
   uploadPartCopy = uploadPartCopy;

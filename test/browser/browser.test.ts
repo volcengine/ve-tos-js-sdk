@@ -368,7 +368,7 @@ describe('TOS', () => {
       }
 
       {
-        const { data, headers } = await client.getObject({
+        const { headers } = await client.getObject({
           key: testObjectName,
           headers: {
             Range: 'bytes=0-9',
@@ -377,7 +377,7 @@ describe('TOS', () => {
             'content-type': 'application/octet-stream',
           },
         });
-        expect(data.length).toBe(10);
+        expect(+headers['content-length']!).toBe(10);
         expect(headers['content-type']).toBe('application/octet-stream');
       }
     },
@@ -519,7 +519,7 @@ describe('TOS', () => {
       );
 
       const { data } = await client.getObject(key);
-      expect(data.toString()).toEqual(content);
+      expect((data as Buffer).toString()).toEqual(content);
     },
     NEVER_TIMEOUT
   );

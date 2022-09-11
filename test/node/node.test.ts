@@ -12,7 +12,13 @@ import {
 } from '../utils/options';
 import https from 'https';
 import fs from 'fs';
-import { Agent, OutgoingMessage, Server } from 'http';
+import http, {
+  IncomingMessage,
+  ServerResponse,
+  Agent,
+  OutgoingMessage,
+  Server,
+} from 'http';
 import { AddressInfo } from 'net';
 import path from 'path';
 import { Readable } from 'stream';
@@ -182,12 +188,58 @@ describe('nodejs connection params', () => {
         promises.push(client.listBuckets());
       }
       const agent: Agent = (client as any).httpsAgent;
-      expect(Object.values(agent.sockets).flat().length).toEqual(taskNum);
       await Promise.all(promises);
       expect(Object.values(agent.freeSockets).flat().length).toEqual(taskNum);
 
       await new Promise(r => setTimeout(r, idleConnectionTime + 500));
       expect(Object.values(agent.freeSockets).flat().length).toEqual(0);
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'ensure http header encode/decode',
+    async () => {
+      const headerKey = 'x-test-header-key';
+      const requestReceiveHeader = 'abc%09中文&';
+      const sendHeader = 'abc%09中%E6%96%87&';
+      const receiveHeader = 'abc%09%E4%B8%AD%E6%96%87&';
+      const server = await startServer();
+      const address = server.address() as AddressInfo;
+      const endpoint = `${address.address}:${address.port}`;
+      const client = new TOS({
+        ...tosOptions,
+        endpoint,
+        secure: false,
+      });
+
+      const { headers } = await client.getObject({
+        key: 'aa',
+        headers: {
+          [headerKey]: sendHeader,
+        },
+      });
+      expect(headers[headerKey]).toBe(requestReceiveHeader);
+
+      server.close();
+
+      function startServer(): Promise<Server> {
+        return new Promise(res => {
+          http
+            .createServer((req: IncomingMessage, res: ServerResponse) => {
+              if (req.headers[headerKey] === receiveHeader) {
+                res.setHeader(headerKey, receiveHeader);
+                res.end();
+                return;
+              }
+              res.statusCode = 400;
+            })
+
+            .listen(function(this: Server) {
+              res(this);
+            });
+        });
+      }
     },
     NEVER_TIMEOUT
   );

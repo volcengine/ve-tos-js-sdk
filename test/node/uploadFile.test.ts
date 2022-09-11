@@ -1,6 +1,6 @@
 import axios from 'axios';
 import TOS, { isCancel } from '../../src/browser-index';
-import { deleteBucket, sleepCache, NEVER_TIMEOUT } from '../utils';
+import { deleteBucket, sleepCache, NEVER_TIMEOUT, streamToBuf } from '../utils';
 import {
   testBucketName,
   isNeedDeleteBucket,
@@ -61,7 +61,9 @@ describe('uploadFile in node.js environment', () => {
       const client = new TOS(tosOptions);
       await client.uploadFile({ file: objectPath1K, key });
       const { data } = await client.getObject(key);
-      expect(data.length === 1024).toBeTruthy();
+      expect(
+        (await streamToBuf(data as NodeJS.ReadableStream)).length === 1024
+      ).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -108,7 +110,9 @@ describe('uploadFile in node.js environment', () => {
       expect(progressFn.mock.calls[1][0]).toBe(1);
 
       const { data } = await client.getObject(key);
-      expect(data.length === 1024).toBeTruthy();
+      expect(
+        (await streamToBuf(data as NodeJS.ReadableStream)).length === 1024
+      ).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
