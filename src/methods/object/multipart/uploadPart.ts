@@ -5,7 +5,7 @@ import fs, { Stats } from 'fs';
 import * as fsp from '../../../nodejs/fs-promises';
 
 export interface UploadPartInput {
-  body: Blob | Buffer | ReadableStream | NodeJS.ReadableStream;
+  body: Blob | Buffer | NodeJS.ReadableStream;
   bucket?: string;
   key: string;
   partNumber: number;

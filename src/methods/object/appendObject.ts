@@ -7,7 +7,7 @@ export interface AppendObjectInput {
   key: string;
   offset: number;
   // body is empty buffer if it's falsy
-  body?: File | Blob | Buffer | ReadableStream | NodeJS.ReadableStream;
+  body?: File | Blob | Buffer | NodeJS.ReadableStream;
 
   headers?: {
     [key: string]: string | undefined;

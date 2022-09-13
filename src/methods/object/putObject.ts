@@ -8,14 +8,13 @@ import fs, { Stats } from 'fs';
 import { Readable } from 'stream';
 import { isBlob, isBuffer } from './utils';
 
-const fileSizeKey = '__fileSizeKey__';
 export interface PutObjectInput {
   bucket?: string;
   key: string;
   /**
    * body is empty buffer if it's falsy.
    */
-  body?: File | Blob | Buffer | ReadableStream | NodeJS.ReadableStream;
+  body?: File | Blob | Buffer | NodeJS.ReadableStream;
 
   dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
@@ -31,10 +30,11 @@ export interface PutObjectInput {
 
   headers?: {
     [key: string]: string | undefined;
+    'content-length'?: string;
     'content-type'?: string;
-    'Content-MD5'?: string;
-    'Cache-Control'?: string;
-    Expires?: string;
+    'content-md5'?: string;
+    'cache-control'?: string;
+    expires?: string;
     'x-tos-acl'?: Acl;
     'x-tos-grant-full-control'?: string;
     'x-tos-grant-read'?: string;
@@ -70,9 +70,9 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
     if (isBlob(body)) {
       return body.size;
     }
-    const bodyAny = body as any;
-    if (bodyAny?.[fileSizeKey] != null) {
-      return bodyAny[fileSizeKey];
+    if (headers['content-length']) {
+      const v = +headers['content-length'];
+      return v >= 0 ? v : -1;
     }
     return -1;
   })();
@@ -157,17 +157,24 @@ export async function putObjectFromFile(
   this: TOSBase,
   input: PutObjectFromFileInput
 ): Promise<void> {
+  const normalizedHeaders = normalizeHeaders(input.headers);
   if (process.env.TARGET_ENVIRONMENT !== 'node') {
     throw new TosClientError(
       "putObjectFromFile doesn't support in browser environment"
     );
   }
 
-  const stats: Stats = await fsp.stat(input.filePath);
   const stream = fs.createReadStream(input.filePath);
-  (stream as any)[fileSizeKey] = stats.size;
+  if (!normalizedHeaders['content-length']) {
+    const stats: Stats = await fsp.stat(input.filePath);
+    normalizedHeaders['content-length'] = `${stats.size}`;
+  }
 
-  return putObject.call(this, { ...input, body: stream });
+  return putObject.call(this, {
+    ...input,
+    body: stream,
+    headers: normalizedHeaders,
+  });
 }
 
 export default putObject;
