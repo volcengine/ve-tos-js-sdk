@@ -1,5 +1,6 @@
 const execa = require('execa');
 const packageJson = require('../package.json');
+const { updateChangelog } = require('./updateChangelog');
 const { getBranch } = require('./utils');
 
 require('dotenv').config();
@@ -19,6 +20,7 @@ async function prePublish() {
   }
 
   await execa('yarn', ['build'], { stdio: 'inherit' });
+  await updateChangelog();
   await execa('git', ['add', '.']);
 
   if (process.env.LOCAL_NPM_REGISTRY) {
