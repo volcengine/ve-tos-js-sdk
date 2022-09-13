@@ -1,5 +1,11 @@
 # tos-sdk
 
+## 2.1.1
+
+### Feature Changes
+
+- add `getObjectV2` method, default return stream
+
 ## 2.1.0
 
 ### Feature Changes
