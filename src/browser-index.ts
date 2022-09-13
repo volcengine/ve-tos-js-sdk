@@ -13,7 +13,11 @@ import {
   isCancelError as isCancel,
   CancelError,
 } from './methods/object/multipart/uploadFile';
-import getObject, { getObjectToFile } from './methods/object/getObject';
+import {
+  getObject,
+  getObjectV2,
+  getObjectToFile,
+} from './methods/object/getObject';
 import putObject, { putObjectFromFile } from './methods/object/putObject';
 import { listObjectVersions, listObjects } from './methods/object/listObjects';
 import getPreSignedUrl from './methods/object/getPreSignedUrl';
@@ -81,6 +85,7 @@ class TOS extends TOSBase {
   deleteObject = deleteObject;
   deleteMultiObjects = deleteMultiObjects;
   getObject = getObject;
+  getObjectV2 = getObjectV2;
   getObjectToFile = getObjectToFile;
   getObjectAcl = getObjectAcl;
   headObject = headObject;

@@ -7,6 +7,7 @@ import {
   sleepCache,
   NEVER_TIMEOUT,
   testCheckErr,
+  streamToBuf,
 } from '../utils';
 import {
   testBucketName,
@@ -368,7 +369,7 @@ describe('TOS', () => {
       }
 
       {
-        const { headers } = await client.getObject({
+        const { headers } = await client.getObjectV2({
           key: testObjectName,
           headers: {
             Range: 'bytes=0-9',
@@ -518,8 +519,11 @@ describe('TOS', () => {
         }
       );
 
-      const { data } = await client.getObject(key);
-      expect((data as Buffer).toString()).toEqual(content);
+      const { data } = await client.getObjectV2(key);
+      expect(data.etag).not.toEqual('');
+      expect(data.lastModified).not.toEqual('');
+      expect(data.hashCrc64ecma).not.toEqual('');
+      expect((await streamToBuf(data.content)).toString()).toEqual(content);
     },
     NEVER_TIMEOUT
   );

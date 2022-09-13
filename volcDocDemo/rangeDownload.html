@@ -30,21 +30,19 @@
       // 监听按钮。
       download.addEventListener('click', () => {
         client
-          .getObject({
+          .getObjectV2({
             key: 'exampleobject.txt',
+            dataType: 'blob',
             headers: {
               Range: `bytes=${start}-${end}`,
             },
           })
           .then(r => {
-            // 将返回的数据通过 Blob 的形式转为可下载的 Object。
-            const newBlob = new Blob([r.data], {
-              type: r.headers['content-type'],
-            });
+            const blob = r.data.content;
             // 创建标签。
             const link = document.createElement('a');
             // 将标签绑定 href 属性。
-            link.href = window.URL.createObjectURL(newBlob);
+            link.href = window.URL.createObjectURL(blob);
             // 指定下载后的本地文件名称。
             link.download = 'exampleobject.txt';
             // 下载Object。

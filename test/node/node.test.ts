@@ -213,7 +213,7 @@ describe('nodejs connection params', () => {
         secure: false,
       });
 
-      const { headers } = await client.getObject({
+      const { headers } = await client.getObjectV2({
         key: 'aa',
         headers: {
           [headerKey]: sendHeader,
