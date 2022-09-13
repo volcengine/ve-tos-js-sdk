@@ -369,6 +369,7 @@ describe('TOS', () => {
       {
         const { headers } = await client.getObjectV2({
           key: testObjectName,
+          dataType: 'blob',
           headers: {
             Range: 'bytes=0-9',
           },

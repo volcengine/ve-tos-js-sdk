@@ -2,6 +2,7 @@ const execa = require('execa');
 const fs = require('fs-extra');
 const path = require('path');
 const pkgJson = require('../package.json');
+const { checkBrowserDist } = require('./checkBrowserDist');
 
 const pwd = path.resolve(__dirname, '../');
 async function build() {
@@ -36,6 +37,7 @@ export default '${version}';
   await fs.rm(browserDirPath, { recursive: true, force: true });
   await fs.mkdir(browserDirPath, { recursive: true });
   await fs.copy(distDirPath, browserDirPath, { overwrite: true });
+  await checkBrowserDist();
 
   {
     console.log('exec:', 'yarn build:node');
@@ -64,7 +66,7 @@ async function main() {
   try {
     await build();
   } catch (err) {
-    // catching err for hidden err info
+    console.error(err);
     process.exit(1);
   }
 }
