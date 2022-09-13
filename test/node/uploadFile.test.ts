@@ -60,10 +60,8 @@ describe('uploadFile in node.js environment', () => {
       const key = `${objectKey1K}_without_checkpoint`;
       const client = new TOS(tosOptions);
       await client.uploadFile({ file: objectPath1K, key });
-      const { data } = await client.getObject(key);
-      expect(
-        (await streamToBuf(data as NodeJS.ReadableStream)).length === 1024
-      ).toBeTruthy();
+      const { data } = await client.getObjectV2(key);
+      expect((await streamToBuf(data.content)).length === 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -109,10 +107,8 @@ describe('uploadFile in node.js environment', () => {
       expect(progressFn.mock.calls[0][0]).toBe(0);
       expect(progressFn.mock.calls[1][0]).toBe(1);
 
-      const { data } = await client.getObject(key);
-      expect(
-        (await streamToBuf(data as NodeJS.ReadableStream)).length === 1024
-      ).toBeTruthy();
+      const { data } = await client.getObjectV2(key);
+      expect((await streamToBuf(data.content)).length === 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
