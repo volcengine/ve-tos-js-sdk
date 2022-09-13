@@ -54,7 +54,7 @@ export async function getObject(this: TOSBase, input: GetObjectInput | string) {
   });
 }
 
-type DataType = 'stream' | 'blob';
+type DataType = 'stream' | 'buffer' | 'blob';
 export interface GetObjectV2Input {
   bucket?: string;
   key: string;
@@ -64,8 +64,7 @@ export interface GetObjectV2Input {
    * The type of return value, 'stream' | 'blob'
    * default: 'stream'
    *
-   * nodejs environment can use 'stream'.
-   *   Because we think that it's unsafe to load all content to memory, we don't provide 'buffer' option.
+   * nodejs environment can use 'stream' and 'buffer'
    * browser environment can use 'blob'
    */
   dataType?: DataType;
@@ -91,7 +90,7 @@ export interface GetObjectV2Input {
   };
 }
 export interface GetObjectV2Output {
-  content: NodeJS.ReadableStream | Blob;
+  content: NodeJS.ReadableStream | Buffer | Blob;
   etag: string;
   lastModified: string;
 
@@ -102,6 +101,12 @@ export interface GetObjectV2Output {
 interface GetObjectV2OutputStream extends Omit<GetObjectV2Output, 'content'> {
   content: NodeJS.ReadableStream;
 }
+interface GetObjectV2InputBuffer extends Omit<GetObjectV2Input, 'dataType'> {
+  dataType: 'buffer';
+}
+interface GetObjectV2OutputBuffer extends Omit<GetObjectV2Output, 'content'> {
+  content: Buffer;
+}
 interface GetObjectV2InputBlob extends Omit<GetObjectV2Input, 'dataType'> {
   dataType: 'blob';
 }
@@ -109,7 +114,7 @@ interface GetObjectV2OutputBlob extends Omit<GetObjectV2Output, 'content'> {
   content: Blob;
 }
 
-const NODEJS_DATATYPE: DataType[] = ['stream'];
+const NODEJS_DATATYPE: DataType[] = ['stream', 'buffer'];
 const BROWSER_DATATYPE: DataType[] = ['blob'];
 
 function checkSupportDataType(dataType: DataType) {
@@ -132,12 +137,16 @@ function checkSupportDataType(dataType: DataType) {
 }
 
 /**
- * `getObjectV2` default returns stream, using `dataType` param to return other type(eg: blob)
+ * `getObjectV2` default returns stream, using `dataType` param to return other type(eg: buffer, blob)
  */
 async function getObjectV2(
   this: TOSBase,
   input: GetObjectV2InputBlob
 ): Promise<TosResponse<GetObjectV2OutputBlob>>;
+async function getObjectV2(
+  this: TOSBase,
+  input: GetObjectV2InputBuffer
+): Promise<TosResponse<GetObjectV2OutputBuffer>>;
 async function getObjectV2(
   this: TOSBase,
   input: GetObjectV2Input | string
@@ -184,7 +193,7 @@ async function getObjectV2(
   );
 
   let resHeaders = res.headers;
-  let newData: NodeJS.ReadableStream | Blob = res.data;
+  let newData: NodeJS.ReadableStream | Blob | Buffer = res.data;
   if (dataType === 'blob') {
     newData = new Blob([res.data], {
       type: resHeaders['content-type'],

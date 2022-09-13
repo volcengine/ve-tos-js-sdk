@@ -24,6 +24,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import axios from 'axios';
 import { DEFAULT_CONTENT_TYPE } from '../../src/methods/object/utils';
+import FormData from 'form-data';
 
 describe('nodejs connection params', () => {
   beforeAll(async done => {
@@ -240,6 +241,41 @@ describe('nodejs connection params', () => {
             });
         });
       }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'post object',
+    async () => {
+      const client = new TOS(tosOptions);
+
+      const key = 'post-object-key';
+      const content = 'abcd';
+      const form = await client.calculatePostSignature({ key });
+      const formData = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      formData.append('file', content, {
+        filename: 'test.abcd',
+      });
+
+      await axios.post(
+        `https://${client.opts.bucket!}.${client.opts.endpoint}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': `multipart/form-data; boundary=${formData.getBoundary()}`,
+          },
+        }
+      );
+
+      const { data } = await client.getObjectV2({ key, dataType: 'buffer' });
+      expect(data.etag).not.toEqual('');
+      expect(data.lastModified).not.toEqual('');
+      expect(data.hashCrc64ecma).not.toEqual('');
+      expect(data.content.toString()).toEqual(content);
     },
     NEVER_TIMEOUT
   );

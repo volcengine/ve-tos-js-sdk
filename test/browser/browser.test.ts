@@ -7,14 +7,12 @@ import {
   sleepCache,
   NEVER_TIMEOUT,
   testCheckErr,
-  streamToBuf,
 } from '../utils';
 import {
   testBucketName,
   isNeedDeleteBucket,
   tosOptions,
 } from '../utils/options';
-import FormData from 'form-data';
 import { ACLType } from '../../src/TosExportEnum';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
@@ -489,41 +487,6 @@ describe('TOS', () => {
 
       expect(res.data.Deleted.length).toBe(4);
       expect(res.data.Error.length).toBe(0);
-    },
-    NEVER_TIMEOUT
-  );
-
-  it(
-    'post object',
-    async () => {
-      const client = new TOS(tosOptions);
-
-      const key = 'post-object-key';
-      const content = 'abcd';
-      const form = await client.calculatePostSignature({ key });
-      const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-      formData.append('file', content, {
-        filename: 'test.abcd',
-      });
-
-      await axios.post(
-        `https://${client.opts.bucket!}.${client.opts.endpoint}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': `multipart/form-data; boundary=${formData.getBoundary()}`,
-          },
-        }
-      );
-
-      const { data } = await client.getObjectV2(key);
-      expect(data.etag).not.toEqual('');
-      expect(data.lastModified).not.toEqual('');
-      expect(data.hashCrc64ecma).not.toEqual('');
-      expect((await streamToBuf(data.content)).toString()).toEqual(content);
     },
     NEVER_TIMEOUT
   );
