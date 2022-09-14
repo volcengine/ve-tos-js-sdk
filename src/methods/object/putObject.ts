@@ -77,7 +77,8 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
     type: DataTransferType,
     rwOnceBytes: number = 0
   ) => {
-    if (!totalSizeValid) {
+    // request cancel will make rwOnceBytes < 0 in browser
+    if (!totalSizeValid || rwOnceBytes < 0) {
       return;
     }
     if (!dataTransferStatusChange && !progress) {

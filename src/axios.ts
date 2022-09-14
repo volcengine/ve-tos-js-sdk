@@ -22,8 +22,25 @@ function isCanRetryStatusCode(error: any) {
   return false;
 }
 
+const BROWSER_NEED_DELETE_HEADERS = ['content-length', 'user-agent', 'host'];
+
 export const makeAxiosInst = (maxRetryCount: number) => {
   const axiosInst = axios.create();
+  // delete browser headers
+  axiosInst.interceptors.request.use(config => {
+    if (!config.headers) {
+      return config;
+    }
+
+    Object.keys(config.headers).forEach(key => {
+      if (BROWSER_NEED_DELETE_HEADERS.includes(key.toLowerCase())) {
+        delete config.headers[key];
+      }
+    });
+
+    return config;
+  });
+
   // header encode/decode
   axiosInst.interceptors.request.use(config => {
     if (!config.headers) {
