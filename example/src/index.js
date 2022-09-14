@@ -9,8 +9,7 @@ const client = new TOS({
     url: `${window.location.protocol}//${window.location.host}/api/proxy-tos/`,
     needProxyParams: true,
   },
-  maxRetryCount: 1,
-  requestTimeout: 1000,
+  requestTimeout: 0,
   bucket: 'cg-beijing',
 });
 
@@ -64,6 +63,9 @@ uploadObjectDom.addEventListener('click', async () => {
   const inputDom = document.querySelector('#upload-progress-input');
   const textDom = document.querySelector('#upload-progress-text');
   const putObjectBtn = document.querySelector('#upload-progress-by-putObject');
+  const uploadFileBtn = document.querySelector(
+    '#upload-progress-by-uploadFile'
+  );
 
   putObjectBtn.addEventListener('click', async () => {
     textDom.innerHTML = '';
@@ -78,6 +80,30 @@ uploadObjectDom.addEventListener('click', async () => {
     client.putObject({
       key,
       body: file,
+      dataTransferStatusChange: status => {
+        addContent(
+          `type: ${status.type}, rwOnceBytes: ${status.rwOnceBytes}, consumedBytes: ${status.consumedBytes}, totalBytes: ${status.totalBytes}`
+        );
+      },
+      progress: p => {
+        addContent(`progress: ${p}`);
+      },
+    });
+  });
+
+  uploadFileBtn.addEventListener('click', async () => {
+    textDom.innerHTML = '';
+    let content = '';
+    const addContent = line => {
+      content += line + '\n';
+      textDom.innerHTML = content;
+    };
+
+    const file = inputDom.files[0];
+    const key = file.name;
+    client.uploadFile({
+      key,
+      file,
       dataTransferStatusChange: status => {
         addContent(
           `type: ${status.type}, rwOnceBytes: ${status.rwOnceBytes}, consumedBytes: ${status.consumedBytes}, totalBytes: ${status.totalBytes}`

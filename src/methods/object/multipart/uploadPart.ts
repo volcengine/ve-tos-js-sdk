@@ -61,7 +61,8 @@ export async function uploadPart(this: TOSBase, input: UploadPartInput) {
     type: DataTransferType,
     rwOnceBytes: number = 0
   ) => {
-    if (!totalSizeValid) {
+    // request cancel will make rwOnceBytes < 0 in browser
+    if (!totalSizeValid || rwOnceBytes < 0) {
       return;
     }
     if (!dataTransferStatusChange && !progress) {

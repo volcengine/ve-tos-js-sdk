@@ -51,12 +51,14 @@ export interface TOSConstructorOptions {
   /**
    * unit: ms
    * default value: 60s
+   * disable if value <= 0
    */
   requestTimeout?: number;
 
   /**
    * unit: ms
    * default value: 10s
+   * disable if value <= 0
    */
   connectionTimeout?: number;
 
@@ -73,6 +75,8 @@ export interface TOSConstructorOptions {
 
   /**
    * default value: 3
+   *
+   * disable if value <= 0
    */
   maxRetryCount?: number;
 }
@@ -271,14 +275,10 @@ export class TOSBase {
       }
     }
 
-    if (process.env.TARGET_ENVIRONMENT === 'node') {
-      reqHeaders['user-agent'] = this.userAgent;
-    } else {
-      // the browser xhr doesn't set the host and user-agent
-      delete reqHeaders['host'];
+    reqHeaders['user-agent'] = this.userAgent;
+    if (this.opts.requestTimeout > 0 && this.opts.requestTimeout !== Infinity) {
+      reqOpts.timeout = this.opts.requestTimeout;
     }
-
-    reqOpts.timeout = this.opts.requestTimeout;
 
     if (process.env.TARGET_ENVIRONMENT === 'node') {
       reqOpts.httpAgent = this.httpAgent;
