@@ -53,6 +53,11 @@ describe('putObject data transfer in node.js environment', () => {
         dataTransferStatusChange: dataTransferFn,
         progress: progressFn,
       });
+      expect(progressFn.mock.calls[0][0]).toEqual(0);
+      expect(progressFn.mock.calls.filter(it => it[0] === 1).length).toEqual(1);
+      const lastCall = progressFn.mock.calls.slice(-1)[0];
+      expect(lastCall[0]).toEqual(1);
+
       expect(
         dataTransferFn.mock.calls[0][0].type === DataTransferType.Started
       ).toBe(true);

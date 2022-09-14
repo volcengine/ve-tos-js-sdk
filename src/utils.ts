@@ -66,7 +66,9 @@ export const getSortedQueryString = (query: Record<string, any>) => {
   return searchParts.join('&');
 };
 
-export const normalizeHeaders = (headers: any = {}): Headers => {
+export const normalizeHeaders = <T extends Headers>(
+  headers: T | undefined
+): T => {
   const headers1 = (pickBy(
     headers || {},
     v => v != null
@@ -78,7 +80,7 @@ export const normalizeHeaders = (headers: any = {}): Headers => {
     headers2[newKey] = headers1[key];
   });
 
-  return headers2;
+  return headers2 as T;
 };
 
 // TODO: getRegion from endpoint, maybe user passes it is better.
@@ -114,7 +116,7 @@ export const normalizeProxy = (proxy: TOSConstructorOptions['proxy']) => {
 
 export async function safeAwait<T>(
   p: T
-): Promise<[any, null] | [null, Awaited<T>]> {
+): Promise<[null, Awaited<T>] | [any, null]> {
   try {
     const v = await p;
     return [null, v];

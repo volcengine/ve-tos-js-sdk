@@ -6,16 +6,15 @@ import * as fsp from '../../nodejs/fs-promises';
 import { EmitReadStream } from '../../nodejs/EmitReadStream';
 import fs, { Stats } from 'fs';
 import { Readable } from 'stream';
-import { isBlob, isBuffer } from './utils';
+import { isBuffer, getSize } from './utils';
 
-const fileSizeKey = '__fileSizeKey__';
 export interface PutObjectInput {
   bucket?: string;
   key: string;
   /**
    * body is empty buffer if it's falsy.
    */
-  body?: File | Blob | Buffer | ReadableStream | NodeJS.ReadableStream;
+  body?: File | Blob | Buffer | NodeJS.ReadableStream;
 
   dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
@@ -31,10 +30,11 @@ export interface PutObjectInput {
 
   headers?: {
     [key: string]: string | undefined;
+    'content-length'?: string;
     'content-type'?: string;
-    'Content-MD5'?: string;
-    'Cache-Control'?: string;
-    Expires?: string;
+    'content-md5'?: string;
+    'cache-control'?: string;
+    expires?: string;
     'x-tos-acl'?: Acl;
     'x-tos-grant-full-control'?: string;
     'x-tos-grant-read'?: string;
@@ -62,22 +62,9 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
   const headers = normalizeHeaders(input.headers);
   this.setObjectContentTypeHeader(input, headers);
 
-  const totalSize = await (async () => {
-    const { body } = input;
-    if (isBuffer(body)) {
-      return body.length;
-    }
-    if (isBlob(body)) {
-      return body.size;
-    }
-    const bodyAny = body as any;
-    if (bodyAny?.[fileSizeKey] != null) {
-      return bodyAny[fileSizeKey];
-    }
-    return -1;
-  })();
+  const totalSize = getSize(input.body, headers);
+  const totalSizeValid = totalSize != null;
 
-  const totalSizeValid = totalSize >= 0;
   if (!totalSizeValid && (input.dataTransferStatusChange || input.progress)) {
     console.warn(
       `Don't get totalSize of putObject's body, the \`dataTransferStatusChange\` and \`progress\` callback will not trigger. You can use \`putObjectFromFile\` instead`
@@ -113,13 +100,21 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
       }
       return consumedBytes / totalSize;
     })();
-    progress?.(progressValue);
+    if (progressValue === 1) {
+      if (type === DataTransferType.Succeed) {
+        progress?.(progressValue);
+      } else {
+        // not exec progress
+      }
+    } else {
+      progress?.(progressValue);
+    }
   };
 
   let newBody = input.body;
   if (process.env.TARGET_ENVIRONMENT === 'node') {
     const body = input.body;
-    if (isBlob(body) || isBuffer(body) || body instanceof Readable) {
+    if (totalSizeValid && (isBuffer(body) || body instanceof Readable)) {
       newBody = new EmitReadStream(body, totalSize, n =>
         triggerDataTransfer(DataTransferType.Rw, n)
       ).stream();
@@ -157,17 +152,24 @@ export async function putObjectFromFile(
   this: TOSBase,
   input: PutObjectFromFileInput
 ): Promise<void> {
+  const normalizedHeaders = normalizeHeaders(input.headers);
   if (process.env.TARGET_ENVIRONMENT !== 'node') {
     throw new TosClientError(
       "putObjectFromFile doesn't support in browser environment"
     );
   }
 
-  const stats: Stats = await fsp.stat(input.filePath);
   const stream = fs.createReadStream(input.filePath);
-  (stream as any)[fileSizeKey] = stats.size;
+  if (!normalizedHeaders['content-length']) {
+    const stats: Stats = await fsp.stat(input.filePath);
+    normalizedHeaders['content-length'] = `${stats.size}`;
+  }
 
-  return putObject.call(this, { ...input, body: stream });
+  return putObject.call(this, {
+    ...input,
+    body: stream,
+    headers: normalizedHeaders,
+  });
 }
 
 export default putObject;

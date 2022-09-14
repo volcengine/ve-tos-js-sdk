@@ -21,7 +21,7 @@
     "build:browser": "tsdx build --format cjs,esm,umd --name TOS",
     "build:proxy": "tsc --esModuleInterop --declaration --outDir ./out ./src/proxy.ts",
     "test": "yarn test:node && cp ./coverage/coverage-final.json ./coverage/coverage-node-final.json && yarn test:browser && cp ./coverage/coverage-final.json ./coverage/coverage-browser-final.json && node ./scripts/mapCoverage.js",
-    "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --testEnvironment=node -t \"\"",
+    "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --testEnvironment=node -i -t \"\"",
     "test:browser": "NODE_ENV=development TARGET_ENVIRONMENT=browser tsdx test test/browser/** --coverage --testEnvironment=node -t \"\"",
     "docs": "npx typedoc src/*",
     "deploy:docs": "./scripts/deployDocs.sh",

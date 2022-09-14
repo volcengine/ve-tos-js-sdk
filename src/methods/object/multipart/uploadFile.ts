@@ -17,7 +17,8 @@ import { CancelToken } from 'axios';
 import * as fs from '../../../nodejs/fs-promises';
 import path from 'path';
 import TosClientError from '../../../TosClientError';
-import { DataTransferStatus } from '../../../interface';
+import { DataTransferStatus, DataTransferType } from '../../../interface';
+import { safeAwait } from '../../../utils';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -289,9 +290,10 @@ export async function uploadFile(
   let uploadId = '';
   let tasks: Task[] = [];
   const allTasks: Task[] = getAllTasks(fileSize, partSize);
-  let consumedBytes = (checkpointRichInfo.record?.parts_info || [])
+  const initConsumedBytes = (checkpointRichInfo.record?.parts_info || [])
     .filter(it => it.is_completed)
     .reduce((prev, it) => prev + it.part_size, 0);
+  let consumedBytesForProgress = initConsumedBytes;
 
   // recorded tasks
   const recordedTasks = checkpointRichInfo.record?.parts_info || [];
@@ -350,17 +352,35 @@ export async function uploadFile(
     ) {
       ret = 1;
     } else {
-      ret = !fileSize ? 1 : consumedBytes / fileSize;
+      ret = !fileSize ? 1 : consumedBytesForProgress / fileSize;
     }
 
     if (
-      consumedBytes === fileSize &&
+      consumedBytesForProgress === fileSize &&
       type === TriggerProgressEventType.uploadPartSucceed
     ) {
       // 100% 仅在 complete 后处理，以便 100% 可以拉取到新对象
     } else {
       input.progress(ret, getCheckpointContent());
     }
+  };
+  let consumedBytes = initConsumedBytes;
+  const { dataTransferStatusChange } = input;
+  const triggerDataTransfer = (
+    type: DataTransferType,
+    rwOnceBytes: number = 0
+  ) => {
+    if (!dataTransferStatusChange) {
+      return;
+    }
+    consumedBytes += rwOnceBytes;
+
+    dataTransferStatusChange?.({
+      type,
+      rwOnceBytes,
+      consumedBytes,
+      totalBytes: fileSize,
+    });
   };
   const writeCheckpointFile = async () => {
     if (
@@ -440,7 +460,7 @@ export async function uploadFile(
     }
 
     uploadPartInfo.etag = uploadPartRes.ETag;
-    consumedBytes += uploadPartInfo.partSize;
+    consumedBytesForProgress += uploadPartInfo.partSize;
 
     triggerUploadEvent({
       type: UploadEventType.uploadPartSucceed,
@@ -499,8 +519,7 @@ export async function uploadFile(
     tasks = allTasks;
   }
 
-  // handle tasks
-  return (async () => {
+  const handleTasks = async () => {
     let firstErr: Error | null = null;
     let index = 0;
 
@@ -515,39 +534,22 @@ export async function uploadFile(
 
           const curTask = tasks[currentIndex];
           try {
-            // TODO(P0): backend is not stable, so I loop three time
-            const LOOP = 3;
-            const uploadPartRes = await (async () => {
-              let lastErr = null;
-              for (let i = 0; i < LOOP && !isCancel(); ++i) {
-                try {
-                  const { data: uploadPartRes } = await uploadPart.call(this, {
-                    bucket,
-                    key,
-                    uploadId,
-                    body: getBody(input.file, curTask),
-                    partNumber: curTask.partNumber,
-                  });
-                  return uploadPartRes;
-                } catch (_err) {
-                  const err = _err as any;
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log(
-                      err.message,
-                      `\npartNumber=${curTask.partNumber}, uploadId=${uploadId}`
-                    );
-                  }
-                  lastErr = err;
+            const { data: uploadPartRes } = await uploadPart.call(this, {
+              bucket,
+              key,
+              uploadId,
+              body: getBody(input.file, curTask),
+              partNumber: curTask.partNumber,
+              headers: {
+                ['content-length']: `${curTask.partSize}`,
+              },
+              dataTransferStatusChange(status) {
+                if (status.type !== DataTransferType.Rw) {
+                  return;
                 }
-              }
-
-              if (isCancel()) {
-                throw new CancelError('cancel uploadFile');
-              }
-
-              throw lastErr;
-            })();
-            // console.log('uploadPart Res: ', uploadPartRes);
+                triggerDataTransfer(status.type, status.rwOnceBytes);
+              },
+            });
 
             if (isCancel()) {
               throw new CancelError('cancel uploadFile');
@@ -594,7 +596,16 @@ export async function uploadFile(
     await rmCheckpointFile();
 
     return res;
-  })();
+  };
+
+  triggerDataTransfer(DataTransferType.Started);
+  const [err, res] = await safeAwait(handleTasks());
+  if (err || !res) {
+    triggerDataTransfer(DataTransferType.Failed);
+    throw err;
+  }
+  triggerDataTransfer(DataTransferType.Succeed);
+  return res;
 }
 
 export function isCancelError(err: any) {

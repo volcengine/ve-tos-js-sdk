@@ -1,19 +1,32 @@
-import { isBlob, isBuffer } from '../utils';
+import { getSize, isBuffer } from '../utils';
 import TOSBase from '../../base';
 import TosClientError from '../../../TosClientError';
 import fs, { Stats } from 'fs';
 import * as fsp from '../../../nodejs/fs-promises';
+import { DataTransferStatus, DataTransferType } from '../../../interface';
+import { EmitReadStream } from '../../../nodejs/EmitReadStream';
+import { Readable } from 'stream';
+import { safeAwait } from '../../../utils';
 
 export interface UploadPartInput {
-  body: Blob | Buffer | ReadableStream | NodeJS.ReadableStream;
+  body: Blob | Buffer | NodeJS.ReadableStream;
   bucket?: string;
   key: string;
   partNumber: number;
   uploadId: string;
+  dataTransferStatusChange?: (status: DataTransferStatus) => void;
+  /**
+   * the simple progress feature
+   * percent is [0, 1].
+   *
+   * since uploadPart is stateless, so if `uploadPart` fail and you retry it,
+   * `percent` will start from 0 again rather than from the previous value.
+   */
+  progress?: (percent: number) => void;
   headers?: {
     [key: string]: string | undefined;
-    'Content-Length'?: string;
-    'Content-MD5'?: string;
+    'content-length'?: string;
+    'content-md5'?: string;
     'x-tos-server-side-encryption-customer-algorithm'?: string;
     'x-tos-server-side-encryption-customer-key'?: string;
     'x-tos-server-side-encryption-customer-key-MD5'?: string;
@@ -24,37 +37,112 @@ export interface UploadPartOutput {
   ETag: string;
 }
 
-function getSize(body: unknown) {
-  if (isBuffer(body)) {
-    return body.length;
-  }
-  if (isBlob(body)) {
-    return body.size;
-  }
-  return null;
-}
-
 export async function uploadPart(this: TOSBase, input: UploadPartInput) {
   const { uploadId, partNumber, body } = input;
   const headers = input.headers || {};
   const size = getSize(body);
-  if (size && headers['Content-Length'] == null) {
-    // browser will error: Refused to set unsafe header "Content-Length"
+  if (size && headers['content-length'] == null) {
+    // browser will error: Refused to set unsafe header "content-length"
     if (process.env.TARGET_ENVIRONMENT === 'node') {
-      headers['Content-Length'] = size.toFixed(0);
+      headers['content-length'] = size.toFixed(0);
+    }
+  }
+  const totalSize = getSize(input.body, headers);
+  const totalSizeValid = totalSize != null;
+  if (!totalSizeValid && (input.dataTransferStatusChange || input.progress)) {
+    console.warn(
+      `Don't get totalSize of uploadPart's body, the \`dataTransferStatusChange\` callback will not trigger. You can use \`uploadPartFromFile\` instead`
+    );
+  }
+
+  let consumedBytes = 0;
+  const { dataTransferStatusChange, progress } = input;
+  const triggerDataTransfer = (
+    type: DataTransferType,
+    rwOnceBytes: number = 0
+  ) => {
+    if (!totalSizeValid) {
+      return;
+    }
+    if (!dataTransferStatusChange && !progress) {
+      return;
+    }
+    consumedBytes += rwOnceBytes;
+
+    dataTransferStatusChange?.({
+      type,
+      rwOnceBytes,
+      consumedBytes,
+      totalBytes: totalSize,
+    });
+
+    const progressValue = (() => {
+      if (totalSize === 0) {
+        if (type === DataTransferType.Succeed) {
+          return 1;
+        }
+        return 0;
+      }
+      return consumedBytes / totalSize;
+    })();
+    if (progressValue === 1) {
+      if (type === DataTransferType.Succeed) {
+        progress?.(progressValue);
+      } else {
+        // not exec progress
+      }
+    } else {
+      progress?.(progressValue);
+    }
+  };
+  let newBody = input.body;
+  if (process.env.TARGET_ENVIRONMENT === 'node') {
+    const body = input.body;
+    if (totalSizeValid && (isBuffer(body) || body instanceof Readable)) {
+      newBody = new EmitReadStream(body, totalSize, n =>
+        triggerDataTransfer(DataTransferType.Rw, n)
+      ).stream();
     }
   }
 
-  return this.fetchObject<UploadPartOutput>(
-    input,
-    'PUT',
-    { partNumber, uploadId },
-    headers,
-    body,
-    {
-      handleResponse: res => ({ ETag: res.headers.etag }),
-    }
+  triggerDataTransfer(DataTransferType.Started);
+  const [err, res] = await safeAwait(
+    this.fetchObject<UploadPartOutput>(
+      input,
+      'PUT',
+      { partNumber, uploadId },
+      headers,
+      newBody,
+      {
+        handleResponse: res => ({ ETag: res.headers.etag }),
+        axiosOpts: {
+          onUploadProgress: event => {
+            triggerDataTransfer(
+              DataTransferType.Rw,
+              event.loaded - consumedBytes
+            );
+          },
+        },
+      }
+    )
   );
+
+  // FAQ: no etag
+  if (process.env.TARGET_ENVIRONMENT === 'browser') {
+    if (res && !res.data.ETag) {
+      throw new TosClientError(
+        "No ETag in uploadPart's response, please see https://www.volcengine.com/docs/6349/127737 to fix CORS problem"
+      );
+    }
+  }
+
+  if (err || !res) {
+    triggerDataTransfer(DataTransferType.Failed);
+    throw err;
+  }
+
+  triggerDataTransfer(DataTransferType.Succeed);
+  return res;
 }
 
 interface UploadPartFromFileInput extends Omit<UploadPartInput, 'body'> {
@@ -92,7 +180,7 @@ export async function uploadPartFromFile(
     body: stream,
     headers: {
       ...(input.headers || {}),
-      ['Content-Length']: `${end - start}`,
+      ['content-length']: `${end - start}`,
     },
   });
 }

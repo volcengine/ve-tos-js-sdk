@@ -1,20 +1,17 @@
 import axios from 'axios';
 import TOS from '../../src/browser-index';
-import { UploadPartOutput } from '../../src/methods/object/multipart';
 import { Readable } from 'stream';
 import {
   deleteBucket,
   sleepCache,
   NEVER_TIMEOUT,
   testCheckErr,
-  streamToBuf,
 } from '../utils';
 import {
   testBucketName,
   isNeedDeleteBucket,
   tosOptions,
 } from '../utils/options';
-import FormData from 'form-data';
 import { ACLType } from '../../src/TosExportEnum';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
@@ -295,97 +292,6 @@ describe('TOS', () => {
   );
 
   it(
-    'object multipart',
-    async () => {
-      const testObjectName = 'test-multipart-ddddd.png';
-      const client = new TOS({
-        ...tosOptions,
-        bucket: testBucketName,
-      });
-      const PART_LENGTH = 5 * 1024 * 1024;
-      const TOTAL = 2 * PART_LENGTH + 1234;
-
-      {
-        // multi upload
-        const {
-          data: { UploadId },
-        } = await client.createMultipartUpload({
-          key: testObjectName,
-          headers: {
-            'x-tos-acl': ACLType.ACLPrivate,
-          },
-        });
-
-        const createPromise = (i: number) => {
-          const size =
-            (i + 1) * PART_LENGTH > TOTAL ? TOTAL % PART_LENGTH : PART_LENGTH;
-          const promise = client.uploadPart({
-            body: Buffer.from(new Array(size).fill(0)),
-            key: testObjectName,
-            partNumber: i + 1,
-            uploadId: UploadId,
-          });
-          return promise;
-        };
-
-        let uploadPartRes: UploadPartOutput[] = [];
-        uploadPartRes = [];
-        for (let i = 0; i * PART_LENGTH < TOTAL; ++i) {
-          uploadPartRes[i] = (await createPromise(i)).data;
-        }
-
-        const res = await client.completeMultipartUpload({
-          key: testObjectName,
-          uploadId: UploadId,
-          parts: uploadPartRes.map((it, idx) => ({
-            eTag: it.ETag,
-            partNumber: idx + 1,
-          })),
-        });
-
-        expect(res.data.Location.includes(client.opts.endpoint)).toBeTruthy();
-        expect(res.data.Location.includes(testObjectName)).toBeTruthy();
-      }
-
-      {
-        const url = client.getPreSignedUrl({
-          bucket: testBucketName,
-          key: testObjectName,
-        });
-
-        const res = await axios(url, { responseType: 'arraybuffer' });
-        expect(res.headers['content-length']).toEqual(TOTAL.toString());
-      }
-
-      {
-        const url = client.getPreSignedUrl({
-          // no bucket param
-          key: testObjectName,
-        });
-
-        const res = await axios(url, { responseType: 'arraybuffer' });
-        expect(res.headers['content-length']).toEqual(TOTAL.toString());
-        expect(res.headers['content-type']).toBe('image/png');
-      }
-
-      {
-        const { headers } = await client.getObjectV2({
-          key: testObjectName,
-          headers: {
-            Range: 'bytes=0-9',
-          },
-          response: {
-            'content-type': 'application/octet-stream',
-          },
-        });
-        expect(+headers['content-length']!).toBe(10);
-        expect(headers['content-type']).toBe('application/octet-stream');
-      }
-    },
-    NEVER_TIMEOUT
-  );
-
-  it(
     'auto add content-type for uploading object',
     async () => {
       const client = new TOS(tosOptions);
@@ -489,41 +395,6 @@ describe('TOS', () => {
 
       expect(res.data.Deleted.length).toBe(4);
       expect(res.data.Error.length).toBe(0);
-    },
-    NEVER_TIMEOUT
-  );
-
-  it(
-    'post object',
-    async () => {
-      const client = new TOS(tosOptions);
-
-      const key = 'post-object-key';
-      const content = 'abcd';
-      const form = await client.calculatePostSignature({ key });
-      const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-      formData.append('file', content, {
-        filename: 'test.abcd',
-      });
-
-      await axios.post(
-        `https://${client.opts.bucket!}.${client.opts.endpoint}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': `multipart/form-data; boundary=${formData.getBoundary()}`,
-          },
-        }
-      );
-
-      const { data } = await client.getObjectV2(key);
-      expect(data.etag).not.toEqual('');
-      expect(data.lastModified).not.toEqual('');
-      expect(data.hashCrc64ecma).not.toEqual('');
-      expect((await streamToBuf(data.content)).toString()).toEqual(content);
     },
     NEVER_TIMEOUT
   );
