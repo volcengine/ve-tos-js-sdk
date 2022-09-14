@@ -1,4 +1,4 @@
-import TOS from '../../src/browser-index';
+import TOS, { ACLType } from '../../src/browser-index';
 import {
   deleteBucket,
   NEVER_TIMEOUT,
@@ -25,6 +25,7 @@ import { Readable } from 'stream';
 import axios from 'axios';
 import { DEFAULT_CONTENT_TYPE } from '../../src/methods/object/utils';
 import FormData from 'form-data';
+import { UploadPartOutput } from '../../src/methods/object/multipart';
 
 describe('nodejs connection params', () => {
   beforeAll(async done => {
@@ -276,6 +277,106 @@ describe('nodejs connection params', () => {
       expect(data.lastModified).not.toEqual('');
       expect(data.hashCrc64ecma).not.toEqual('');
       expect(data.content.toString()).toEqual(content);
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'object multipart',
+    async () => {
+      const testObjectName = 'test-multipart-ddddd.png';
+      const client = new TOS({
+        ...tosOptions,
+        bucket: testBucketName,
+      });
+      const PART_LENGTH = 5 * 1024 * 1024;
+      const TOTAL = 2 * PART_LENGTH + 1234;
+
+      {
+        // multi upload
+        const {
+          data: { UploadId },
+        } = await client.createMultipartUpload({
+          key: testObjectName,
+          headers: {
+            'x-tos-acl': ACLType.ACLPrivate,
+          },
+        });
+
+        const createPromise = (i: number, progressFn: any) => {
+          const size =
+            (i + 1) * PART_LENGTH > TOTAL ? TOTAL % PART_LENGTH : PART_LENGTH;
+          const promise = client.uploadPart({
+            body: Buffer.from(new Array(size).fill(0)),
+            key: testObjectName,
+            progress: progressFn,
+            partNumber: i + 1,
+            uploadId: UploadId,
+          });
+          return promise;
+        };
+
+        let uploadPartRes: UploadPartOutput[] = [];
+        uploadPartRes = [];
+        for (let i = 0; i * PART_LENGTH < TOTAL; ++i) {
+          const progressFn = jest.fn();
+          uploadPartRes[i] = (await createPromise(i, progressFn)).data;
+
+          expect(progressFn.mock.calls[0][0]).toEqual(0);
+          expect(
+            progressFn.mock.calls.filter(it => it[0] === 1).length
+          ).toEqual(1);
+          const lastCall = progressFn.mock.calls.slice(-1)[0];
+          expect(lastCall[0]).toEqual(1);
+        }
+
+        const res = await client.completeMultipartUpload({
+          key: testObjectName,
+          uploadId: UploadId,
+          parts: uploadPartRes.map((it, idx) => ({
+            eTag: it.ETag,
+            partNumber: idx + 1,
+          })),
+        });
+
+        expect(res.data.Location.includes(client.opts.endpoint)).toBeTruthy();
+        expect(res.data.Location.includes(testObjectName)).toBeTruthy();
+      }
+
+      {
+        const url = client.getPreSignedUrl({
+          bucket: testBucketName,
+          key: testObjectName,
+        });
+
+        const res = await axios(url, { responseType: 'arraybuffer' });
+        expect(res.headers['content-length']).toEqual(TOTAL.toString());
+      }
+
+      {
+        const url = client.getPreSignedUrl({
+          // no bucket param
+          key: testObjectName,
+        });
+
+        const res = await axios(url, { responseType: 'arraybuffer' });
+        expect(res.headers['content-length']).toEqual(TOTAL.toString());
+        expect(res.headers['content-type']).toBe('image/png');
+      }
+
+      {
+        const { headers } = await client.getObjectV2({
+          key: testObjectName,
+          headers: {
+            Range: 'bytes=0-9',
+          },
+          response: {
+            'content-type': 'application/octet-stream',
+          },
+        });
+        expect(+headers['content-length']!).toBe(10);
+        expect(headers['content-type']).toBe('application/octet-stream');
+      }
     },
     NEVER_TIMEOUT
   );

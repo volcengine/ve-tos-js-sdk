@@ -6,7 +6,7 @@ import * as fsp from '../../nodejs/fs-promises';
 import { EmitReadStream } from '../../nodejs/EmitReadStream';
 import fs, { Stats } from 'fs';
 import { Readable } from 'stream';
-import { isBlob, isBuffer } from './utils';
+import { isBuffer, getSize } from './utils';
 
 export interface PutObjectInput {
   bucket?: string;
@@ -62,22 +62,9 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
   const headers = normalizeHeaders(input.headers);
   this.setObjectContentTypeHeader(input, headers);
 
-  const totalSize = await (async () => {
-    const { body } = input;
-    if (isBuffer(body)) {
-      return body.length;
-    }
-    if (isBlob(body)) {
-      return body.size;
-    }
-    if (headers['content-length']) {
-      const v = +headers['content-length'];
-      return v >= 0 ? v : -1;
-    }
-    return -1;
-  })();
+  const totalSize = getSize(input.body, headers);
+  const totalSizeValid = totalSize != null;
 
-  const totalSizeValid = totalSize >= 0;
   if (!totalSizeValid && (input.dataTransferStatusChange || input.progress)) {
     console.warn(
       `Don't get totalSize of putObject's body, the \`dataTransferStatusChange\` and \`progress\` callback will not trigger. You can use \`putObjectFromFile\` instead`
@@ -113,13 +100,21 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
       }
       return consumedBytes / totalSize;
     })();
-    progress?.(progressValue);
+    if (progressValue === 1) {
+      if (type === DataTransferType.Succeed) {
+        progress?.(progressValue);
+      } else {
+        // not exec progress
+      }
+    } else {
+      progress?.(progressValue);
+    }
   };
 
   let newBody = input.body;
   if (process.env.TARGET_ENVIRONMENT === 'node') {
     const body = input.body;
-    if (isBlob(body) || isBuffer(body) || body instanceof Readable) {
+    if (totalSizeValid && (isBuffer(body) || body instanceof Readable)) {
       newBody = new EmitReadStream(body, totalSize, n =>
         triggerDataTransfer(DataTransferType.Rw, n)
       ).stream();

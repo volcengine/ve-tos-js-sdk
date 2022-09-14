@@ -202,7 +202,7 @@ export class TOSBase {
 
     if (body && needMd5) {
       const md5String = hashMd5(JSON.stringify(body), 'base64');
-      headers['Content-MD5'] = md5String;
+      headers['content-md5'] = md5String;
     }
 
     const [endpoint, newPath] = (() => {

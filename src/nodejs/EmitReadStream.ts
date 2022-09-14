@@ -5,7 +5,7 @@ export class EmitReadStream extends Readable {
   isEnd = false;
 
   constructor(
-    public underlying: Readable | Buffer | Blob,
+    public underlying: Readable | Buffer,
     private totalSize: number,
     private readCb: (n: number) => void
   ) {

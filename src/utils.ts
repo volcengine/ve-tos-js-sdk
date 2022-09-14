@@ -116,7 +116,7 @@ export const normalizeProxy = (proxy: TOSConstructorOptions['proxy']) => {
 
 export async function safeAwait<T>(
   p: T
-): Promise<[any, null] | [null, Awaited<T>]> {
+): Promise<[null, Awaited<T>] | [any, null]> {
   try {
     const v = await p;
     return [null, v];

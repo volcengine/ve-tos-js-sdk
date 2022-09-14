@@ -1,5 +1,6 @@
 import TosClientError from '../../TosClientError';
 import mimeTypes from '../../mime-types';
+import { Headers } from '../../interface';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -50,4 +51,20 @@ export function validateObjectName(input: { key: string } | string) {
       `invalid object name, the object name can not start with '/' or '\\'`
     );
   }
+}
+
+export function getSize(body: unknown, headers?: Headers) {
+  if (isBuffer(body)) {
+    return body.length;
+  }
+  if (isBlob(body)) {
+    return body.size;
+  }
+  if (headers && headers['content-length']) {
+    const v = +headers['content-length'];
+    if (v >= 0) {
+      return v;
+    }
+  }
+  return null;
 }
