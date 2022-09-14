@@ -1,6 +1,5 @@
 import axios from 'axios';
 import TOS from '../../src/browser-index';
-import { UploadPartOutput } from '../../src/methods/object/multipart';
 import { Readable } from 'stream';
 import {
   deleteBucket,

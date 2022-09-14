@@ -127,6 +127,15 @@ export async function uploadPart(this: TOSBase, input: UploadPartInput) {
     )
   );
 
+  // FAQ: no etag
+  if (process.env.TARGET_ENVIRONMENT === 'browser') {
+    if (res && !res.data.ETag) {
+      throw new TosClientError(
+        "No ETag in uploadPart's response, please see https://www.volcengine.com/docs/6349/127737 to fix CORS problem"
+      );
+    }
+  }
+
   if (err || !res) {
     triggerDataTransfer(DataTransferType.Failed);
     throw err;
