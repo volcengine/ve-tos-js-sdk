@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 - `getObjectV2` method supports `buffer` in Node.js environment
+- `uploadFile` method supports `dataTransferStatusChange` option
+- `uploadPart` method throws error when there is no etag in browser environment
 
 ## 2.1.1
 
