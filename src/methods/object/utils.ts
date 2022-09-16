@@ -9,7 +9,7 @@ export const getObjectInputKey = (input: string | { key: string }): string => {
 export const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 
 export function lookupMimeType(key: string) {
-  const lastDotIndex = key.lastIndexOf('.');
+  const lastDotIndex = key.lastIndexOf('.');//t.lastIndexOf is not a function
 
   if (lastDotIndex <= 0) {
     return undefined;
