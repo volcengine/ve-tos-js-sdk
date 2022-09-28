@@ -7,14 +7,15 @@ import {
 import { isBlob, isBuffer } from '../utils';
 import { calculateSafePartSize } from './listParts';
 import { Stats } from 'fs';
-import { uploadPart, UploadPartOutput } from './uploadPart';
+import { UploadPartOutput, _uploadPart } from './uploadPart';
 import TosServerError from '../../../TosServerError';
 import {
   completeMultipartUpload,
   CompleteMultipartUploadOutput,
 } from './completeMultipartUpload';
 import { CancelToken } from 'axios';
-import * as fs from '../../../nodejs/fs-promises';
+import * as fsp from '../../../nodejs/fs-promises';
+import fs from 'fs';
 import path from 'path';
 import TosClientError from '../../../TosClientError';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
@@ -174,7 +175,7 @@ export async function uploadFile(
       process.env.TARGET_ENVIRONMENT === 'node' &&
       typeof input.file === 'string'
     ) {
-      return fs.stat(input.file);
+      return fsp.stat(input.file);
     }
     return null;
   })();
@@ -200,7 +201,7 @@ export async function uploadFile(
         // file doesn't exist when stat is null
         let checkpointStat: Stats | null = null;
         try {
-          checkpointStat = await fs.stat(checkpoint);
+          checkpointStat = await fsp.stat(checkpoint);
         } catch (_err) {
           // TODO: remove any
           const err = _err as any;
@@ -224,7 +225,7 @@ export async function uploadFile(
           : checkpoint;
         const dirPath = path.dirname(filePath);
         // ensure directory exist
-        await fs.mkdir(dirPath, { recursive: true });
+        await fsp.mkdir(dirPath, { recursive: true });
 
         if (isDirectory) {
           return {
@@ -388,7 +389,7 @@ export async function uploadFile(
       checkpointRichInfo.filePath
     ) {
       const content = JSON.stringify(getCheckpointContent(), null, 2);
-      await fs.writeFile(checkpointRichInfo.filePath, content, 'utf-8');
+      await fsp.writeFile(checkpointRichInfo.filePath, content, 'utf-8');
     }
   };
   const rmCheckpointFile = async () => {
@@ -396,7 +397,7 @@ export async function uploadFile(
       process.env.TARGET_ENVIRONMENT === 'node' &&
       checkpointRichInfo.filePath
     ) {
-      await fs.rm(checkpointRichInfo.filePath).catch((err: any) => {
+      await fsp.rm(checkpointRichInfo.filePath).catch((err: any) => {
         // eat err
         console.warn(
           'remove checkpoint file failure, you can remove it by hand.\n',
@@ -533,12 +534,18 @@ export async function uploadFile(
           }
 
           const curTask = tasks[currentIndex];
+          let consumedBytesThisTask = 0;
           try {
-            const { data: uploadPartRes } = await uploadPart.call(this, {
+            const { data: uploadPartRes } = await _uploadPart.call(this, {
               bucket,
               key,
               uploadId,
               body: getBody(input.file, curTask),
+              makeRetryStream: getMakeRetryStream(input.file, curTask),
+              beforeRetry: () => {
+                consumedBytes -= consumedBytesThisTask;
+                consumedBytesThisTask = 0;
+              },
               partNumber: curTask.partNumber,
               headers: {
                 ['content-length']: `${curTask.partSize}`,
@@ -547,6 +554,7 @@ export async function uploadFile(
                 if (status.type !== DataTransferType.Rw) {
                   return;
                 }
+                consumedBytesThisTask += status.rwOnceBytes;
                 triggerDataTransfer(status.type, status.rwOnceBytes);
               },
             });
@@ -558,6 +566,9 @@ export async function uploadFile(
             await updateAfterUploadPart(curTask, uploadPartRes);
           } catch (_err) {
             const err = _err as any;
+            consumedBytes -= consumedBytesThisTask;
+            consumedBytesThisTask = 0;
+
             if (isCancelError(err)) {
               throw err;
             }
@@ -649,13 +660,11 @@ function getBody(file: UploadFileInput['file'], task: Task) {
   const { offset: start, partSize } = task;
   const end = start + partSize;
 
-  if (process.env.TARGET_ENVIRONMENT === 'node' && typeof file === 'string') {
-    const fs = require('fs');
-    return fs.createReadStream(file, {
-      start,
-      end: end - 1,
-    }) as NodeJS.ReadableStream;
+  const makeRetryStream = getMakeRetryStream(file, task);
+  if (makeRetryStream) {
+    return makeRetryStream();
   }
+
   if (isBlob(file)) {
     return file.slice(start, end);
   }
@@ -663,4 +672,20 @@ function getBody(file: UploadFileInput['file'], task: Task) {
     return file.slice(start, end);
   }
   throw new TosClientError(FILE_PARAM_CHECK_MSG);
+}
+
+function getMakeRetryStream(file: UploadFileInput['file'], task: Task) {
+  const { offset: start, partSize } = task;
+  const end = start + partSize;
+
+  if (process.env.TARGET_ENVIRONMENT === 'node' && typeof file === 'string') {
+    return () => {
+      return fs.createReadStream(file, {
+        start,
+        end: end - 1,
+      });
+    };
+  }
+
+  return undefined;
 }

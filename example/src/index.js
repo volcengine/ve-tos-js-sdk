@@ -9,7 +9,7 @@ const client = new TOS({
     url: `${window.location.protocol}//${window.location.host}/api/proxy-tos/`,
     needProxyParams: true,
   },
-  requestTimeout: 0,
+  requestTimeout: 1000,
   bucket: 'cg-beijing',
 });
 

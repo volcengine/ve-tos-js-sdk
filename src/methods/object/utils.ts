@@ -1,6 +1,8 @@
 import TosClientError from '../../TosClientError';
 import mimeTypes from '../../mime-types';
 import { Headers } from '../../interface';
+import { Readable } from 'stream';
+import { EmitReadStream } from '../../nodejs/EmitReadStream';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -67,4 +69,73 @@ export function getSize(body: unknown, headers?: Headers) {
     }
   }
   return null;
+}
+
+interface GetNewBodyConfigIn<T> {
+  body: T;
+  totalSize: number | null | undefined;
+  dataTransferCallback: (n: number) => void;
+  makeRetryStream?: () => Readable | undefined;
+}
+interface GetNewBodyConfigOut<T> {
+  body: T | Readable;
+  makeRetryStream?: () => Readable | undefined;
+}
+
+export function getNewBodyConfig<T extends unknown>({
+  body,
+  totalSize,
+  dataTransferCallback,
+  makeRetryStream,
+}: GetNewBodyConfigIn<T>): GetNewBodyConfigOut<T> {
+  let newBody: T | Readable = body;
+  const getDefaultRet = () => ({
+    body: newBody,
+    makeRetryStream: undefined,
+  });
+
+  if (process.env.TARGET_ENVIRONMENT !== 'node') {
+    return getDefaultRet();
+  }
+
+  const totalSizeValid = totalSize != null;
+  if (isBuffer(body) && totalSizeValid) {
+    const bodyBuffer = body;
+    const makeRetryStream = () =>
+      new EmitReadStream(bodyBuffer, totalSize, dataTransferCallback).stream();
+    return {
+      body: makeRetryStream(),
+      makeRetryStream,
+    };
+  }
+
+  if (body instanceof Readable) {
+    if (totalSizeValid) {
+      newBody = new EmitReadStream(
+        body,
+        totalSize,
+        dataTransferCallback
+      ).stream();
+    }
+
+    if (makeRetryStream) {
+      return {
+        body: newBody,
+        makeRetryStream: () => {
+          const stream = makeRetryStream();
+          if (stream && totalSizeValid) {
+            newBody = new EmitReadStream(
+              stream,
+              totalSize,
+              dataTransferCallback
+            ).stream();
+          }
+
+          return stream;
+        },
+      };
+    }
+  }
+
+  return getDefaultRet();
 }

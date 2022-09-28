@@ -50,7 +50,7 @@ export interface TOSConstructorOptions {
 
   /**
    * unit: ms
-   * default value: 60s
+   * default value: 120s
    * disable if value <= 0
    */
   requestTimeout?: number;
@@ -178,7 +178,7 @@ export class TOSBase {
       secure,
       enableVerifySSL: _default(_opts.enableVerifySSL, true),
       autoRecognizeContentType: _default(_opts.autoRecognizeContentType, true),
-      requestTimeout: _default(_opts.requestTimeout, 60_000),
+      requestTimeout: _default(_opts.requestTimeout, 120_000),
       connectionTimeout: _default(_opts.connectionTimeout, 10_000),
       maxConnections: _default(_opts.maxConnections, 1024),
       idleConnectionTime: _default(_opts.idleConnectionTime, 60_000),
