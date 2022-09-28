@@ -3,10 +3,10 @@ import { normalizeHeaders, safeAwait } from '../../utils';
 import { Acl, DataTransferStatus, DataTransferType } from '../../interface';
 import TosClientError from '../../TosClientError';
 import * as fsp from '../../nodejs/fs-promises';
-import { EmitReadStream } from '../../nodejs/EmitReadStream';
 import fs, { Stats } from 'fs';
 import { Readable } from 'stream';
-import { isBuffer, getSize } from './utils';
+import { getSize, getNewBodyConfig } from './utils';
+import { retryNamespace } from '../../axios';
 
 export interface PutObjectInput {
   bucket?: string;
@@ -49,6 +49,10 @@ export interface PutObjectInput {
   };
 }
 
+interface PutObjectInputInner extends PutObjectInput {
+  makeRetryStream?: () => Readable;
+}
+
 export interface PutObjectOutput {
   'x-tos-server-side-encryption-customer-algorithm'?: string;
   'x-tos-server-side-encryption-customer-key-md5'?: string;
@@ -58,6 +62,13 @@ export interface PutObjectOutput {
 }
 
 export async function putObject(this: TOSBase, input: PutObjectInput | string) {
+  return _putObject.call(this, input);
+}
+
+export async function _putObject(
+  this: TOSBase,
+  input: PutObjectInputInner | string
+) {
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeaders(input.headers);
   this.setObjectContentTypeHeader(input, headers);
@@ -112,29 +123,39 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
     }
   };
 
-  let newBody = input.body;
-  if (process.env.TARGET_ENVIRONMENT === 'node') {
-    const body = input.body;
-    if (totalSizeValid && (isBuffer(body) || body instanceof Readable)) {
-      newBody = new EmitReadStream(body, totalSize, n =>
-        triggerDataTransfer(DataTransferType.Rw, n)
-      ).stream();
-    }
-  }
+  const bodyConfig = getNewBodyConfig({
+    body: input.body,
+    totalSize,
+    dataTransferCallback: n => triggerDataTransfer(DataTransferType.Rw, n),
+    makeRetryStream: input.makeRetryStream,
+  });
 
   triggerDataTransfer(DataTransferType.Started);
   const [err] = await safeAwait(
-    this.fetchObject<PutObjectOutput>(input, 'PUT', {}, headers, newBody, {
-      handleResponse: res => res.headers,
-      axiosOpts: {
-        onUploadProgress: event => {
-          triggerDataTransfer(
-            DataTransferType.Rw,
-            event.loaded - consumedBytes
-          );
+    this.fetchObject<PutObjectOutput>(
+      input,
+      'PUT',
+      {},
+      headers,
+      bodyConfig.body,
+      {
+        handleResponse: res => res.headers,
+        axiosOpts: {
+          [retryNamespace]: {
+            beforeRetry: () => {
+              consumedBytes = 0;
+            },
+            makeRetryStream: bodyConfig.makeRetryStream,
+          },
+          onUploadProgress: event => {
+            triggerDataTransfer(
+              DataTransferType.Rw,
+              event.loaded - consumedBytes
+            );
+          },
         },
-      },
-    })
+      }
+    )
   );
 
   if (err) {
@@ -160,16 +181,20 @@ export async function putObjectFromFile(
     );
   }
 
-  const stream = fs.createReadStream(input.filePath);
   if (!normalizedHeaders['content-length']) {
     const stats: Stats = await fsp.stat(input.filePath);
     normalizedHeaders['content-length'] = `${stats.size}`;
   }
+  const makeRetryStream = () => {
+    const stream = fs.createReadStream(input.filePath);
+    return stream;
+  };
 
-  return putObject.call(this, {
+  return _putObject.call(this, {
     ...input,
-    body: stream,
+    body: makeRetryStream(),
     headers: normalizedHeaders,
+    makeRetryStream,
   });
 }
 

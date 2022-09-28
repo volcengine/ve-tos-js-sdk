@@ -1,12 +1,12 @@
-import { getSize, isBuffer } from '../utils';
+import { getNewBodyConfig, getSize } from '../utils';
 import TOSBase from '../../base';
 import TosClientError from '../../../TosClientError';
 import fs, { Stats } from 'fs';
 import * as fsp from '../../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
-import { EmitReadStream } from '../../../nodejs/EmitReadStream';
 import { Readable } from 'stream';
 import { safeAwait } from '../../../utils';
+import { retryNamespace } from '../../../axios';
 
 export interface UploadPartInput {
   body: Blob | Buffer | NodeJS.ReadableStream;
@@ -33,19 +33,21 @@ export interface UploadPartInput {
   };
 }
 
+export interface UploadPartInputInner extends UploadPartInput {
+  makeRetryStream?: () => Readable;
+  beforeRetry?: () => void;
+}
+
 export interface UploadPartOutput {
   ETag: string;
 }
 
-export async function uploadPart(this: TOSBase, input: UploadPartInput) {
+export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
   const { uploadId, partNumber, body } = input;
   const headers = input.headers || {};
   const size = getSize(body);
   if (size && headers['content-length'] == null) {
-    // browser will error: Refused to set unsafe header "content-length"
-    if (process.env.TARGET_ENVIRONMENT === 'node') {
-      headers['content-length'] = size.toFixed(0);
-    }
+    headers['content-length'] = size.toFixed(0);
   }
   const totalSize = getSize(input.body, headers);
   const totalSizeValid = totalSize != null;
@@ -96,15 +98,12 @@ export async function uploadPart(this: TOSBase, input: UploadPartInput) {
       progress?.(progressValue);
     }
   };
-  let newBody = input.body;
-  if (process.env.TARGET_ENVIRONMENT === 'node') {
-    const body = input.body;
-    if (totalSizeValid && (isBuffer(body) || body instanceof Readable)) {
-      newBody = new EmitReadStream(body, totalSize, n =>
-        triggerDataTransfer(DataTransferType.Rw, n)
-      ).stream();
-    }
-  }
+  const bodyConfig = getNewBodyConfig({
+    body: input.body,
+    totalSize,
+    dataTransferCallback: n => triggerDataTransfer(DataTransferType.Rw, n),
+    makeRetryStream: input.makeRetryStream,
+  });
 
   triggerDataTransfer(DataTransferType.Started);
   const [err, res] = await safeAwait(
@@ -113,10 +112,17 @@ export async function uploadPart(this: TOSBase, input: UploadPartInput) {
       'PUT',
       { partNumber, uploadId },
       headers,
-      newBody,
+      bodyConfig.body,
       {
         handleResponse: res => ({ ETag: res.headers.etag }),
         axiosOpts: {
+          [retryNamespace]: {
+            beforeRetry: () => {
+              consumedBytes = 0;
+              input.beforeRetry?.();
+            },
+            makeRetryStream: bodyConfig.makeRetryStream,
+          },
           onUploadProgress: event => {
             triggerDataTransfer(
               DataTransferType.Rw,
@@ -146,6 +152,10 @@ export async function uploadPart(this: TOSBase, input: UploadPartInput) {
   return res;
 }
 
+export async function uploadPart(this: TOSBase, input: UploadPartInput) {
+  return _uploadPart.call(this, input);
+}
+
 interface UploadPartFromFileInput extends Omit<UploadPartInput, 'body'> {
   filePath: string;
   /**
@@ -171,17 +181,21 @@ export async function uploadPartFromFile(
   const stats: Stats = await fsp.stat(input.filePath);
   const start = input.offset ?? 0;
   const end = start + (input.partSize ?? stats.size);
-  const stream = fs.createReadStream(input.filePath, {
-    start,
-    end: end - 1,
-  }) as NodeJS.ReadableStream;
+  const makeRetryStream = () => {
+    const stream = fs.createReadStream(input.filePath, {
+      start,
+      end: end - 1,
+    });
+    return stream;
+  };
 
-  return uploadPart.call(this, {
+  return _uploadPart.call(this, {
     ...input,
-    body: stream,
+    body: makeRetryStream(),
     headers: {
       ...(input.headers || {}),
       ['content-length']: `${end - start}`,
     },
+    makeRetryStream,
   });
 }

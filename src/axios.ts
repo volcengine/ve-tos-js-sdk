@@ -1,7 +1,26 @@
 import axios from 'axios';
+import { Readable } from 'stream';
 import { safeSync } from './utils';
 
 export const retryNamespace = '__retryConfig__';
+
+export interface RetryConfig {
+  // 对于文件流重试应该重新生成新的文件流
+  makeRetryStream?: () => Readable | undefined;
+
+  beforeRetry?: () => void;
+}
+
+interface InnerRetryConfig extends RetryConfig {
+  retryCount?: number;
+}
+
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    __retryConfig__?: RetryConfig;
+  }
+}
+
 function isNetworkError(error: any) {
   // no response or no requestId, ignore no network(error.code is undefined)
   return (
@@ -121,22 +140,42 @@ export const makeAxiosInst = (maxRetryCount: number) => {
     if (!config[retryNamespace]) {
       config[retryNamespace] = {};
     }
-    const retryCount = config[retryNamespace].retryCount ?? 0;
+    const retryConfig: InnerRetryConfig = config[retryNamespace];
+    const retryCount = retryConfig.retryCount ?? 0;
+
+    let newData = config.data;
+    const canRetryData = (() => {
+      if (process.env.TARGET_ENVIRONMENT === 'node') {
+        if (config.data && config.data instanceof Readable) {
+          const v = retryConfig.makeRetryStream?.();
+          if (!v) {
+            return false;
+          }
+          newData = v;
+        }
+      }
+      return true;
+    })();
 
     const canRetry =
       (isNetworkError(error) || isCanRetryStatusCode(error)) &&
-      retryCount < maxRetryCount;
+      retryCount < maxRetryCount &&
+      canRetryData;
+
     if (!canRetry) {
       return Promise.reject(error);
     }
 
     const nextConfig = {
       ...config,
+      data: newData,
       [retryNamespace]: {
-        ...config[retryNamespace],
+        ...retryConfig,
         retryCount: retryCount + 1,
       },
     };
+
+    retryConfig.beforeRetry?.();
     return axiosInst(nextConfig);
   });
 
