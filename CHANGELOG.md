@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+
+- fix: body is empty if retrying to upload a stream or file in nodejs
+- modify default `requestTimeout` to 120s
+
 ## [2.1.3] - 2022-09-14
 
 ### Fixed
