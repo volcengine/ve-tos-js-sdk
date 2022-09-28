@@ -20,6 +20,7 @@ import path from 'path';
 import TosClientError from '../../../TosClientError';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
 import { safeAwait } from '../../../utils';
+import { EmptyReadStream } from '../../../nodejs/EmptyReadStream';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -680,6 +681,9 @@ function getMakeRetryStream(file: UploadFileInput['file'], task: Task) {
 
   if (process.env.TARGET_ENVIRONMENT === 'node' && typeof file === 'string') {
     return () => {
+      if (!partSize) {
+        return new EmptyReadStream();
+      }
       return fs.createReadStream(file, {
         start,
         end: end - 1,
