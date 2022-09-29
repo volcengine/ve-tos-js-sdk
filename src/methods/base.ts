@@ -82,6 +82,7 @@ export interface TOSConstructorOptions {
 }
 
 interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
+  secure: boolean;
   endpoint: string;
   enableVerifySSL: boolean;
   autoRecognizeContentType: boolean;

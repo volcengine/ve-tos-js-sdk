@@ -4,7 +4,6 @@ import {
   CreateMultipartUploadInput,
 } from './createMultipartUpload';
 
-import { isBlob, isBuffer } from '../utils';
 import { calculateSafePartSize } from './listParts';
 import { Stats } from 'fs';
 import { UploadPartOutput, _uploadPart } from './uploadPart';
@@ -15,20 +14,18 @@ import {
 } from './completeMultipartUpload';
 import { CancelToken } from 'axios';
 import * as fsp from '../../../nodejs/fs-promises';
-import fs from 'fs';
 import path from 'path';
-import TosClientError from '../../../TosClientError';
-import { DataTransferStatus, DataTransferType } from '../../../interface';
 import { safeAwait } from '../../../utils';
-import { EmptyReadStream } from '../../../nodejs/EmptyReadStream';
 import { CancelError } from '../../../CancelError';
+import headObject from '../headObject';
+import { uploadPartCopy } from './uploadPartCopy';
+import { Headers } from '../../../interface';
+import copyObject from '../copyObject';
 
-export interface UploadFileInput extends CreateMultipartUploadInput {
-  /**
-   * if the type of `file` is string,
-   * `file` represents the file path that will be uploaded
-   */
-  file: string | File | Blob | Buffer;
+export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
+  srcBucket: string;
+  srcKey: string;
+  srcVersionId?: string;
 
   /**
    * default is 20 MB
@@ -40,29 +37,30 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
    */
   taskNum?: number;
 
-  // TODO: default file name is not aligned.
   /**
    * if checkpoint is a string and point to a exist file,
    * the checkpoint record will recover from this file.
    *
    * if checkpoint is a string and point to a directory,
    * the checkpoint will be auto generated,
-   * and its name is `{bucketName}_{objectName}.{uploadId}`.
+   * and its name is
+   * `{srcBucketName}.{srcObjectName}.{srcVersionId}.{bucketName}.{objectName}.copy`.
    */
-  checkpoint?: string | CheckpointRecord;
-
-  dataTransferStatusChange?: (status: DataTransferStatus) => void;
+  checkpoint?: string | ResumableCopyCheckpointRecord;
 
   /**
-   * the feature of pause and continue uploading
+   * the callback of copy event
    */
-  uploadEventChange?: (event: UploadEvent) => void;
+  copyEventListener?: (event: ResumableCopyEvent) => void;
 
   /**
    * the simple progress feature
    * percent is [0, 1]
    */
-  progress?: (percent: number, checkpoint: CheckpointRecord) => void;
+  progress?: (
+    percent: number,
+    checkpoint: ResumableCopyCheckpointRecord
+  ) => void;
 
   /**
    * is axios CancelToken
@@ -72,30 +70,27 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
 
 export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
 
-export enum UploadEventType {
+export enum ResumableCopyEventType {
   createMultipartUploadSucceed = 1,
   createMultipartUploadFailed = 2,
-  uploadPartSucceed = 3,
-  uploadPartFailed = 4,
-  uploadPartAborted = 5,
+  uploadPartCopySucceed = 3,
+  uploadPartCopyFailed = 4,
+  uploadPartCopyAborted = 5,
   completeMultipartUploadSucceed = 6,
   completeMultipartUploadFailed = 7,
 }
 
-export interface UploadPartInfo {
+export interface CopyPartInfo {
   partNumber: number;
-  partSize: number;
-  offset: number;
+  copySourceRangeStart: number;
+  copySourceRangeEnd: number;
 
   // has value when upload part succeed
   etag?: string;
-
-  // not support
-  // hashCrc64ecma?: number;
 }
 
-export interface UploadEvent {
-  type: UploadEventType;
+export interface ResumableCopyEvent {
+  type: ResumableCopyEventType;
 
   /**
    * has value when event is failed or aborted
@@ -104,36 +99,32 @@ export interface UploadEvent {
 
   bucket: string;
   key: string;
-  uploadId: string;
+  uploadId?: string;
   checkpointFile?: string;
-  uploadPartInfo?: UploadPartInfo;
+  copyPartInfo?: CopyPartInfo;
 }
 
-export interface CheckpointRecord {
+export interface ResumableCopyCheckpointRecord {
   bucket: string;
   key: string;
   part_size: number;
   upload_id: string;
-  parts_info?: CheckpointRecordPart[];
+  parts_info?: ResumableCopyCheckpointRecordPart[];
   // Information about the file to be uploaded
-  file_info?: {
-    last_modified: number;
-    file_size: number;
+  copy_source_object_info: {
+    etag: string;
+    hash_crc64ecma: string;
+    last_modified: string;
+    object_size: number;
   };
-
-  // TODO: Not support the fields below
-  // ssec_algorithm?: string;
-  // ssec_key_md5?: string;
-  // encoding_type?: string;
+  // TODO: more information
 }
 
-interface CheckpointRecordPart {
+interface ResumableCopyCheckpointRecordPart {
   part_number: number;
-  part_size: number;
-  offset: number;
+  copy_source_range_start: number;
+  copy_source_range_end: number;
   etag: string;
-  // not support
-  // hash_crc64ecma: number;
   is_completed: boolean;
 }
 
@@ -142,7 +133,7 @@ interface CheckpointRichInfo {
 
   filePathIsPlaceholder?: boolean;
 
-  record?: CheckpointRecord;
+  record?: ResumableCopyCheckpointRecord;
 }
 
 interface Task {
@@ -152,41 +143,23 @@ interface Task {
 }
 
 const CHECKPOINT_FILE_NAME_PLACEHOLDER = '@@checkpoint-file-placeholder@@';
-const FILE_PARAM_CHECK_MSG = '`file` must be string, Buffer, File or Blob';
 const ABORT_ERROR_STATUS_CODE = [403, 404, 405];
-
 export const DEFAULT_PART_SIZE = 20 * 1024 * 1024; // 20 MB
 
-export async function uploadFile(
+export async function resumableCopyObject(
   this: TOSBase,
-  input: UploadFileInput
+  input: ResumableCopyObjectInput
 ): Promise<TosResponse<UploadFileOutput>> {
   const { cancelToken } = input;
   const isCancel = () => cancelToken && !!cancelToken.reason;
 
-  const fileStats: Stats | null = await (async () => {
-    if (
-      process.env.TARGET_ENVIRONMENT === 'node' &&
-      typeof input.file === 'string'
-    ) {
-      return fsp.stat(input.file);
-    }
-    return null;
-  })();
-
-  const fileSize = await (async () => {
-    const { file } = input;
-    if (fileStats) {
-      return fileStats.size;
-    }
-    if (isBuffer(file)) {
-      return file.length;
-    }
-    if (isBlob(file)) {
-      return file.size;
-    }
-    throw new TosClientError(FILE_PARAM_CHECK_MSG);
-  })();
+  const { data: objectStats } = await headObject.call(this, {
+    bucket: input.srcBucket,
+    key: input.srcKey,
+    versionId: input.srcVersionId,
+  });
+  const etag = objectStats['etag'];
+  const objectSize = +objectStats['content-length'];
 
   const checkpointRichInfo = await (async (): Promise<CheckpointRichInfo> => {
     if (process.env.TARGET_ENVIRONMENT === 'node') {
@@ -249,9 +222,16 @@ export async function uploadFile(
 
   // check if file info is matched
   await (async () => {
-    if (fileStats && checkpointRichInfo.record?.file_info) {
-      const { last_modified, file_size } = checkpointRichInfo.record?.file_info;
-      if (fileStats.mtimeMs !== last_modified || fileStats.size !== file_size) {
+    if (checkpointRichInfo.record?.copy_source_object_info) {
+      const {
+        last_modified,
+        object_size,
+      } = checkpointRichInfo.record?.copy_source_object_info;
+      if (
+        // TODO: `last-modified` aligns to number
+        objectStats['last-modified'] !== last_modified ||
+        +objectStats['content-length'] !== object_size
+      ) {
         console.warn(
           `The file has been modified since ${new Date(
             last_modified
@@ -263,7 +243,7 @@ export async function uploadFile(
   })();
 
   const partSize = calculateSafePartSize(
-    fileSize,
+    objectSize,
     input.partSize || checkpointRichInfo.record?.part_size || DEFAULT_PART_SIZE,
     true
   );
@@ -284,41 +264,51 @@ export async function uploadFile(
   const key = input.key;
   let uploadId = '';
   let tasks: Task[] = [];
-  const allTasks: Task[] = getAllTasks(fileSize, partSize);
+  const allTasks: Task[] = getAllTasks(objectSize, partSize);
   const initConsumedBytes = (checkpointRichInfo.record?.parts_info || [])
     .filter(it => it.is_completed)
-    .reduce((prev, it) => prev + it.part_size, 0);
+    .reduce(
+      (prev, it) =>
+        prev + it.copy_source_range_end - it.copy_source_range_start + 1,
+      0
+    );
   let consumedBytesForProgress = initConsumedBytes;
 
   // recorded tasks
   const recordedTasks = checkpointRichInfo.record?.parts_info || [];
-  const recordedTaskMap: Map<number, CheckpointRecordPart> = new Map();
+  const recordedTaskMap: Map<
+    number,
+    ResumableCopyCheckpointRecordPart
+  > = new Map();
   recordedTasks.forEach(it => recordedTaskMap.set(it.part_number, it));
 
   const getCheckpointContent = () => {
-    const checkpointContent: CheckpointRecord = {
+    const checkpointContent: ResumableCopyCheckpointRecord = {
       bucket,
       key,
       part_size: partSize,
       upload_id: uploadId,
       parts_info: recordedTasks,
+      copy_source_object_info: {
+        last_modified: objectStats['last-modified'],
+        etag: objectStats.etag,
+        hash_crc64ecma: objectStats['x-tos-hash-crc64ecma'] || '',
+        object_size: +objectStats['content-length'],
+      },
     };
-    if (fileStats) {
-      checkpointContent.file_info = {
-        last_modified: fileStats.mtimeMs,
-        file_size: fileStats.size,
-      };
-    }
     return checkpointContent;
   };
   const triggerUploadEvent = (
-    e: Omit<UploadEvent, 'bucket' | 'uploadId' | 'key' | 'checkpointFile'>
+    e: Omit<
+      ResumableCopyEvent,
+      'bucket' | 'uploadId' | 'key' | 'checkpointFile'
+    >
   ) => {
-    if (!input.uploadEventChange) {
+    if (!input.copyEventListener) {
       return;
     }
 
-    const event: UploadEvent = {
+    const event: ResumableCopyEvent = {
       bucket,
       uploadId,
       key,
@@ -328,7 +318,7 @@ export async function uploadFile(
       event.checkpointFile = checkpointRichInfo.filePath;
     }
 
-    input.uploadEventChange(event);
+    input.copyEventListener(event);
   };
   enum TriggerProgressEventType {
     createMultipartUploadSucceed = 1,
@@ -347,11 +337,11 @@ export async function uploadFile(
     ) {
       ret = 1;
     } else {
-      ret = !fileSize ? 1 : consumedBytesForProgress / fileSize;
+      ret = !objectSize ? 1 : consumedBytesForProgress / objectSize;
     }
 
     if (
-      consumedBytesForProgress === fileSize &&
+      consumedBytesForProgress === objectSize &&
       type === TriggerProgressEventType.uploadPartSucceed
     ) {
       // 100% 仅在 complete 后处理，以便 100% 可以拉取到新对象
@@ -359,24 +349,7 @@ export async function uploadFile(
       input.progress(ret, getCheckpointContent());
     }
   };
-  let consumedBytes = initConsumedBytes;
-  const { dataTransferStatusChange } = input;
-  const triggerDataTransfer = (
-    type: DataTransferType,
-    rwOnceBytes: number = 0
-  ) => {
-    if (!dataTransferStatusChange) {
-      return;
-    }
-    consumedBytes += rwOnceBytes;
 
-    dataTransferStatusChange?.({
-      type,
-      rwOnceBytes,
-      consumedBytes,
-      totalBytes: fileSize,
-    });
-  };
   const writeCheckpointFile = async () => {
     if (
       process.env.TARGET_ENVIRONMENT === 'node' &&
@@ -415,8 +388,8 @@ export async function uploadFile(
     if (!existRecordTask) {
       existRecordTask = {
         part_number: task.partNumber,
-        offset: task.offset,
-        part_size: task.partSize,
+        copy_source_range_start: task.offset,
+        copy_source_range_end: task.offset + task.partSize - 1,
         is_completed: false,
         etag: '',
       };
@@ -430,36 +403,38 @@ export async function uploadFile(
     }
 
     await writeCheckpointFile();
-    const uploadPartInfo: UploadPartInfo = {
+    const copyPartInfo: CopyPartInfo = {
       partNumber: existRecordTask.part_number,
-      partSize: existRecordTask.part_size,
-      offset: existRecordTask.offset,
+      copySourceRangeEnd: existRecordTask.copy_source_range_end,
+      copySourceRangeStart: existRecordTask.copy_source_range_start,
     };
 
     if (uploadPartRes instanceof Error) {
       const err = uploadPartRes;
-      let type: UploadEventType = UploadEventType.uploadPartFailed;
+      let type: ResumableCopyEventType =
+        ResumableCopyEventType.uploadPartCopyFailed;
 
       if (err instanceof TosServerError) {
         if (ABORT_ERROR_STATUS_CODE.includes(err.statusCode)) {
-          type = UploadEventType.uploadPartAborted;
+          type = ResumableCopyEventType.uploadPartCopyAborted;
         }
       }
 
       triggerUploadEvent({
         type,
         err,
-        uploadPartInfo,
+        copyPartInfo,
       });
       return;
     }
 
-    uploadPartInfo.etag = uploadPartRes.ETag;
-    consumedBytesForProgress += uploadPartInfo.partSize;
+    copyPartInfo.etag = uploadPartRes.ETag;
+    consumedBytesForProgress +=
+      copyPartInfo.copySourceRangeEnd - copyPartInfo.copySourceRangeStart + 1;
 
     triggerUploadEvent({
-      type: UploadEventType.uploadPartSucceed,
-      uploadPartInfo,
+      type: ResumableCopyEventType.uploadPartCopySucceed,
+      copyPartInfo,
     });
     triggerProgressEvent(TriggerProgressEventType.uploadPartSucceed);
   };
@@ -492,12 +467,15 @@ export async function uploadFile(
       if (checkpointRichInfo.filePathIsPlaceholder) {
         checkpointRichInfo.filePath = checkpointRichInfo.filePath?.replace(
           `${CHECKPOINT_FILE_NAME_PLACEHOLDER}`,
-          getDefaultCheckpointFilePath(bucket, key, uploadId)
+          getDefaultCheckpointFilePath({
+            ...input,
+            bucket,
+          })
         );
       }
 
       triggerUploadEvent({
-        type: UploadEventType.createMultipartUploadSucceed,
+        type: ResumableCopyEventType.createMultipartUploadSucceed,
       });
       triggerProgressEvent(
         TriggerProgressEventType.createMultipartUploadSucceed
@@ -505,7 +483,7 @@ export async function uploadFile(
     } catch (_err) {
       const err = _err as Error;
       triggerUploadEvent({
-        type: UploadEventType.createMultipartUploadFailed,
+        type: ResumableCopyEventType.createMultipartUploadFailed,
         err,
       });
       throw err;
@@ -528,29 +506,29 @@ export async function uploadFile(
           }
 
           const curTask = tasks[currentIndex];
-          let consumedBytesThisTask = 0;
           try {
-            const { data: uploadPartRes } = await _uploadPart.call(this, {
+            let copySource = `/${input.srcBucket}/${input.srcKey}`;
+            if (input.srcVersionId) {
+              copySource += `?versionId=${input.srcVersionId}`;
+            }
+            const copyRange = `bytes=${curTask.offset}-${curTask.offset +
+              curTask.partSize -
+              1}`;
+            const headers: Headers = {
+              ['x-tos-copy-source']: copySource,
+              ['x-tos-copy-source-if-match']: etag,
+              ['x-tos-copy-source-range']: copyRange,
+            };
+
+            if (!curTask.partSize) {
+              delete headers['x-tos-copy-source-range'];
+            }
+            const { data: uploadPartRes } = await uploadPartCopy.call(this, {
               bucket,
               key,
               uploadId,
-              body: getBody(input.file, curTask),
-              makeRetryStream: getMakeRetryStream(input.file, curTask),
-              beforeRetry: () => {
-                consumedBytes -= consumedBytesThisTask;
-                consumedBytesThisTask = 0;
-              },
               partNumber: curTask.partNumber,
-              headers: {
-                ['content-length']: `${curTask.partSize}`,
-              },
-              dataTransferStatusChange(status) {
-                if (status.type !== DataTransferType.Rw) {
-                  return;
-                }
-                consumedBytesThisTask += status.rwOnceBytes;
-                triggerDataTransfer(status.type, status.rwOnceBytes);
-              },
+              headers,
             });
 
             if (isCancel()) {
@@ -560,8 +538,6 @@ export async function uploadFile(
             await updateAfterUploadPart(curTask, uploadPartRes);
           } catch (_err) {
             const err = _err as any;
-            consumedBytes -= consumedBytesThisTask;
-            consumedBytesThisTask = 0;
 
             if (isCancelError(err)) {
               throw err;
@@ -596,13 +572,13 @@ export async function uploadFile(
 
     if (err || !res) {
       triggerUploadEvent({
-        type: UploadEventType.completeMultipartUploadFailed,
+        type: ResumableCopyEventType.completeMultipartUploadFailed,
       });
       throw err;
     }
 
     triggerUploadEvent({
-      type: UploadEventType.completeMultipartUploadSucceed,
+      type: ResumableCopyEventType.completeMultipartUploadSucceed,
     });
     triggerProgressEvent(
       TriggerProgressEventType.completeMultipartUploadSucceed
@@ -612,21 +588,70 @@ export async function uploadFile(
     return res;
   };
 
-  triggerDataTransfer(DataTransferType.Started);
-  const [err, res] = await safeAwait(handleTasks());
-  if (err || !res) {
-    triggerDataTransfer(DataTransferType.Failed);
-    throw err;
-  }
-  triggerDataTransfer(DataTransferType.Succeed);
-  return res;
+  const handleEmptyObj = async (): Promise<TosResponse<UploadFileOutput>> => {
+    let copySource = `/${input.srcBucket}/${input.srcKey}`;
+    if (input.srcVersionId) {
+      copySource += `?versionId=${input.srcVersionId}`;
+    }
+    const headers: Headers = {
+      ['x-tos-copy-source']: copySource,
+      ['x-tos-copy-source-if-match']: etag,
+    };
+
+    const [err, res] = await safeAwait(
+      copyObject.call(this, {
+        bucket: input.bucket,
+        key: input.key,
+        headers,
+      })
+    );
+    if (err || !res) {
+      triggerUploadEvent({
+        type: ResumableCopyEventType.uploadPartCopyFailed,
+      });
+      throw err;
+    }
+
+    triggerProgressEvent(
+      TriggerProgressEventType.completeMultipartUploadSucceed
+    );
+    triggerUploadEvent({
+      type: ResumableCopyEventType.uploadPartCopySucceed,
+      copyPartInfo: {
+        partNumber: 0,
+        copySourceRangeStart: 0,
+        copySourceRangeEnd: 0,
+      },
+    });
+    triggerUploadEvent({
+      type: ResumableCopyEventType.completeMultipartUploadSucceed,
+    });
+
+    return {
+      ...res,
+      data: {
+        ETag: res.headers['etag'] || '',
+        Bucket: bucket,
+        Key: key,
+        Location: `http${this.opts.secure ? 's' : ''}://${bucket}.${
+          this.opts.endpoint
+        }/${key}`,
+        VersionID: res.headers['x-tos-version-id'],
+        HashCrc64ecma: res.headers['x-tos-hash-crc64ecma']
+          ? +res.headers['x-tos-hash-crc64ecma']
+          : 0,
+      },
+    };
+  };
+
+  return objectSize === 0 ? handleEmptyObj() : handleTasks();
 }
 
 export function isCancelError(err: any) {
   return err instanceof CancelError;
 }
 
-export default uploadFile;
+export default resumableCopyObject;
 
 /**
  * 即使 totalSize 是 0，也需要一个 Part，否则 Server 端会报错 read request body failed
@@ -652,46 +677,21 @@ function getAllTasks(totalSize: number, partSize: number) {
 }
 
 function getDefaultCheckpointFilePath(
-  bucket: string,
-  key: string,
-  uploadId: string
+  opts: Pick<
+    ResumableCopyObjectInput,
+    'srcBucket' | 'srcKey' | 'srcVersionId' | 'key'
+  > & {
+    bucket: string;
+  }
 ) {
-  return `${bucket}_${key}.${uploadId}.json`;
-}
-
-function getBody(file: UploadFileInput['file'], task: Task) {
-  const { offset: start, partSize } = task;
-  const end = start + partSize;
-
-  const makeRetryStream = getMakeRetryStream(file, task);
-  if (makeRetryStream) {
-    return makeRetryStream();
-  }
-
-  if (isBlob(file)) {
-    return file.slice(start, end);
-  }
-  if (isBuffer(file)) {
-    return file.slice(start, end);
-  }
-  throw new TosClientError(FILE_PARAM_CHECK_MSG);
-}
-
-function getMakeRetryStream(file: UploadFileInput['file'], task: Task) {
-  const { offset: start, partSize } = task;
-  const end = start + partSize;
-
-  if (process.env.TARGET_ENVIRONMENT === 'node' && typeof file === 'string') {
-    return () => {
-      if (!partSize) {
-        return new EmptyReadStream();
-      }
-      return fs.createReadStream(file, {
-        start,
-        end: end - 1,
-      });
-    };
-  }
-
-  return undefined;
+  return [
+    opts.srcBucket,
+    opts.srcKey,
+    opts.srcVersionId,
+    opts.bucket,
+    opts.key,
+    'copy',
+  ]
+    .filter(Boolean)
+    .join('.');
 }
