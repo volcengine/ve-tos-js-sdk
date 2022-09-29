@@ -437,6 +437,19 @@ export class TOSBase {
       headers['content-type'] = mimeType;
     }
   };
+
+  protected getNormalDataFromError<T>(
+    data: T,
+    err: TosServerError
+  ): TosResponse<T> {
+    return {
+      data,
+      statusCode: err.statusCode,
+      headers: err.headers,
+      requestId: err.requestId,
+      id2: err.id2,
+    };
+  }
 }
 
 export default TOSBase;

@@ -1,5 +1,6 @@
+import { safeAwait } from '@/utils';
 import { StorageClass, ServerSideEncryption } from '../../interface';
-import TOSBase from '../base';
+import TOSBase, { TosResponse } from '../base';
 
 export interface CopyObjectInput {
   bucket?: string;
@@ -25,8 +26,25 @@ export interface CopyObjectInput {
   };
 }
 
-export async function copyObject(this: TOSBase, input: CopyObjectInput) {
-  return this.fetchObject<undefined>(input, 'PUT', {}, input.headers || {});
+interface CopyObjectBody {
+  ETag: string;
+}
+
+export interface CopyObjectOutput extends CopyObjectBody {}
+
+export async function copyObject(
+  this: TOSBase,
+  input: CopyObjectInput
+): Promise<TosResponse<CopyObjectOutput>> {
+  const [err, res] = await safeAwait(
+    this.fetchObject<CopyObjectBody>(input, 'PUT', {}, input.headers || {})
+  );
+
+  if (err || !res || !res.data.ETag) {
+    // TODO: throw TosServerErr
+    throw err;
+  }
+  return res;
 }
 
 export default copyObject;

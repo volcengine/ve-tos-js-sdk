@@ -49,6 +49,11 @@ import {
 } from './TosExportEnum';
 import { CancelError } from './CancelError';
 import { resumableCopyObject } from './methods/object/multipart/resumableCopyObject';
+import {
+  deleteBucketPolicy,
+  getBucketPolicy,
+  putBucketPolicy,
+} from './methods/bucket/policy';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -78,6 +83,11 @@ class TOS extends TOSBase {
   // bucket acl
   getBucketAcl = getBucketAcl;
   putBucketAcl = putBucketAcl;
+
+  // bucket policy
+  getBucketPolicy = getBucketPolicy;
+  putBucketPolicy = putBucketPolicy;
+  deleteBucketPolicy = deleteBucketPolicy;
 
   // object base
   copyObject = copyObject;

@@ -1,3 +1,4 @@
+import { safeAwait } from '@/utils';
 import TOSBase from '../../base';
 
 export interface UploadPartCopyInput {
@@ -31,10 +32,19 @@ export async function uploadPartCopy(
   const { uploadId, partNumber } = input;
   const headers = input.headers || {};
 
-  return this.fetchObject<UploadPartCopyOutput>(
-    input,
-    'PUT',
-    { partNumber, uploadId },
-    headers
+  const [err, res] = await safeAwait(
+    this.fetchObject<UploadPartCopyOutput>(
+      input,
+      'PUT',
+      { partNumber, uploadId },
+      headers
+    )
   );
+
+  if (err || !res || !res.data.ETag) {
+    // TODO: throw TosServerErr
+    throw err;
+  }
+
+  return res;
 }
