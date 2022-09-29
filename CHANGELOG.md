@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- add `resumableCopyObject` method which can copy object which is bigger than 5GiB
+- add `(get|put|delete)BucketPolicy` methods to modify bucket policy
+
 ## [2.1.5] - 2022-09-28
 
 ### Fixed
