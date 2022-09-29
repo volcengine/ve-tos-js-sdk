@@ -46,10 +46,12 @@ describe('resumableCopyObject in node.js environment', () => {
     await client.createBucket({
       bucket: testBucketName,
     });
-    client.uploadFile({ file: objectPathEmpty, key: objectKeyEmpty });
-    client.uploadFile({ file: objectPath1K, key: objectKey1K });
-    client.uploadFile({ file: objectPath10M, key: objectKey10M });
-    client.uploadFile({ file: objectPath100M, key: objectKey100M });
+    await Promise.all([
+      client.uploadFile({ file: objectPathEmpty, key: objectKeyEmpty }),
+      client.uploadFile({ file: objectPath1K, key: objectKey1K }),
+      client.uploadFile({ file: objectPath10M, key: objectKey10M }),
+      client.uploadFile({ file: objectPath100M, key: objectKey100M }),
+    ]);
     await sleepCache();
     done();
   }, NEVER_TIMEOUT);
