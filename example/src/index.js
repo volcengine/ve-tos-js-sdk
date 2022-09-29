@@ -1,6 +1,7 @@
 import axios from 'axios';
 import TOS from '../../';
 
+const bucket = 'cg-beijing';
 const client = new TOS({
   accessKeyId: process.env.ACCESS_KEY_ID,
   accessKeySecret: process.env.ACCESS_KEY_SECRET,
@@ -9,8 +10,8 @@ const client = new TOS({
     url: `${window.location.protocol}//${window.location.host}/api/proxy-tos/`,
     needProxyParams: true,
   },
-  requestTimeout: 1000,
-  bucket: 'cg-beijing',
+  requestTimeout: -1,
+  bucket,
 });
 
 const listBucketsDom = document.querySelector('#list-buckets');
@@ -60,11 +61,15 @@ uploadObjectDom.addEventListener('click', async () => {
 })();
 
 (function() {
+  let lastUploadKey = '';
   const inputDom = document.querySelector('#upload-progress-input');
   const textDom = document.querySelector('#upload-progress-text');
   const putObjectBtn = document.querySelector('#upload-progress-by-putObject');
   const uploadFileBtn = document.querySelector(
     '#upload-progress-by-uploadFile'
+  );
+  const resumableCopyBtn = document.querySelector(
+    '#resumeCopy-progress-by-uploadFile'
   );
 
   putObjectBtn.addEventListener('click', async () => {
@@ -77,6 +82,7 @@ uploadObjectDom.addEventListener('click', async () => {
 
     const file = inputDom.files[0];
     const key = file.name;
+    lastUploadKey = key;
     client.putObject({
       key,
       body: file,
@@ -101,6 +107,7 @@ uploadObjectDom.addEventListener('click', async () => {
 
     const file = inputDom.files[0];
     const key = file.name;
+    lastUploadKey = key;
     client.uploadFile({
       key,
       file,
@@ -112,6 +119,24 @@ uploadObjectDom.addEventListener('click', async () => {
       progress: p => {
         addContent(`progress: ${p}`);
       },
+    });
+
+    resumableCopyBtn.addEventListener('click', () => {
+      textDom.innerHTML = '';
+      let content = '';
+      const addContent = line => {
+        content += line + '\n';
+        textDom.innerHTML = content;
+      };
+
+      client.resumableCopyObject({
+        srcBucket: bucket,
+        srcKey: lastUploadKey,
+        key: `copy_${lastUploadKey}`,
+        progress: p => {
+          addContent(`progress: ${p}`);
+        },
+      });
     });
   });
 })();
