@@ -1,4 +1,4 @@
-import { safeAwait } from '@/utils';
+import { safeAwait } from '../../../utils';
 import TOSBase from '../../base';
 
 export interface UploadPartCopyInput {
