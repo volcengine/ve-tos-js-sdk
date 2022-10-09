@@ -1,4 +1,4 @@
-import { safeAwait } from '@/utils';
+import { safeAwait } from '../../utils';
 import { StorageClass, ServerSideEncryption } from '../../interface';
 import TOSBase, { TosResponse } from '../base';
 
