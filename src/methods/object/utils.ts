@@ -39,8 +39,9 @@ export function validateObjectName(input: { key: string } | string) {
     );
   }
 
-  for (let i = 0; i < key.length; ++i) {
-    const charCode = key.charCodeAt(i);
+  if (key.length === 1) {
+    // only check one ascii code, otherwise server maybe produce strange problems
+    const charCode = key.charCodeAt(0);
     if (charCode < 32 || (charCode > 127 && charCode < 256)) {
       throw new TosClientError(
         'invalid object name, the character set is illegal'
