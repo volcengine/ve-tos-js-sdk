@@ -66,7 +66,7 @@ export const getSortedQueryString = (query: Record<string, any>) => {
   return searchParts.join('&');
 };
 
-export const normalizeHeaders = <T extends Headers>(
+export const normalizeHeadersKey = <T extends Headers>(
   headers: T | undefined
 ): T => {
   const headers1 = (pickBy(
@@ -81,6 +81,22 @@ export const normalizeHeaders = <T extends Headers>(
   });
 
   return headers2 as T;
+};
+
+export const encodeHeadersValue = (headers: Headers) => {
+  const header2: Headers = {};
+  Object.entries(headers).forEach(([key, value]) => {
+    header2[key] = `${value}`
+      .split('')
+      .map((ch: string) => {
+        if (ch.charCodeAt(0) >= 128) {
+          return encodeURIComponent(ch);
+        }
+        return ch;
+      })
+      .join('');
+  });
+  return header2;
 };
 
 // TODO: getRegion from endpoint, maybe user passes it is better.

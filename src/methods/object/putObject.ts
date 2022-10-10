@@ -1,5 +1,5 @@
 import TOSBase from '../base';
-import { normalizeHeaders, safeAwait } from '../../utils';
+import { normalizeHeadersKey, safeAwait } from '../../utils';
 import { Acl, DataTransferStatus, DataTransferType } from '../../interface';
 import TosClientError from '../../TosClientError';
 import * as fsp from '../../nodejs/fs-promises';
@@ -70,7 +70,7 @@ export async function _putObject(
   input: PutObjectInputInner | string
 ) {
   input = this.normalizeObjectInput(input);
-  const headers = normalizeHeaders(input.headers);
+  const headers = normalizeHeadersKey(input.headers);
   this.setObjectContentTypeHeader(input, headers);
 
   const totalSize = getSize(input.body, headers);
@@ -174,7 +174,7 @@ export async function putObjectFromFile(
   this: TOSBase,
   input: PutObjectFromFileInput
 ): Promise<void> {
-  const normalizedHeaders = normalizeHeaders(input.headers);
+  const normalizedHeaders = normalizeHeadersKey(input.headers);
   if (process.env.TARGET_ENVIRONMENT !== 'node') {
     throw new TosClientError(
       "putObjectFromFile doesn't support in browser environment"

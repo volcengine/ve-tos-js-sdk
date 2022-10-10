@@ -1,5 +1,5 @@
 import TOSBase from '../../base';
-import { normalizeHeaders } from '../../../utils';
+import { normalizeHeadersKey } from '../../../utils';
 import { Acl } from '../../../interface';
 
 export interface CreateMultipartUploadInput {
@@ -38,7 +38,7 @@ export async function createMultipartUpload(
   input: CreateMultipartUploadInput | string
 ) {
   input = this.normalizeObjectInput(input);
-  const headers = normalizeHeaders(input.headers);
+  const headers = normalizeHeadersKey(input.headers);
   if (input.acl) {
     if (!headers['x-tos-acl']) {
       headers['x-tos-acl'] = input.acl;

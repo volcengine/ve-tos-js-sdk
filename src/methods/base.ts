@@ -8,7 +8,12 @@ import axios, {
 import { ISigV4Credentials, SignersV4 } from '../signatureV4';
 import { Headers } from '../interface';
 import TosServerError, { TosServerErrorData } from '../TosServerError';
-import { getEndpoint, getSortedQueryString, normalizeProxy } from '../utils';
+import {
+  encodeHeadersValue,
+  getEndpoint,
+  getSortedQueryString,
+  normalizeProxy,
+} from '../utils';
 import version from '../version';
 import { TosAgent } from '../nodejs/TosAgent';
 import TosClientError from '../TosClientError';
@@ -221,6 +226,8 @@ export class TOSBase {
       return [this.opts.endpoint, path];
     })();
     path = newPath;
+
+    headers = encodeHeadersValue(headers);
 
     const signOpt = {
       // TODO: delete endpoints and buckets

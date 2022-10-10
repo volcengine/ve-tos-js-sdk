@@ -60,26 +60,7 @@ export const makeAxiosInst = (maxRetryCount: number) => {
     return config;
   });
 
-  // header encode/decode
-  axiosInst.interceptors.request.use(config => {
-    if (!config.headers) {
-      return config;
-    }
-
-    Object.entries(config.headers).forEach(([key, value]) => {
-      config.headers[key] = `${value}`
-        .split('')
-        .map((ch: string) => {
-          if (ch.charCodeAt(0) >= 128) {
-            return encodeURIComponent(ch);
-          }
-          return ch;
-        })
-        .join('');
-    });
-
-    return config;
-  });
+  // decode header. Encode headers' value by encodeHeadersValue method before calling axios
   function handleResponseHeader(headers: Record<string, string>) {
     Object.entries(headers).forEach(([key, value]) => {
       const [err, decodedValue] = safeSync(() => decodeURI(value));
