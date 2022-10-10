@@ -1,7 +1,7 @@
 import fs from 'fs';
 import TosClientError from '../../TosClientError';
 import { Headers } from '../../interface';
-import { normalizeHeaders } from '../../utils';
+import { normalizeHeadersKey } from '../../utils';
 import TOSBase, { TosResponse } from '../base';
 
 export interface GetObjectInput {
@@ -39,7 +39,7 @@ export async function getObject(this: TOSBase, input: GetObjectInput | string) {
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
-  const headers: Headers = normalizeHeaders(normalizedInput?.headers);
+  const headers: Headers = normalizeHeadersKey(normalizedInput?.headers);
   const response: Partial<Headers> = normalizedInput?.response || {};
   Object.keys(response).forEach((key: string) => {
     const v = response[key];
@@ -165,7 +165,7 @@ async function getObjectV2(
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
-  const headers: Headers = normalizeHeaders(normalizedInput?.headers);
+  const headers: Headers = normalizeHeadersKey(normalizedInput?.headers);
   const response: Partial<Headers> = normalizedInput?.response || {};
   Object.keys(response).forEach((key: string) => {
     const v = response[key];
