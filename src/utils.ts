@@ -149,3 +149,11 @@ export function safeSync<T>(func: () => T): [any, null] | [null, T] {
     return [err, null];
   }
 }
+
+export function isBlob(obj: unknown): obj is Blob {
+  return typeof Blob !== 'undefined' && obj instanceof Blob;
+}
+
+export function isBuffer(obj: unknown): obj is Buffer {
+  return typeof Buffer !== 'undefined' && obj instanceof Buffer;
+}

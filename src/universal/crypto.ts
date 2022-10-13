@@ -8,7 +8,7 @@ interface CryptoModule {
     decoding?: 'base64' | 'hex'
   ) => string;
   hashSha256: (message: string, decoding?: 'base64' | 'hex') => string;
-  hashMd5: (message: string, decoding?: 'base64' | 'hex') => string;
+  hashMd5: (message: string | Buffer, decoding?: 'base64' | 'hex') => string;
   parse: (str: string, encoding: 'utf-8' | 'base64' | 'hex') => string;
   stringify: (str: string, decoding: 'utf-8' | 'base64' | 'hex') => string;
 }

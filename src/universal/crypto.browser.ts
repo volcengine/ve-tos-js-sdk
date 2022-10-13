@@ -5,6 +5,7 @@ import cryptoEncBase64 from 'crypto-js/enc-base64';
 import cryptoEncHex from 'crypto-js/enc-hex';
 import cryptoEncUtf8 from 'crypto-js/enc-utf8';
 import TosClientError from '../TosClientError';
+import { isBuffer } from '../utils';
 
 function getEnc(coding: 'utf-8' | 'base64' | 'hex') {
   switch (coding) {
@@ -43,9 +44,13 @@ export const hashSha256 = function hashSha256(
 };
 
 export const hashMd5 = function hashMd5(
-  message: string,
+  message: string | Buffer,
   decoding?: 'base64' | 'hex'
 ) {
+  if (isBuffer(message)) {
+    throw new TosClientError('not support buffer in browser environment');
+  }
+
   return decode(cryptoHashMd5(message), decoding);
 };
 

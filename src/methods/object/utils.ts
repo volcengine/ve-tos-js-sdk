@@ -3,6 +3,7 @@ import mimeTypes from '../../mime-types';
 import { Headers } from '../../interface';
 import { Readable } from 'stream';
 import { EmitReadStream } from '../../nodejs/EmitReadStream';
+import { isBuffer, isBlob } from '../../utils';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -20,14 +21,6 @@ export function lookupMimeType(key: string) {
   const extName = key.slice(lastDotIndex + 1).toLowerCase();
 
   return mimeTypes[extName];
-}
-
-export function isBlob(obj: unknown): obj is Blob {
-  return typeof Blob !== 'undefined' && obj instanceof Blob;
-}
-
-export function isBuffer(obj: unknown): obj is Buffer {
-  return typeof Buffer !== 'undefined' && obj instanceof Buffer;
 }
 
 // for all object methods
