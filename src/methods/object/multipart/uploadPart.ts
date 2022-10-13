@@ -7,6 +7,7 @@ import { DataTransferStatus, DataTransferType } from '../../../interface';
 import { Readable } from 'stream';
 import { safeAwait } from '../../../utils';
 import { retryNamespace } from '../../../axios';
+import { hashMd5 } from '../../../universal/crypto';
 
 export interface UploadPartInput {
   body: Blob | Buffer | NodeJS.ReadableStream;
@@ -36,6 +37,10 @@ export interface UploadPartInput {
 export interface UploadPartInputInner extends UploadPartInput {
   makeRetryStream?: () => Readable;
   beforeRetry?: () => void;
+  /**
+   * default: false
+   */
+  enableContentMD5?: boolean;
 }
 
 export interface UploadPartOutput {
@@ -43,12 +48,31 @@ export interface UploadPartOutput {
 }
 
 export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
-  const { uploadId, partNumber, body } = input;
+  const { uploadId, partNumber, body, enableContentMD5 = false } = input;
   const headers = input.headers || {};
   const size = getSize(body);
   if (size && headers['content-length'] == null) {
     headers['content-length'] = size.toFixed(0);
   }
+  if (enableContentMD5 && headers['content-md5'] == null) {
+    // current only support in nodejs
+    if (
+      process.env.TARGET_ENVIRONMENT === 'node' &&
+      body instanceof Readable &&
+      input.makeRetryStream
+    ) {
+      const newStream = input.makeRetryStream();
+      let allContent = Buffer.from([]);
+      for await (const chunk of newStream) {
+        allContent = Buffer.concat([allContent, chunk]);
+      }
+      const md5 = hashMd5(allContent.toString('ascii'), 'base64');
+      headers['content-md5'] = md5;
+    } else {
+      console.warn(`current not support enableMD5Checksum`);
+    }
+  }
+
   const totalSize = getSize(input.body, headers);
   const totalSizeValid = totalSize != null;
   if (!totalSizeValid && (input.dataTransferStatusChange || input.progress)) {

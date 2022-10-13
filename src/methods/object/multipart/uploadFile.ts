@@ -65,9 +65,16 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
   progress?: (percent: number, checkpoint: CheckpointRecord) => void;
 
   /**
-   * is axios CancelToken
+   * cancel this upload progress
    */
   cancelToken?: CancelToken;
+
+  /**
+   * enable md5 checksum to uploadPart method
+   *
+   * default: false
+   */
+  enableContentMD5?: boolean;
 }
 
 export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
@@ -161,7 +168,7 @@ export async function uploadFile(
   this: TOSBase,
   input: UploadFileInput
 ): Promise<TosResponse<UploadFileOutput>> {
-  const { cancelToken } = input;
+  const { cancelToken, enableContentMD5 = false } = input;
   const isCancel = () => cancelToken && !!cancelToken.reason;
 
   const fileStats: Stats | null = await (async () => {
@@ -535,6 +542,7 @@ export async function uploadFile(
               key,
               uploadId,
               body: getBody(input.file, curTask),
+              enableContentMD5,
               makeRetryStream: getMakeRetryStream(input.file, curTask),
               beforeRetry: () => {
                 consumedBytes -= consumedBytesThisTask;
