@@ -23,7 +23,7 @@ export const hashSha256 = function hashSha256(
 };
 
 export const hashMd5 = function hashMd5(
-  message: string,
+  message: string | Buffer,
   decoding?: 'base64' | 'hex'
 ) {
   return digest(crypto.createHash('md5').update(message), decoding);

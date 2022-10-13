@@ -4,7 +4,6 @@ import {
   CreateMultipartUploadInput,
 } from './createMultipartUpload';
 
-import { isBlob, isBuffer } from '../utils';
 import { calculateSafePartSize } from './listParts';
 import { Stats } from 'fs';
 import { UploadPartOutput, _uploadPart } from './uploadPart';
@@ -19,7 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import TosClientError from '../../../TosClientError';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
-import { safeAwait } from '../../../utils';
+import { safeAwait, isBlob, isBuffer } from '../../../utils';
 import { EmptyReadStream } from '../../../nodejs/EmptyReadStream';
 import { CancelError } from '../../../CancelError';
 

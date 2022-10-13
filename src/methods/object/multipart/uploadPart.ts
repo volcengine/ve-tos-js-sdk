@@ -66,7 +66,7 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
       for await (const chunk of newStream) {
         allContent = Buffer.concat([allContent, chunk]);
       }
-      const md5 = hashMd5(allContent.toString('ascii'), 'base64');
+      const md5 = hashMd5(allContent, 'base64');
       headers['content-md5'] = md5;
     } else {
       console.warn(`current not support enableMD5Checksum`);
