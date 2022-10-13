@@ -9,7 +9,7 @@ async function updateChangelog() {
 
   let isFound = false;
   const newContent = content.replace(
-    /^\s*(#+)\s*\[\s*Unreleased\s*\]/m,
+    /^\s*(#*)\s*\[?\s*Unreleased\s*\]?/m,
     ($0, $1) => {
       isFound = true;
       const startCh = $0.startsWith('\n') ? '\n' : '';
