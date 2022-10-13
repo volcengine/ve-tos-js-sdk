@@ -37,3 +37,7 @@ npm i @volcengine/tos-sdk
   ```
 
 - More example, see test and example folder
+
+## Changelog
+
+Detailed changes for each release are documented in the [CHANGELOG.md](https://github.com/volcengine/ve-tos-js-sdk/blob/main/CHANGELOG.md).
