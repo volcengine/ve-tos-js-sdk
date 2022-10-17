@@ -2,9 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-
-- fix: error "URI malformed" if source key includes multi code points character
+## [2.1.12] - 2022-10-17- fix: error "URI malformed" if source key includes multi code points character
 
 ## [2.1.11] - 2022-10-13
 
