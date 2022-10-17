@@ -68,9 +68,11 @@ export const makeAxiosInst = (maxRetryCount: number) => {
         return;
       }
       let sArr = [];
-      for (let i = 0, j = 0; i < decodedValue.length; ) {
-        const ch = decodedValue[i];
-        if (ch === value[j]) {
+      const valueArr = `${value}`.match(/./gu)!;
+      const decodedValueArr = decodedValue.match(/./gu)!;
+      for (let i = 0, j = 0; i < decodedValueArr.length; ) {
+        const ch = decodedValueArr[i];
+        if (ch === valueArr[j]) {
           sArr.push(ch);
           ++i;
           ++j;
@@ -78,7 +80,7 @@ export const makeAxiosInst = (maxRetryCount: number) => {
         }
 
         const encodedCh = encodeURIComponent(ch);
-        if (ch.charCodeAt(0) >= 128) {
+        if (ch.length > 1 || ch.charCodeAt(0) >= 128) {
           sArr.push(ch);
         } else {
           sArr.push(encodedCh);
