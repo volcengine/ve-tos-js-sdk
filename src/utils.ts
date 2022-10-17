@@ -87,9 +87,11 @@ export const encodeHeadersValue = (headers: Headers) => {
   const header2: Headers = {};
   Object.entries(headers).forEach(([key, value]) => {
     header2[key] = `${value}`
-      .split('')
+      // reference:
+      //  https://stackoverflow.com/questions/38345372/why-is-length-2
+      .match(/./gu)!
       .map((ch: string) => {
-        if (ch.charCodeAt(0) >= 128) {
+        if (ch.length > 1 || ch.charCodeAt(0) >= 128) {
           return encodeURIComponent(ch);
         }
         return ch;
