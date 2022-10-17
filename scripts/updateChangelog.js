@@ -9,12 +9,12 @@ async function updateChangelog() {
 
   let isFound = false;
   const newContent = content.replace(
-    /^\s*(#*)\s*\[?\s*Unreleased\s*\]?/m,
+    /^\s*(#*)\s*\[?\s*Unreleased\s*\]?\s*/m,
     ($0, $1) => {
       isFound = true;
       const startCh = $0.startsWith('\n') ? '\n' : '';
       const date = new Date().toISOString().split('T')[0];
-      return `${startCh}${$1} [${version}] - ${date}`;
+      return `${startCh}${$1} [${version}] - ${date}\n\n`;
     }
   );
 
