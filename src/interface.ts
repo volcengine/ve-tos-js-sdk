@@ -44,3 +44,10 @@ export enum DataTransferType {
   Succeed = 3, // data transfer succeed
   Failed = 4, // data transfer failed
 }
+
+export type SupportObjectBody =
+  | File
+  | Blob
+  | Buffer
+  | NodeJS.ReadableStream
+  | undefined;

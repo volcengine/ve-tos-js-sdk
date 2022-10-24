@@ -6,7 +6,7 @@ export const retryNamespace = '__retryConfig__';
 
 export interface RetryConfig {
   // 对于文件流重试应该重新生成新的文件流
-  makeRetryStream?: () => Readable | undefined;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
 
   beforeRetry?: () => void;
 }

@@ -24,6 +24,7 @@ import {
   validateObjectName,
 } from './object/utils';
 import { makeAxiosInst } from '../axios';
+import { CRC } from '../crcPureJS';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -98,6 +99,14 @@ export interface TOSConstructorOptions {
    * disable if value <= 0
    */
   maxRetryCount?: number;
+
+  // TODO: need more efficient way, 1min for 10M currently
+  /**
+   * default value: false
+   *
+   * CRC executed by js is slow currently, it's default value will be true if it is fast enough.
+   */
+  enableCRC?: boolean;
 }
 
 interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
@@ -110,6 +119,7 @@ interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
   maxConnections: number;
   idleConnectionTime: number;
   maxRetryCount: number;
+  enableCRC: boolean;
 }
 
 interface GetSignatureQueryInput {
@@ -124,6 +134,7 @@ interface GetSignatureQueryInput {
 
 interface FetchOpts<T> {
   needMd5?: boolean;
+  crc?: CRC;
   handleResponse?: (response: AxiosResponse<T>) => T;
   subdomainBucket?: string;
   axiosOpts?: AxiosRequestConfig;
@@ -203,6 +214,7 @@ export class TOSBase {
       maxConnections: _default(_opts.maxConnections, 1024),
       idleConnectionTime: _default(_opts.idleConnectionTime, 60_000),
       maxRetryCount: _default(_opts.maxRetryCount, 3),
+      enableCRC: _opts.enableCRC ?? false,
     };
   }
 
@@ -328,6 +340,11 @@ export class TOSBase {
         ...reqOpts,
         ...(opts?.axiosOpts || {}),
       });
+      if (opts?.crc) {
+        await opts.crc.finalBlob();
+        this.checkCRC64(opts.crc, res.headers);
+      }
+
       const data = handleResponse(res);
       return {
         data,
@@ -484,6 +501,29 @@ export class TOSBase {
       requestId: err.requestId,
       id2: err.id2,
     };
+  }
+
+  protected checkCRC64(crc: CRC, headers: Headers) {
+    if (!this.opts.enableCRC) {
+      return;
+    }
+
+    const serverCRC64 = headers['x-tos-hash-crc64ecma'];
+    if (serverCRC64 == null) {
+      if (process.env.TARGET_ENVIRONMENT === 'browser') {
+        console.warn(
+          "No x-tos-hash-crc64ecma in response's headers, please see https://www.volcengine.com/docs/6349/127737 to add `x-tos-hash-crc64ecma` to Expose-Headers field."
+        );
+      } else {
+      }
+      return;
+    }
+
+    if (!crc.equalsTo(serverCRC64)) {
+      throw new TosClientError(
+        `expect crc64 ${crc.toString()}, actual crc64 ${serverCRC64}`
+      );
+    }
   }
 }
 

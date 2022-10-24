@@ -1,6 +1,11 @@
 import TOSBase from '../base';
 import { normalizeHeadersKey, safeAwait } from '../../utils';
-import { Acl, DataTransferStatus, DataTransferType } from '../../interface';
+import {
+  Acl,
+  DataTransferStatus,
+  DataTransferType,
+  SupportObjectBody,
+} from '../../interface';
 import TosClientError from '../../TosClientError';
 import * as fsp from '../../nodejs/fs-promises';
 import fs, { Stats } from 'fs';
@@ -14,7 +19,7 @@ export interface PutObjectInput {
   /**
    * body is empty buffer if it's falsy.
    */
-  body?: File | Blob | Buffer | NodeJS.ReadableStream;
+  body?: SupportObjectBody;
 
   dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
@@ -123,11 +128,12 @@ export async function _putObject(
     }
   };
 
-  const bodyConfig = getNewBodyConfig({
+  const bodyConfig = await getNewBodyConfig({
     body: input.body,
     totalSize,
     dataTransferCallback: n => triggerDataTransfer(DataTransferType.Rw, n),
     makeRetryStream: input.makeRetryStream,
+    enableCRC: this.opts.enableCRC,
   });
 
   triggerDataTransfer(DataTransferType.Started);
@@ -140,10 +146,12 @@ export async function _putObject(
       bodyConfig.body,
       {
         handleResponse: res => res.headers,
+        crc: bodyConfig.crc,
         axiosOpts: {
           [retryNamespace]: {
             beforeRetry: () => {
               consumedBytes = 0;
+              bodyConfig.beforeRetry?.();
             },
             makeRetryStream: bodyConfig.makeRetryStream,
           },

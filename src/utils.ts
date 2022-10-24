@@ -3,6 +3,7 @@ import get from 'lodash/get';
 import set from 'lodash/set';
 import { Headers } from './interface';
 import { TOSConstructorOptions } from './methods/base';
+import { Readable } from 'stream';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: Object) => (key: string) => {
@@ -158,4 +159,12 @@ export function isBlob(obj: unknown): obj is Blob {
 
 export function isBuffer(obj: unknown): obj is Buffer {
   return typeof Buffer !== 'undefined' && obj instanceof Buffer;
+}
+
+export function isReadable(obj: unknown): obj is NodeJS.ReadableStream {
+  if (process.env.TARGET_ENVIRONMENT !== 'node') {
+    return false;
+  }
+
+  return obj instanceof Readable;
 }

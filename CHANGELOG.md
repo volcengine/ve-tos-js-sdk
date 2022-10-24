@@ -7,6 +7,7 @@ Unreleased
 ### Added
 
 - disable request redirect for 3xx response status code
+- support crc64
 
 ### Fixed
 
