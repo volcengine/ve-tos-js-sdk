@@ -36,12 +36,26 @@ export interface TOSConstructorOptions {
    */
   secure?: boolean;
   region: string;
+
+  /**
+   * proxy for web, use it with the middleware of `./proxy`
+   */
   proxy?:
     | string
     | {
         url: string;
         needProxyParams?: boolean;
       };
+  /**
+   * proxy to general http proxy server, this feature doesn't work in browser environment.
+   * only support http proxy server.
+   * proxyHost and proxyPort are required if the proxy function works.
+   */
+  proxyHost?: string;
+  proxyPort?: number;
+  // username and password don't be supported currently
+  // proxyUsername?: string;
+  // proxyPassword?: string;
 
   /**
    * default value: true
@@ -275,12 +289,26 @@ export class TOSBase {
     });
 
     const normalizedProxy = normalizeProxy(this.opts.proxy);
-    if (normalizedProxy?.url) {
+    if (normalizedProxy?.url && !this.opts.proxyHost) {
+      // proxy for nodejs middleware server
       reqOpts.baseURL = normalizedProxy.url;
       if (normalizedProxy?.needProxyParams) {
         reqOpts.params['x-proxy-tos-host'] = endpoint;
         delete reqHeaders['host'];
       }
+    } else if (this.opts.proxyHost) {
+      if (!this.opts.proxyPort) {
+        throw new TosClientError(
+          'The `proxyPort` is required if `proxyHost` is truly.'
+        );
+      }
+
+      // proxy for general proxy server
+      reqOpts.proxy = {
+        host: this.opts.proxyHost,
+        port: this.opts.proxyPort,
+        protocol: 'http',
+      };
     }
 
     reqHeaders['user-agent'] = this.userAgent;

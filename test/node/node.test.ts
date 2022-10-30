@@ -380,4 +380,36 @@ describe('nodejs connection params', () => {
     },
     NEVER_TIMEOUT
   );
+
+  it(
+    'test proxy',
+    async () => {
+      const server = await startServer();
+      const resHeaderKey = 'x-test-proxy';
+
+      const address = server.address() as AddressInfo;
+      const client = new TOS({
+        ...tosOptions,
+        proxyHost: address.address,
+        proxyPort: address.port,
+      });
+      const { headers } = await client.listBuckets();
+      expect(headers[resHeaderKey]).toBeTruthy();
+
+      server.close();
+      function startServer(): Promise<Server> {
+        return new Promise(res => {
+          http
+            .createServer((_req: unknown, res: OutgoingMessage) => {
+              res.setHeader(resHeaderKey, '1');
+              res.end('{}');
+            })
+            .listen(function(this: Server) {
+              res(this);
+            });
+        });
+      }
+    },
+    NEVER_TIMEOUT
+  );
 });
