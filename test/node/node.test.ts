@@ -26,6 +26,8 @@ import axios from 'axios';
 import { DEFAULT_CONTENT_TYPE } from '../../src/methods/object/utils';
 import FormData from 'form-data';
 import { UploadPartOutput } from '../../src/methods/object/multipart';
+import { Bucket, ListBucketOutput } from '../../src/methods/bucket/base';
+import { safeAwait } from '../../src/utils';
 
 describe('nodejs connection params', () => {
   beforeAll(async done => {
@@ -412,4 +414,68 @@ describe('nodejs connection params', () => {
     },
     NEVER_TIMEOUT
   );
+
+  it(
+    'test-redirect',
+    async () => {
+      const server = await startServer();
+      const address = server.address() as AddressInfo;
+      const endpoint = `${address.address}:${address.port}`;
+      const client = new TOS({ ...tosOptions, endpoint, secure: false });
+      const [err] = await safeAwait(client.listBuckets());
+      expect(err).not.toBeNull();
+      server.close();
+
+      function startServer(): Promise<Server> {
+        return new Promise(res => {
+          http
+            .createServer((req: IncomingMessage, res: ServerResponse) => {
+              let data: ListBucketOutput = { Buckets: [] };
+              if (req.url?.includes('redirected')) {
+                data = { Buckets: [] };
+              } else {
+                data = { Buckets: [{} as Bucket] };
+                res.setHeader('Location', '/redirected');
+                res.statusCode = 307;
+              }
+              res.setHeader('content-type', 'application/json');
+              res.setHeader('x-tos-request-id', 'id');
+              res.end(JSON.stringify(data));
+            })
+            .listen(undefined, '0.0.0.0', function(this: Server) {
+              res(this);
+            });
+        });
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it('ensure-userAgent', async () => {
+    const server = await startServer();
+    const address = server.address() as AddressInfo;
+    const endpoint = `${address.address}:${address.port}`;
+    const client = new TOS({ ...tosOptions, endpoint, secure: false });
+    const [err] = await safeAwait(client.listBuckets());
+    expect(err).toBeNull();
+
+    server.close();
+
+    function startServer(): Promise<Server> {
+      return new Promise(res => {
+        http
+          .createServer((req: IncomingMessage, res: ServerResponse) => {
+            if (req.headers['user-agent']?.includes('tos')) {
+              res.statusCode = 200;
+            } else {
+              res.statusCode = 400;
+            }
+            res.end();
+          })
+          .listen(function(this: Server) {
+            res(this);
+          });
+      });
+    }
+  });
 });
