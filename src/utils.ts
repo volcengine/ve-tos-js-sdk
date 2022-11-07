@@ -1,15 +1,17 @@
-import pickBy from 'lodash/pickBy';
-import get from 'lodash/get';
-import set from 'lodash/set';
 import { Headers } from './interface';
 import { TOSConstructorOptions } from './methods/base';
 import { Readable } from 'stream';
 
 // obj[key] must be a array
-export const makeArrayProp = (obj: Object) => (key: string) => {
-  const v = get(obj, key);
+export const makeArrayProp = (obj: unknown) => (key: string) => {
+  if (obj == null || typeof obj !== 'object') {
+    return;
+  }
+
+  const objAny = obj as any;
+  const v = objAny[key];
   if (!Array.isArray(v)) {
-    set(obj, key, v == null ? [] : [v]);
+    objAny[key] = v == null ? [] : [v];
   }
 };
 
@@ -70,18 +72,21 @@ export const getSortedQueryString = (query: Record<string, any>) => {
 export const normalizeHeadersKey = <T extends Headers>(
   headers: T | undefined
 ): T => {
-  const headers1 = (pickBy(
-    headers || {},
-    v => v != null
-  ) as unknown) as Headers;
-
+  const headers1: Headers = headers || {};
   const headers2: Headers = {};
   Object.keys(headers1).forEach((key: string) => {
-    const newKey = key.toLowerCase();
-    headers2[newKey] = headers1[key];
+    if (headers1[key] != null) {
+      headers2[key] = headers1[key];
+    }
   });
 
-  return headers2 as T;
+  const headers3: Headers = {};
+  Object.keys(headers2).forEach((key: string) => {
+    const newKey = key.toLowerCase();
+    headers3[newKey] = headers2[key];
+  });
+
+  return headers3 as T;
 };
 
 export const encodeHeadersValue = (headers: Headers) => {

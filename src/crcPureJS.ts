@@ -132,14 +132,6 @@ export class CRC {
   }
 
   update(value: string | Buffer | ArrayBuffer | undefined) {
-    // see crc performance
-    // const fs = require('fs');
-    // fs.appendFile(
-    //   './a.txt',
-    //   '==== update: ' + (value as Buffer).length + ' ' + new Date() + '\n',
-    //   () => {}
-    // );
-
     this.checkFinal();
 
     let bytes = new Uint8Array();
