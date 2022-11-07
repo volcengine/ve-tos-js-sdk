@@ -8,6 +8,7 @@ Unreleased
 
 - disable request redirect for 3xx response status code
 - support crc64
+- add `(get|put)BucketVersioning` methods to modify bucket versioning
 
 ### Fixed
 

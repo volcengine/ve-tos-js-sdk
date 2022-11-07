@@ -54,6 +54,10 @@ import {
   getBucketPolicy,
   putBucketPolicy,
 } from './methods/bucket/policy';
+import {
+  getBucketVersioning,
+  putBucketVersioning,
+} from './methods/bucket/versioning';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -88,6 +92,10 @@ class TOS extends TOSBase {
   getBucketPolicy = getBucketPolicy;
   putBucketPolicy = putBucketPolicy;
   deleteBucketPolicy = deleteBucketPolicy;
+
+  // bucket versioning
+  getBucketVersioning = getBucketVersioning;
+  putBucketVersioning = putBucketVersioning;
 
   // object base
   copyObject = copyObject;

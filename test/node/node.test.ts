@@ -28,6 +28,7 @@ import FormData from 'form-data';
 import { UploadPartOutput } from '../../src/methods/object/multipart';
 import { Bucket, ListBucketOutput } from '../../src/methods/bucket/base';
 import { safeAwait } from '../../src/utils';
+import { BucketVersioningStatus } from '../../src/methods/bucket/versioning';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
 
@@ -623,6 +624,7 @@ describe('nodejs connection params', () => {
       });
     }
   });
+
   it(
     'auto add content-type for uploading object',
     async () => {
@@ -705,6 +707,46 @@ describe('nodejs connection params', () => {
 
         const res = await axios(url);
         expect(res.headers['content-type']).toBe('application/octet-stream');
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'bucket versioning',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+        bucket: testBucketName,
+      });
+
+      {
+        const { data } = await client.getBucketVersioning();
+        expect(data.Status).toEqual(BucketVersioningStatus.Disable);
+      }
+
+      {
+        await client.putBucketVersioning({
+          status: BucketVersioningStatus.Enable,
+        });
+        await sleepCache();
+        const { data } = await client.getBucketVersioning();
+        expect(data.Status).toEqual(BucketVersioningStatus.Enable);
+      }
+
+      {
+        // more wait, maybe cache
+        await sleepCache();
+        await sleepCache();
+        await sleepCache();
+        await sleepCache();
+        await sleepCache();
+        await client.putBucketVersioning({
+          status: BucketVersioningStatus.Suspended,
+        });
+        await sleepCache();
+        const { data } = await client.getBucketVersioning();
+        expect(data.Status).toEqual(BucketVersioningStatus.Suspended);
       }
     },
     NEVER_TIMEOUT
