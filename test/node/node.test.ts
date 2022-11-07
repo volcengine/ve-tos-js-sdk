@@ -26,6 +26,11 @@ import axios from 'axios';
 import { DEFAULT_CONTENT_TYPE } from '../../src/methods/object/utils';
 import FormData from 'form-data';
 import { UploadPartOutput } from '../../src/methods/object/multipart';
+import { Bucket, ListBucketOutput } from '../../src/methods/bucket/base';
+import { safeAwait } from '../../src/utils';
+import { BucketVersioningStatus } from '../../src/methods/bucket/versioning';
+
+const testObjectName = '&%&%&%((()))#$U)_@@%%';
 
 describe('nodejs connection params', () => {
   beforeAll(async done => {
@@ -69,7 +74,7 @@ describe('nodejs connection params', () => {
         key: objectKey,
         body: new Readable({
           read() {
-            this.push(Buffer.from([0, 0]));
+            this.push(Buffer.from('a'));
             this.push(null);
           },
         }),
@@ -392,6 +397,7 @@ describe('nodejs connection params', () => {
         ...tosOptions,
         proxyHost: address.address,
         proxyPort: address.port,
+        secure: false,
       });
       const { headers } = await client.listBuckets();
       expect(headers[resHeaderKey]).toBeTruthy();
@@ -404,10 +410,347 @@ describe('nodejs connection params', () => {
               res.setHeader(resHeaderKey, '1');
               res.end('{}');
             })
-            .listen(function(this: Server) {
+            .listen(undefined, '0.0.0.0', function(this: Server) {
               res(this);
             });
         });
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  // how to split multiple
+  it(
+    'upload/list/acl object',
+    async () => {
+      const testObjectName2 = testObjectName + '_' + new Date();
+      const client = new TOS(tosOptions);
+      await client.putObject({
+        bucket: testBucketName,
+        key: testObjectName2,
+        body: new Readable({
+          read() {
+            this.push(Buffer.from([0, 0]));
+            this.push(null);
+          },
+        }),
+      });
+
+      {
+        const { data } = await client.listObjects({
+          prefix: testObjectName2,
+        });
+        expect(data.Contents.length).toEqual(1);
+        expect(data.Contents[0].Size).toEqual(2);
+      }
+
+      {
+        const { data } = await client.headObject(testObjectName2);
+        const { data: data2 } = await client.headObject({
+          key: testObjectName2,
+        });
+
+        expect(data['content-length']).toEqual('2');
+        expect(data2['content-length']).toEqual('2');
+      }
+
+      {
+        const { data } = await client.getObjectAcl(testObjectName2);
+        // private
+        expect(data.Grants[0].Grantee.Canned).toBeUndefined();
+      }
+      {
+        const { data } = await client.getObjectAcl({
+          key: testObjectName2,
+        });
+        // private
+        expect(data.Grants[0].Grantee.Canned).toBeUndefined();
+      }
+
+      await client.putObjectAcl({
+        bucket: testBucketName,
+        key: testObjectName2,
+        acl: ACLType.ACLPublicReadWrite,
+      });
+
+      {
+        const { data } = await client.getObjectAcl({
+          bucket: testBucketName,
+          key: testObjectName2,
+        });
+        expect(data.Grants[0].Grantee.Canned).toBe('AllUsers');
+      }
+
+      {
+        const url = client.getPreSignedUrl({
+          bucket: testBucketName,
+          key: testObjectName2,
+        });
+
+        const res = await axios(url, { responseType: 'arraybuffer' });
+        expect(res.headers['content-length']).toEqual('2');
+        expect(res.data).toEqual(Buffer.from([0, 0]));
+      }
+
+      await client.deleteObject({
+        key: testObjectName2,
+      });
+
+      {
+        const { data } = await client.listObjects({
+          prefix: testObjectName2,
+        });
+        expect(data.Contents.length).toEqual(0);
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'test-redirect',
+    async () => {
+      const server = await startServer();
+      const address = server.address() as AddressInfo;
+      const endpoint = `${address.address}:${address.port}`;
+      const client = new TOS({ ...tosOptions, endpoint, secure: false });
+      const [err] = await safeAwait(client.listBuckets());
+      expect(err).not.toBeNull();
+      server.close();
+
+      function startServer(): Promise<Server> {
+        return new Promise(res => {
+          http
+            .createServer((req: IncomingMessage, res: ServerResponse) => {
+              let data: ListBucketOutput = { Buckets: [] };
+              if (req.url?.includes('redirected')) {
+                data = { Buckets: [] };
+              } else {
+                data = { Buckets: [{} as Bucket] };
+                res.setHeader('Location', '/redirected');
+                res.statusCode = 307;
+              }
+              res.setHeader('content-type', 'application/json');
+              res.setHeader('x-tos-request-id', 'id');
+              res.end(JSON.stringify(data));
+            })
+            .listen(undefined, '0.0.0.0', function(this: Server) {
+              res(this);
+            });
+        });
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'check object name',
+    async () => {
+      const client = new TOS(tosOptions);
+      // 测试中文名不报错
+      await client.putObject('控制台.png');
+      await client.deleteObject('控制台.png');
+      testCheckErr(() => client.putObject('/abcd'), '/');
+      testCheckErr(() => client.putObject('\\abcd'), '\\');
+      testCheckErr(() => client.putObject('\t'), 'name');
+      testCheckErr(() => client.putObject(''), 'length');
+      testCheckErr(() => client.putObject('a'.repeat(700)), 'length');
+
+      // ensure these methods execute the validating logic
+      testCheckErr(() => client.appendObject('/abcd'), '/');
+      testCheckErr(
+        () => client.uploadFile({ key: '/abcd', file: Buffer.from([]) }),
+        '/'
+      );
+      testCheckErr(() => client.createMultipartUpload({ key: '/abcd' }), '/');
+      testCheckErr(() => client.getPreSignedUrl('/abcd'), '/');
+      testCheckErr(() => client.calculatePostSignature('/abcd'), '/');
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'object name includes dot',
+    async () => {
+      await runTest('./aa/bb/cc');
+      await runTest('.');
+
+      async function runTest(testObjectName: string) {
+        const client = new TOS(tosOptions);
+        await client.putObject({
+          bucket: testBucketName,
+          key: testObjectName,
+          body: new Readable({
+            read() {
+              this.push(Buffer.from([0, 0]));
+              this.push(null);
+            },
+          }),
+        });
+
+        {
+          const { data } = await client.listObjects({
+            prefix: testObjectName,
+          });
+          expect(data.Contents.length).toEqual(1);
+          expect(data.Contents[0].Size).toEqual(2);
+        }
+
+        await client.deleteObject(testObjectName);
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it('ensure-userAgent', async () => {
+    const server = await startServer();
+    const address = server.address() as AddressInfo;
+    const endpoint = `${address.address}:${address.port}`;
+    const client = new TOS({ ...tosOptions, endpoint, secure: false });
+    const [err] = await safeAwait(client.listBuckets());
+    expect(err).toBeNull();
+
+    server.close();
+
+    function startServer(): Promise<Server> {
+      return new Promise(res => {
+        http
+          .createServer((req: IncomingMessage, res: ServerResponse) => {
+            if (req.headers['user-agent']?.includes('tos')) {
+              res.statusCode = 200;
+            } else {
+              res.statusCode = 400;
+            }
+            res.end();
+          })
+          .listen(function(this: Server) {
+            res(this);
+          });
+      });
+    }
+  });
+
+  it(
+    'auto add content-type for uploading object',
+    async () => {
+      const client = new TOS(tosOptions);
+
+      {
+        const objectKey = 'c/d/a.png';
+        await client.putObject({
+          bucket: testBucketName,
+          key: objectKey,
+          body: new Readable({
+            read() {
+              this.push(Buffer.from([0, 0]));
+              this.push(null);
+            },
+          }),
+        });
+        const url = client.getPreSignedUrl(objectKey);
+        const res = await axios(url);
+        expect(res.headers['content-type']).toBe('image/png');
+        await client.deleteObject(objectKey);
+      }
+
+      {
+        const objectKey = 'c/d/a.png';
+        await client.putObject({
+          bucket: testBucketName,
+          key: objectKey,
+          body: new Readable({
+            read() {
+              this.push(Buffer.from([0, 0]));
+              this.push(null);
+            },
+          }),
+          headers: {
+            // @ts-ignore validate key is can ignore case
+            'Content-type': 'image/jpeg',
+          },
+        });
+        const url = client.getPreSignedUrl(objectKey);
+        const res = await axios(url);
+        expect(res.headers['content-type']).toBe('image/jpeg');
+
+        await client.deleteObject(objectKey);
+      }
+
+      {
+        // create a directory
+        const objectKey = 'c/d/a.png/';
+        await client.putObject({
+          bucket: testBucketName,
+          key: objectKey,
+        });
+        const url = client.getPreSignedUrl(objectKey);
+        const res = await axios(url);
+        expect(res.headers['content-type']).not.toBe('image/png');
+      }
+
+      {
+        const objectKey = 'audio.WAV';
+        await client.putObject({
+          key: objectKey,
+        });
+        const url = client.getPreSignedUrl({
+          key: objectKey,
+        });
+
+        const res = await axios(url);
+        expect(res.headers['content-type']).toBe('audio/wav');
+      }
+
+      {
+        const objectKey = 'audio';
+        await client.putObject({
+          key: objectKey,
+        });
+        const url = client.getPreSignedUrl({
+          key: objectKey,
+        });
+
+        const res = await axios(url);
+        expect(res.headers['content-type']).toBe('application/octet-stream');
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'bucket versioning',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+        bucket: testBucketName,
+      });
+
+      {
+        const { data } = await client.getBucketVersioning();
+        expect(data.Status).toEqual(BucketVersioningStatus.Disable);
+      }
+
+      {
+        await client.putBucketVersioning({
+          status: BucketVersioningStatus.Enable,
+        });
+        await sleepCache();
+        const { data } = await client.getBucketVersioning();
+        expect(data.Status).toEqual(BucketVersioningStatus.Enable);
+      }
+
+      {
+        // more wait, maybe cache
+        await sleepCache();
+        await sleepCache();
+        await sleepCache();
+        await sleepCache();
+        await sleepCache();
+        await client.putBucketVersioning({
+          status: BucketVersioningStatus.Suspended,
+        });
+        await sleepCache();
+        const { data } = await client.getBucketVersioning();
+        expect(data.Status).toEqual(BucketVersioningStatus.Suspended);
       }
     },
     NEVER_TIMEOUT

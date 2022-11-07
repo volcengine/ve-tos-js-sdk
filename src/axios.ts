@@ -6,7 +6,7 @@ export const retryNamespace = '__retryConfig__';
 
 export interface RetryConfig {
   // 对于文件流重试应该重新生成新的文件流
-  makeRetryStream?: () => Readable | undefined;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
 
   beforeRetry?: () => void;
 }
@@ -45,20 +45,24 @@ const BROWSER_NEED_DELETE_HEADERS = ['content-length', 'user-agent', 'host'];
 
 export const makeAxiosInst = (maxRetryCount: number) => {
   const axiosInst = axios.create();
+  axiosInst.defaults.maxRedirects = 0;
+
   // delete browser headers
-  axiosInst.interceptors.request.use(config => {
-    if (!config.headers) {
-      return config;
-    }
-
-    Object.keys(config.headers).forEach(key => {
-      if (BROWSER_NEED_DELETE_HEADERS.includes(key.toLowerCase())) {
-        delete config.headers[key];
+  if (process.env.TARGET_ENVIRONMENT === 'browser') {
+    axiosInst.interceptors.request.use(config => {
+      if (!config.headers) {
+        return config;
       }
-    });
 
-    return config;
-  });
+      Object.keys(config.headers).forEach(key => {
+        if (BROWSER_NEED_DELETE_HEADERS.includes(key.toLowerCase())) {
+          delete config.headers[key];
+        }
+      });
+
+      return config;
+    });
+  }
 
   // decode header. Encode headers' value by encodeHeadersValue method before calling axios
   function handleResponseHeader(headers: Record<string, string>) {

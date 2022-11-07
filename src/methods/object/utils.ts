@@ -1,9 +1,9 @@
 import TosClientError from '../../TosClientError';
 import mimeTypes from '../../mime-types';
-import { Headers } from '../../interface';
-import { Readable } from 'stream';
+import { Headers, SupportObjectBody } from '../../interface';
 import { EmitReadStream } from '../../nodejs/EmitReadStream';
-import { isBuffer, isBlob } from '../../utils';
+import { isBuffer, isBlob, isReadable } from '../../utils';
+import { CRC } from '../../crcPureJS';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -69,20 +69,36 @@ interface GetNewBodyConfigIn<T> {
   body: T;
   totalSize: number | null | undefined;
   dataTransferCallback: (n: number) => void;
-  makeRetryStream?: () => Readable | undefined;
+  beforeRetry?: () => void;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
+  enableCRC: boolean;
 }
 interface GetNewBodyConfigOut<T> {
-  body: T | Readable;
-  makeRetryStream?: () => Readable | undefined;
+  body: T | NodeJS.ReadableStream;
+  beforeRetry?: () => void;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
+  crc?: CRC;
 }
 
-export function getNewBodyConfig<T extends unknown>({
+interface GetEmitReadBodyConfigIn<T> {
+  body: T;
+  totalSize: number | null | undefined;
+  dataTransferCallback: (n: number) => void;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
+}
+interface GetEmitReadBodyConfigOut<T> {
+  body: T | NodeJS.ReadableStream;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
+}
+
+export function getEmitReadBodyConfig<T extends SupportObjectBody>({
   body,
   totalSize,
   dataTransferCallback,
   makeRetryStream,
-}: GetNewBodyConfigIn<T>): GetNewBodyConfigOut<T> {
-  let newBody: T | Readable = body;
+}: GetEmitReadBodyConfigIn<T>): GetEmitReadBodyConfigOut<T> {
+  let newBody: T | NodeJS.ReadableStream = body;
+
   const getDefaultRet = () => ({
     body: newBody,
     makeRetryStream: undefined,
@@ -103,7 +119,7 @@ export function getNewBodyConfig<T extends unknown>({
     };
   }
 
-  if (body instanceof Readable) {
+  if (isReadable(body)) {
     if (totalSizeValid) {
       newBody = new EmitReadStream(
         body,
@@ -116,9 +132,9 @@ export function getNewBodyConfig<T extends unknown>({
       return {
         body: newBody,
         makeRetryStream: () => {
-          const stream = makeRetryStream();
+          let stream = makeRetryStream();
           if (stream && totalSizeValid) {
-            newBody = new EmitReadStream(
+            stream = new EmitReadStream(
               stream,
               totalSize,
               dataTransferCallback
@@ -132,4 +148,51 @@ export function getNewBodyConfig<T extends unknown>({
   }
 
   return getDefaultRet();
+}
+
+export async function getCRCBodyConfig<T extends SupportObjectBody>({
+  body,
+  beforeRetry,
+  makeRetryStream,
+  enableCRC,
+}: GetNewBodyConfigIn<T>): Promise<GetNewBodyConfigOut<T>> {
+  if (!enableCRC) {
+    return {
+      body,
+      beforeRetry,
+      makeRetryStream,
+    };
+  }
+
+  const crc = new CRC();
+
+  if (isReadable(body)) {
+    body.on('data', (d: Buffer) => {
+      crc.update(d);
+    });
+    body.pause();
+  } else if (isBlob(body)) {
+    await crc.updateBlob(body);
+  } else {
+    crc.update(body);
+  }
+
+  return {
+    body,
+    beforeRetry: () => {
+      crc.reset();
+      beforeRetry?.();
+    },
+    makeRetryStream,
+    crc,
+  };
+}
+
+export async function getNewBodyConfig<T extends SupportObjectBody>(
+  input: GetNewBodyConfigIn<T>
+): Promise<GetNewBodyConfigOut<T>> {
+  const config1 = getEmitReadBodyConfig(input);
+  input = { ...input, ...config1 } as GetNewBodyConfigIn<T>;
+  const config2 = getCRCBodyConfig(input);
+  return config2;
 }

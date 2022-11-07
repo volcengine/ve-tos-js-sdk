@@ -3,7 +3,8 @@
   "include": ["src", "types"],
   "compilerOptions": {
     "module": "esnext",
-    "lib": ["dom", "esnext"],
+    "lib": ["dom", "esnext", "ESNext.BigInt"],
+    "target": "ES2020",
     "importHelpers": true,
     // output .d.ts declaration files for consumers
     "declaration": true,

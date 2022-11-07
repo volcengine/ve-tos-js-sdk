@@ -1,16 +1,17 @@
 import { Readable } from 'stream';
+import { isReadable } from '../utils';
 
 export class EmitReadStream extends Readable {
   lastPos = 0;
   isEnd = false;
 
   constructor(
-    public underlying: Readable | Buffer,
+    public underlying: NodeJS.ReadableStream | Buffer,
     private totalSize: number,
     private readCb: (n: number) => void
   ) {
     super();
-    if (underlying instanceof Readable) {
+    if (isReadable(underlying)) {
       underlying.on('data', d => {
         readCb(d.length);
       });
@@ -27,7 +28,7 @@ export class EmitReadStream extends Readable {
     const { underlying } = this;
     let actualN = Math.min(n, this.totalSize - this.lastPos);
 
-    if (underlying instanceof Readable) {
+    if (isReadable(underlying)) {
       throw Error('use `this.stream()` instead');
     }
     // TODO: yarn test will timeout
@@ -67,8 +68,8 @@ export class EmitReadStream extends Readable {
     this.readCb(actualN);
   }
 
-  stream(): Readable {
-    if (this.underlying instanceof Readable) {
+  stream(): NodeJS.ReadableStream {
+    if (isReadable(this.underlying)) {
       return this.underlying;
     }
     return this;

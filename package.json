@@ -26,7 +26,7 @@
     "docs": "npx typedoc src/*",
     "deploy:docs": "./scripts/deployDocs.sh",
     "lint": "tsdx lint",
-    "prepublish": "node ./scripts/prePublish"
+    "prepublishOnly": "node ./scripts/prePublish"
   },
   "husky": {
     "hooks": {

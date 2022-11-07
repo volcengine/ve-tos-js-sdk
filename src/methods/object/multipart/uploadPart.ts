@@ -7,7 +7,6 @@ import { DataTransferStatus, DataTransferType } from '../../../interface';
 import { Readable } from 'stream';
 import { safeAwait } from '../../../utils';
 import { retryNamespace } from '../../../axios';
-import { hashMd5 } from '../../../universal/crypto';
 
 export interface UploadPartInput {
   body: Blob | Buffer | NodeJS.ReadableStream;
@@ -37,10 +36,6 @@ export interface UploadPartInput {
 export interface UploadPartInputInner extends UploadPartInput {
   makeRetryStream?: () => Readable;
   beforeRetry?: () => void;
-  /**
-   * default: false
-   */
-  enableContentMD5?: boolean;
 }
 
 export interface UploadPartOutput {
@@ -48,29 +43,11 @@ export interface UploadPartOutput {
 }
 
 export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
-  const { uploadId, partNumber, body, enableContentMD5 = false } = input;
+  const { uploadId, partNumber, body } = input;
   const headers = input.headers || {};
   const size = getSize(body);
   if (size && headers['content-length'] == null) {
     headers['content-length'] = size.toFixed(0);
-  }
-  if (enableContentMD5 && headers['content-md5'] == null) {
-    // current only support in nodejs
-    if (
-      process.env.TARGET_ENVIRONMENT === 'node' &&
-      body instanceof Readable &&
-      input.makeRetryStream
-    ) {
-      const newStream = input.makeRetryStream();
-      let allContent = Buffer.from([]);
-      for await (const chunk of newStream) {
-        allContent = Buffer.concat([allContent, chunk]);
-      }
-      const md5 = hashMd5(allContent, 'base64');
-      headers['content-md5'] = md5;
-    } else {
-      console.warn(`current not support enableMD5Checksum`);
-    }
   }
 
   const totalSize = getSize(input.body, headers);
@@ -122,11 +99,13 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
       progress?.(progressValue);
     }
   };
-  const bodyConfig = getNewBodyConfig({
+  const bodyConfig = await getNewBodyConfig({
     body: input.body,
     totalSize,
     dataTransferCallback: n => triggerDataTransfer(DataTransferType.Rw, n),
+    beforeRetry: input.beforeRetry,
     makeRetryStream: input.makeRetryStream,
+    enableCRC: this.opts.enableCRC,
   });
 
   triggerDataTransfer(DataTransferType.Started);
@@ -138,12 +117,13 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
       headers,
       bodyConfig.body,
       {
+        crc: bodyConfig.crc,
         handleResponse: res => ({ ETag: res.headers.etag }),
         axiosOpts: {
           [retryNamespace]: {
             beforeRetry: () => {
               consumedBytes = 0;
-              input.beforeRetry?.();
+              bodyConfig.beforeRetry?.();
             },
             makeRetryStream: bodyConfig.makeRetryStream,
           },
@@ -162,7 +142,7 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
   if (process.env.TARGET_ENVIRONMENT === 'browser') {
     if (res && !res.data.ETag) {
       throw new TosClientError(
-        "No ETag in uploadPart's response, please see https://www.volcengine.com/docs/6349/127737 to fix CORS problem"
+        "No ETag in uploadPart's response headers, please see https://www.volcengine.com/docs/6349/127737 to fix CORS problem"
       );
     }
   }
