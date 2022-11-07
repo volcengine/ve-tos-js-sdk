@@ -397,6 +397,7 @@ describe('nodejs connection params', () => {
         ...tosOptions,
         proxyHost: address.address,
         proxyPort: address.port,
+        secure: false,
       });
       const { headers } = await client.listBuckets();
       expect(headers[resHeaderKey]).toBeTruthy();
@@ -409,7 +410,7 @@ describe('nodejs connection params', () => {
               res.setHeader(resHeaderKey, '1');
               res.end('{}');
             })
-            .listen(function(this: Server) {
+            .listen(undefined, '0.0.0.0', function(this: Server) {
               res(this);
             });
         });
@@ -422,10 +423,11 @@ describe('nodejs connection params', () => {
   it(
     'upload/list/acl object',
     async () => {
+      const testObjectName2 = testObjectName + '_' + new Date();
       const client = new TOS(tosOptions);
       await client.putObject({
         bucket: testBucketName,
-        key: testObjectName,
+        key: testObjectName2,
         body: new Readable({
           read() {
             this.push(Buffer.from([0, 0]));
@@ -436,16 +438,16 @@ describe('nodejs connection params', () => {
 
       {
         const { data } = await client.listObjects({
-          prefix: testObjectName,
+          prefix: testObjectName2,
         });
         expect(data.Contents.length).toEqual(1);
         expect(data.Contents[0].Size).toEqual(2);
       }
 
       {
-        const { data } = await client.headObject(testObjectName);
+        const { data } = await client.headObject(testObjectName2);
         const { data: data2 } = await client.headObject({
-          key: testObjectName,
+          key: testObjectName2,
         });
 
         expect(data['content-length']).toEqual('2');
@@ -453,13 +455,13 @@ describe('nodejs connection params', () => {
       }
 
       {
-        const { data } = await client.getObjectAcl(testObjectName);
+        const { data } = await client.getObjectAcl(testObjectName2);
         // private
         expect(data.Grants[0].Grantee.Canned).toBeUndefined();
       }
       {
         const { data } = await client.getObjectAcl({
-          key: testObjectName,
+          key: testObjectName2,
         });
         // private
         expect(data.Grants[0].Grantee.Canned).toBeUndefined();
@@ -467,14 +469,14 @@ describe('nodejs connection params', () => {
 
       await client.putObjectAcl({
         bucket: testBucketName,
-        key: testObjectName,
+        key: testObjectName2,
         acl: ACLType.ACLPublicReadWrite,
       });
 
       {
         const { data } = await client.getObjectAcl({
           bucket: testBucketName,
-          key: testObjectName,
+          key: testObjectName2,
         });
         expect(data.Grants[0].Grantee.Canned).toBe('AllUsers');
       }
@@ -482,7 +484,7 @@ describe('nodejs connection params', () => {
       {
         const url = client.getPreSignedUrl({
           bucket: testBucketName,
-          key: testObjectName,
+          key: testObjectName2,
         });
 
         const res = await axios(url, { responseType: 'arraybuffer' });
@@ -491,11 +493,13 @@ describe('nodejs connection params', () => {
       }
 
       await client.deleteObject({
-        key: testObjectName,
+        key: testObjectName2,
       });
 
       {
-        const { data } = await client.listObjects();
+        const { data } = await client.listObjects({
+          prefix: testObjectName2,
+        });
         expect(data.Contents.length).toEqual(0);
       }
     },
