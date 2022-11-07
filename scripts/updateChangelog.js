@@ -14,7 +14,7 @@ async function updateChangelog() {
       isFound = true;
       const startCh = $0.startsWith('\n') ? '\n' : '';
       const date = new Date().toISOString().split('T')[0];
-      return `${startCh}${$1} [${version}] - ${date}\n\n`;
+      return `${startCh}## [${version}] - ${date}\n\n`;
     }
   );
 

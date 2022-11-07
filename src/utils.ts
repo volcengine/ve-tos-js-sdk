@@ -173,3 +173,7 @@ export function isReadable(obj: unknown): obj is NodeJS.ReadableStream {
 
   return obj instanceof Readable;
 }
+
+export function isValidNumber(v: number): v is number {
+  return !!v || v == 0;
+}
