@@ -483,7 +483,6 @@ export async function uploadFile(
         this,
         input
       );
-      // console.log('createMultipartUpload Res: ', multipartRes);
       if (isCancel()) {
         throw new CancelError('cancel uploadFile');
       }
