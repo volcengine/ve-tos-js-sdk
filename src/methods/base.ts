@@ -25,6 +25,7 @@ import {
 } from './object/utils';
 import { makeAxiosInst } from '../axios';
 import { CRC } from '../crcPureJS';
+import * as log from '../log';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -334,7 +335,11 @@ export class TOSBase {
     }
 
     try {
-      // console.log('axios: ', reqOpts.method, reqOpts.url, reqOpts.params);
+      const logReqOpts = { ...reqOpts };
+      delete logReqOpts.httpAgent;
+      delete logReqOpts.httpsAgent;
+      log.TOS('reqOpts: ', logReqOpts);
+
       const res = await this.axiosInst({
         ...{ maxBodyLength: Infinity, maxContentLength: Infinity },
         ...reqOpts,
@@ -354,15 +359,16 @@ export class TOSBase {
         id2: res.headers['x-tos-id-2'],
       };
     } catch (err) {
-      // console.log('err response: ', (err as any).response.data);
       if (axios.isAxiosError(err) && err.response?.data?.RequestId) {
         // it's ServerError only if `RequestId` exists
         const response: AxiosResponse<TosServerErrorData> = err.response;
+        log.TOS('TosServerError response: ', response);
         const err2 = new TosServerError(response);
         throw err2;
       }
 
       // it is neither ServerError nor ClientError, it's other error
+      log.TOS('err: ', err);
       throw err;
     }
   }

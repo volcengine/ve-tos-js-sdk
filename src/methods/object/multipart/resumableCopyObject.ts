@@ -457,7 +457,6 @@ export async function resumableCopyObject(
         this,
         input
       );
-      // console.log('createMultipartUpload Res: ', multipartRes);
       if (isCancel()) {
         throw new CancelError('cancel uploadFile');
       }
@@ -507,7 +506,9 @@ export async function resumableCopyObject(
 
           const curTask = tasks[currentIndex];
           try {
-            let copySource = `/${input.srcBucket}/${input.srcKey}`;
+            let copySource = `/${input.srcBucket}/${encodeURIComponent(
+              input.srcKey
+            )}`;
             if (input.srcVersionId) {
               copySource += `?versionId=${input.srcVersionId}`;
             }
