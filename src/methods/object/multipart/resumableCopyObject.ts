@@ -506,7 +506,9 @@ export async function resumableCopyObject(
 
           const curTask = tasks[currentIndex];
           try {
-            let copySource = `/${input.srcBucket}/${input.srcKey}`;
+            let copySource = `/${input.srcBucket}/${encodeURIComponent(
+              input.srcKey
+            )}`;
             if (input.srcVersionId) {
               copySource += `?versionId=${input.srcVersionId}`;
             }
