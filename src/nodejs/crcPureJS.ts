@@ -1,5 +1,5 @@
-import TosClientError from './TosClientError';
-import { isBuffer } from './utils';
+import TosClientError from '../TosClientError';
+import { isBuffer } from '../utils';
 
 function makeTable() {
   // The ECMA polynomial, defined in ECMA 182.

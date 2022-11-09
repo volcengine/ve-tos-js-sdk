@@ -3,7 +3,7 @@ import mimeTypes from '../../mime-types';
 import { Headers, SupportObjectBody } from '../../interface';
 import { EmitReadStream } from '../../nodejs/EmitReadStream';
 import { isBuffer, isBlob, isReadable } from '../../utils';
-import { CRC } from '../../crcPureJS';
+import { CRC, CRCCls } from '../../universal/crc';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -77,7 +77,7 @@ interface GetNewBodyConfigOut<T> {
   body: T | NodeJS.ReadableStream;
   beforeRetry?: () => void;
   makeRetryStream?: () => NodeJS.ReadableStream | undefined;
-  crc?: CRC;
+  crc?: CRCCls;
 }
 
 interface GetEmitReadBodyConfigIn<T> {
@@ -156,7 +156,7 @@ export async function getCRCBodyConfig<T extends SupportObjectBody>({
   makeRetryStream,
   enableCRC,
 }: GetNewBodyConfigIn<T>): Promise<GetNewBodyConfigOut<T>> {
-  if (!enableCRC) {
+  if (!enableCRC || process.env.TARGET_ENVIRONMENT === 'browser') {
     return {
       body,
       beforeRetry,

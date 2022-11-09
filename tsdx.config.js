@@ -82,7 +82,14 @@ module.exports = {
       }
 
       if (opts.format === 'umd') {
-        config.external = () => false;
+        const nodejsPath = path.resolve(__dirname, './src/nodejs');
+        config.external = (...args) => {
+          const realPath = path.resolve(args[1], args[0]);
+          if (realPath.includes(nodejsPath)) {
+            return true;
+          }
+          return false;
+        };
       }
     }
 
