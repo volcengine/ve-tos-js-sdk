@@ -12,7 +12,6 @@ const client = new TOS({
   },
   requestTimeout: -1,
   bucket,
-  enableCRC: true,
 });
 
 const listBucketsDom = document.querySelector('#list-buckets');

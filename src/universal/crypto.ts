@@ -1,5 +1,5 @@
 import * as cryptoBrowser from './crypto.browser';
-import * as cryptoNode from './crypto.node';
+import * as cryptoNode from '../nodejs/crypto.nodejs';
 
 interface CryptoModule {
   hmacSha256: (

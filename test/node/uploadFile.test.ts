@@ -436,6 +436,23 @@ describe('uploadFile in node.js environment', () => {
     NEVER_TIMEOUT
   );
 
+  it(
+    'test enableContentMD5',
+    async () => {
+      const key = `${objectKey100M}-test-enableContentMD5`;
+      const client = new TOS(tosOptions);
+      await client.uploadFile({
+        file: objectPath100M,
+        key,
+        enableContentMD5: true,
+      });
+
+      const { data } = await client.headObject(key);
+      expect(+data['content-length'] === 100 * 1024 * 1024).toBeTruthy();
+    },
+    NEVER_TIMEOUT
+  );
+
   it('modify file after pause', async () => {}, NEVER_TIMEOUT);
 
   it(

@@ -24,7 +24,7 @@ import {
   validateObjectName,
 } from './object/utils';
 import { makeAxiosInst } from '../axios';
-import { CRC } from '../crcPureJS';
+import type { CRCCls } from '../universal/crc';
 import * as log from '../log';
 
 export interface TOSConstructorOptions {
@@ -135,7 +135,7 @@ interface GetSignatureQueryInput {
 
 interface FetchOpts<T> {
   needMd5?: boolean;
-  crc?: CRC;
+  crc?: CRCCls;
   handleResponse?: (response: AxiosResponse<T>) => T;
   subdomainBucket?: string;
   axiosOpts?: AxiosRequestConfig;
@@ -203,6 +203,11 @@ export class TOSBase {
       v: T | undefined | null,
       defaultValue: T
     ) => (v == null ? defaultValue : v);
+
+    const enableCRC = _opts.enableCRC ?? false;
+    if (enableCRC && process.env.TARGET_ENVIRONMENT === 'browser') {
+      throw new TosClientError('not support crc in browser environment');
+    }
 
     return {
       ..._opts,
@@ -509,7 +514,7 @@ export class TOSBase {
     };
   }
 
-  protected checkCRC64(crc: CRC, headers: Headers) {
+  protected checkCRC64(crc: CRCCls, headers: Headers) {
     if (!this.opts.enableCRC) {
       return;
     }
