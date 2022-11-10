@@ -196,3 +196,7 @@ export async function getNewBodyConfig<T extends SupportObjectBody>(
   const config2 = getCRCBodyConfig(input);
   return config2;
 }
+
+export function getCopySourceHeaderValue(srcBucket: string, srcKey: string) {
+  return `/${srcBucket}/${encodeURIComponent(srcKey)}`;
+}
