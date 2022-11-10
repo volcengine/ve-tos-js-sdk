@@ -21,6 +21,7 @@ import headObject from '../headObject';
 import { uploadPartCopy } from './uploadPartCopy';
 import { Headers } from '../../../interface';
 import copyObject from '../copyObject';
+import { getCopySourceHeaderValue } from '../utils';
 
 export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
   srcBucket: string;
@@ -506,9 +507,10 @@ export async function resumableCopyObject(
 
           const curTask = tasks[currentIndex];
           try {
-            let copySource = `/${input.srcBucket}/${encodeURIComponent(
+            let copySource = getCopySourceHeaderValue(
+              input.srcBucket,
               input.srcKey
-            )}`;
+            );
             if (input.srcVersionId) {
               copySource += `?versionId=${input.srcVersionId}`;
             }
@@ -590,7 +592,7 @@ export async function resumableCopyObject(
   };
 
   const handleEmptyObj = async (): Promise<TosResponse<UploadFileOutput>> => {
-    let copySource = `/${input.srcBucket}/${input.srcKey}`;
+    let copySource = getCopySourceHeaderValue(input.srcBucket, input.srcKey);
     if (input.srcVersionId) {
       copySource += `?versionId=${input.srcVersionId}`;
     }

@@ -120,23 +120,23 @@ uploadObjectDom.addEventListener('click', async () => {
         addContent(`progress: ${p}`);
       },
     });
+  });
 
-    resumableCopyBtn.addEventListener('click', () => {
-      textDom.innerHTML = '';
-      let content = '';
-      const addContent = line => {
-        content += line + '\n';
-        textDom.innerHTML = content;
-      };
+  resumableCopyBtn.addEventListener('click', () => {
+    textDom.innerHTML = '';
+    let content = '';
+    const addContent = line => {
+      content += line + '\n';
+      textDom.innerHTML = content;
+    };
 
-      client.resumableCopyObject({
-        srcBucket: bucket,
-        srcKey: lastUploadKey,
-        key: `copy_${lastUploadKey}`,
-        progress: p => {
-          addContent(`progress: ${p}`);
-        },
-      });
+    client.resumableCopyObject({
+      srcBucket: bucket,
+      srcKey: lastUploadKey,
+      key: `copy_${lastUploadKey}`,
+      progress: p => {
+        addContent(`progress: ${p}`);
+      },
     });
   });
 })();
