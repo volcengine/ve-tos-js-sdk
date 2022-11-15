@@ -26,6 +26,7 @@ const endpoint = '';
 export const tosOptions: TOSConstructorOptions & { bucket: string } = {
   accessKeyId: process.env.ACCESS_KEY_ID || '',
   accessKeySecret: process.env.ACCESS_KEY_SECRET || '',
+  stsToken: process.env.SESSION_TOKEN || '',
   region,
   bucket,
   endpoint,
