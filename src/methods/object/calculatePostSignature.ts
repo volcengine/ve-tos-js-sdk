@@ -72,7 +72,9 @@ export async function calculatePostSignature(
   conditions.push({ bucket });
   Object.entries(addedInForm).forEach(([key, value]) => {
     fields[key] = value;
-    conditions.push({ [key]: value });
+  });
+  Object.entries(fields).forEach(([key, value]) => {
+    conditions.push({ [key]: `${value}` });
   });
 
   const policy = {

@@ -255,10 +255,24 @@ describe('nodejs connection params', () => {
     'post object',
     async () => {
       const client = new TOS(tosOptions);
+      const contentType = 'video/mp4';
 
       const key = 'post-object-key';
       const content = 'abcd';
-      const form = await client.calculatePostSignature({ key });
+      const form = await client.calculatePostSignature({
+        key,
+        fields: {
+          'content-type': contentType,
+        },
+        conditions: [
+          {
+            'content-type': contentType,
+          },
+          {
+            'content-type': contentType,
+          },
+        ],
+      });
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => {
         formData.append(key, value);
@@ -277,7 +291,11 @@ describe('nodejs connection params', () => {
         }
       );
 
-      const { data } = await client.getObjectV2({ key, dataType: 'buffer' });
+      const { data, headers } = await client.getObjectV2({
+        key,
+        dataType: 'buffer',
+      });
+      expect(headers['content-type']).toEqual(contentType);
       expect(data.etag).not.toEqual('');
       expect(data.lastModified).not.toEqual('');
       expect(data.hashCrc64ecma).not.toEqual('');
