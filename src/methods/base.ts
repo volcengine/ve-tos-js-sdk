@@ -123,7 +123,7 @@ interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
   enableCRC: boolean;
 }
 
-interface GetSignatureQueryInput {
+interface GetSignatureQueryUrlInput {
   bucket: string;
   method: Method;
   path: string;
@@ -132,6 +132,19 @@ interface GetSignatureQueryInput {
   expires: number;
   query?: Record<string, any>;
 }
+
+interface GetSignaturePolicyQueryInput {
+  bucket: string;
+  expires: number;
+  policy: {
+    conditions: (string[] | { bucket: string } | { key: string })[];
+  };
+}
+
+type GetSignatureQueryInput =
+  | GetSignatureQueryUrlInput
+  | GetSignaturePolicyQueryInput;
+
 
 interface FetchOpts<T> {
   needMd5?: boolean;
@@ -446,16 +459,25 @@ export class TOSBase {
       signv4
     );
 
-    return sig.getSignatureQuery(
-      {
-        method: input.method,
-        path: input.path,
-        endpoints: input.subdomain ? this.opts.endpoint : undefined,
-        host: this.opts.endpoint,
-        query: input.query,
-      },
-      input.expires
-    );
+    if ('policy' in input) {
+      return sig.getSignaturePolicyQuery(
+        {
+          policy: input.policy,
+        },
+        input.expires
+      );
+    } else {
+      return sig.getSignatureQuery(
+        {
+          method: input.method,
+          path: input.path,
+          endpoints: input.subdomain ? this.opts.endpoint : undefined,
+          host: this.opts.endpoint,
+          query: input.query,
+        },
+        input.expires
+      );
+    }
   }
 
   protected getObjectPath = (

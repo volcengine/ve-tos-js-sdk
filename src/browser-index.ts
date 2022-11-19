@@ -58,6 +58,7 @@ import {
   getBucketVersioning,
   putBucketVersioning,
 } from './methods/bucket/versioning';
+import { preSignedPolicyURL } from './methods/object/preSignedPolicyURL';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -129,6 +130,7 @@ class TOS extends TOSBase {
   uploadFile = uploadFile;
   getPreSignedUrl = getPreSignedUrl;
   calculatePostSignature = calculatePostSignature;
+  preSignedPolicyURL = preSignedPolicyURL;
 }
 
 export default TOS;

@@ -177,3 +177,15 @@ export function isReadable(obj: unknown): obj is NodeJS.ReadableStream {
 export function isValidNumber(v: number): v is number {
   return !!v || v == 0;
 }
+
+export function obj2QueryStr(v?: Record<string, unknown>) {
+  if (!v) {
+    return '';
+  }
+  return Object.keys(v)
+    .map(key => {
+      const vStr = `${v[key]}`;
+      return `${encodeURIComponent(key)}=${encodeURIComponent(vStr)}`;
+    })
+    .join('&');
+}

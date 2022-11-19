@@ -46,6 +46,7 @@ export async function testCheckErr(
 ) {
   try {
     await f();
+    // debugger;
     expect(false).toBeTruthy(); // never go here
   } catch (_err) {
     const err = _err as any;
