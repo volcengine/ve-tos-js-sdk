@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { hashSha256, hmacSha256 } from './universal/crypto';
+import { hashSha256, hmacSha256, stringify, parse } from './universal/crypto';
 import qs from 'querystring';
 import { getSortedQueryString } from './utils';
 
@@ -31,6 +31,12 @@ export interface ISign {
 export interface ISigCredentials {
   GetSecretKey(): string;
   GetAccessKey(): string;
+}
+
+export interface ISigPolicyQuery {
+  policy: {
+    conditions: (string[] | { bucket: string } | { key: string })[];
+  };
 }
 
 export interface ISigOptions {
@@ -67,6 +73,7 @@ export const SIG_QUERY = {
   v4_security_token: 'X-Tos-Security-Token',
   v4_signature: 'X-Tos-Signature',
   v4_content_sha: 'X-Tos-Content-Sha256',
+  v4_policy: 'X-Tos-Policy',
 };
 
 export function isDefaultPort(port?: number) {
@@ -135,7 +142,7 @@ export class SignersV4 implements ISign {
     credentials?: ISigCredentials
   ): Map<string, string> => {
     // const datetime = (new Date(new Date().toUTCString())).Format("yyyyMMddTHHmmssZ")
-    opt.datetime = this.getDataTime();
+    opt.datetime = this.getDateTime();
     const header = new Map<string, string>();
     /* istanbul ignore if */
     if (!opt.headers) {
@@ -203,7 +210,7 @@ export class SignersV4 implements ISign {
     opt: ISigQueryOptions,
     expiredAt: number
   ): { [key: string]: any } => {
-    opt.datetime = this.getDataTime();
+    opt.datetime = this.getDateTime();
     if (!opt.headers) {
       const h: { [key: string]: string } = {};
       opt.headers = h;
@@ -235,9 +242,36 @@ export class SignersV4 implements ISign {
     if (this.options.securityToken) {
       res[SIG_QUERY.v4_security_token] = this.options.securityToken;
     }
-    res[SIG_QUERY.v4_signedHeaders] = this.signedHeaders(opt);
-    if (opt.responseContentType) {
-      res[SIG_QUERY.response_content_type] = opt.responseContentType;
+    opt.query = getSortedQueryString(res);
+
+    res[SIG_QUERY.v4_signature] = this.authorization(
+      opt,
+      this.credentials,
+      expiredAt
+    );
+    return res;
+  };
+
+  public getSignaturePolicyQuery = (
+    opt: ISigPolicyQuery,
+    expiredAt: number
+  ): { [key: string]: any } => {
+    opt.datetime = this.getDateTime();
+
+    const credString = this.credentialString(opt.datetime as string);
+    const res = {
+      [SIG_QUERY.v4_algorithm]: this.options.algorithm,
+      [SIG_QUERY.v4_credential]:
+        this.credentials.GetAccessKey() + '/' + credString,
+      [SIG_QUERY.v4_date]: opt.datetime,
+      [SIG_QUERY.v4_expires]: '' + expiredAt,
+      [SIG_QUERY.v4_policy]: stringify(
+        parse(JSON.stringify(opt.policy), 'utf-8'),
+        'base64'
+      ),
+    };
+    if (this.options.securityToken) {
+      res[SIG_QUERY.v4_security_token] = this.options.securityToken;
     }
     opt.query = getSortedQueryString(res);
 
@@ -277,7 +311,7 @@ export class SignersV4 implements ISign {
     return hmacSha256(signingKey, this.stringToSign(opt.datetime, opt), 'hex');
   };
 
-  private getDataTime = () => {
+  private getDateTime = () => {
     const date = new Date(new Date().toUTCString());
     const datetime =
       date
@@ -318,8 +352,12 @@ export class SignersV4 implements ISign {
     parts.push(this.options.algorithm);
     parts.push(datetime);
     parts.push(this.credentialString(datetime));
+    const canonicalString =
+      'policy' in opt
+        ? this.canonicalStringPolicy(opt)
+        : this.canonicalString(opt);
     // console.log('canonicalString',this.canonicalString(opt),' code:',this.hexEncodedHash(this.canonicalString(opt)));
-    parts.push(this.hexEncodedHash(this.canonicalString(opt)));
+    parts.push(this.hexEncodedHash(canonicalString));
     return parts.join('\n');
   };
 
@@ -334,6 +372,13 @@ export class SignersV4 implements ISign {
     parts.push(this.getEncodePath(opt.query as string, false));
     parts.push(this.canonicalHeaders(opt) + '\n');
     parts.push(this.signedHeaders(opt));
+    parts.push(this.hexEncodedBodyHash());
+    return parts.join('\n');
+  };
+
+  private canonicalStringPolicy = (opt: ISigOptions) => {
+    const parts: any[] = [];
+    parts.push(this.getEncodePath(opt.query as string, false));
     parts.push(this.hexEncodedBodyHash());
     return parts.join('\n');
   };
