@@ -9,6 +9,7 @@ import {
 } from '../utils';
 import {
   isNeedDeleteBucket,
+  specialCharKey,
   testBucketName as _testBucketName,
   tosOptions as _tosOptions,
 } from '../utils/options';
@@ -16,7 +17,19 @@ import {
 const testBucketName = `${_testBucketName}-presignedpolicyurl`;
 const tosOptions = { ..._tosOptions, bucket: testBucketName };
 
-const allTestObjectKeys = ['1', '2', '2/1', '2/2', '22/1', '22/2', '3', '3/'];
+const allTestObjectKeys = [
+  '1',
+  '2',
+  '2/1',
+  '2/2',
+  '22/1',
+  '22/2',
+  '3',
+  '3/',
+  `${specialCharKey}`,
+  `${specialCharKey}/1`,
+  `${specialCharKey}/2`,
+];
 describe('preSignedPolicyURL', () => {
   beforeAll(async done => {
     const client = new TOS(tosOptions);

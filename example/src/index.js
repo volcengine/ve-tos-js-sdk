@@ -1,11 +1,12 @@
 import axios from 'axios';
 import TOS from '../../';
 
-const bucket = 'cg-beijing';
+const bucket = 'test-cg-bucket-name-1668916780281-presignedpolicyurl';
 const client = new TOS({
   accessKeyId: process.env.ACCESS_KEY_ID,
   accessKeySecret: process.env.ACCESS_KEY_SECRET,
-  region: 'cn-beijing',
+  region: process.env.REGION || 'cn-beijing',
+  endpoint: process.env.ENDPOINT || '',
   proxy: {
     url: `${window.location.protocol}//${window.location.host}/api/proxy-tos/`,
     needProxyParams: true,
@@ -168,5 +169,24 @@ uploadObjectDom.addEventListener('click', async () => {
         // 移除绑定的 URL。
         window.URL.revokeObjectURL(link.href);
       });
+  });
+})();
+
+(function() {
+  const btnEle = document.querySelector('#preSignedPolicyURL-btn');
+  btnEle.addEventListener('click', () => {
+    const prefix = `（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
+    const ret = client.preSignedPolicyURL({
+      conditions: [
+        {
+          key: 'key',
+          value: prefix,
+          operator: 'starts-with',
+        },
+      ],
+    });
+
+    const url = ret.getSignedURLForList({ prefix });
+    axios(url);
   });
 })();

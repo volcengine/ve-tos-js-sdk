@@ -23,6 +23,8 @@ module.exports = {
       'process.env.ACCESS_KEY_SECRET': JSON.stringify(
         process.env.ACCESS_KEY_SECRET
       ),
+      'process.env.REGION': JSON.stringify(process.env.REGION),
+      'process.env.ENDPOINT': JSON.stringify(process.env.ENDPOINT),
     }),
   ],
 
