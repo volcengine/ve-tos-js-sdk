@@ -1,7 +1,7 @@
 import axios from 'axios';
 import TOS from '../../';
 
-const bucket = 'test-cg-bucket-name-1668916780281-presignedpolicyurl';
+const bucket = 'cg-beijing';
 const client = new TOS({
   accessKeyId: process.env.ACCESS_KEY_ID,
   accessKeySecret: process.env.ACCESS_KEY_SECRET,
@@ -43,8 +43,9 @@ uploadObjectDom.addEventListener('click', async () => {
     '#put-getPresignedUrl-upload-object'
   );
   let url = null;
+  let file = null;
   inputDom.addEventListener('change', () => {
-    const file = inputDom.files[0];
+    file = inputDom.files[0];
     console.log('file: ', file);
     const key = file.name;
     url = client.getPreSignedUrl({
@@ -57,6 +58,40 @@ uploadObjectDom.addEventListener('click', async () => {
     await axios.request({
       method: 'PUT',
       url,
+      data: file,
+    });
+  });
+})();
+
+(function() {
+  const inputDom = document.querySelector(
+    '#put-getPresignedUrl-custom-domain-file-input'
+  );
+  const textDom = document.querySelector(
+    '#put-getPresignedUrl-custom-domain-url'
+  );
+  const uploadDom = document.querySelector(
+    '#put-getPresignedUrl-custom-domain-upload-object'
+  );
+  let url = null;
+  let file = null;
+
+  inputDom.addEventListener('change', () => {
+    file = inputDom.files[0];
+    console.log('file: ', file);
+    const key = file.name;
+    url = client.getPreSignedUrl({
+      key,
+      method: 'PUT',
+      alternativeEndpoint: '123.baidu.com',
+    });
+    textDom.innerHTML = url;
+  });
+  uploadDom.addEventListener('click', async () => {
+    await axios.request({
+      method: 'PUT',
+      url,
+      data: file,
     });
   });
 })();

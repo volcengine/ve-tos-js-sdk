@@ -14,6 +14,7 @@ export interface GetPreSignedUrlInput {
    * unit: second, default: 1800
    */
   expires?: number;
+  alternativeEndpoint?: string;
   response?: {
     contentType?: string;
     contentDisposition?: string;
@@ -27,9 +28,10 @@ export function getPreSignedUrl(
 ) {
   validateObjectName(input);
   const normalizedInput = typeof input === 'string' ? { key: input } : input;
-  const subdomain = true;
-  const bucket = normalizedInput.bucket || this.opts.bucket;
-  if (!bucket) {
+  const endpoint = normalizedInput.alternativeEndpoint || this.opts.endpoint;
+  const subdomain = normalizedInput.alternativeEndpoint ? false : true;
+  const bucket = normalizedInput.bucket || this.opts.bucket || '';
+  if (subdomain && !bucket) {
     throw new TosClientError('Must provide bucket param');
   }
 
@@ -41,17 +43,9 @@ export function getPreSignedUrl(
       .join('/');
 
     if (subdomain) {
-      return [
-        `${bucket}.${this.opts.endpoint}`,
-        `/${objectKeyPath}`,
-        `/${encodedKey}`,
-      ];
+      return [`${bucket}.${endpoint}`, `/${objectKeyPath}`, `/${encodedKey}`];
     }
-    return [
-      this.opts.endpoint!,
-      `/${bucket}/${objectKeyPath}`,
-      `/${bucket}/${encodedKey}`,
-    ];
+    return [endpoint, `/${objectKeyPath}`, `/${encodedKey}`];
   })();
 
   const nextQuery: Record<string, any> = {};
@@ -69,6 +63,7 @@ export function getPreSignedUrl(
     bucket,
     method: normalizedInput.method || 'GET',
     path: signingPath,
+    endpoint,
     subdomain,
     expires: normalizedInput.expires || 1800,
     query: nextQuery,
