@@ -5,7 +5,8 @@ const bucket = 'cg-beijing';
 const client = new TOS({
   accessKeyId: process.env.ACCESS_KEY_ID,
   accessKeySecret: process.env.ACCESS_KEY_SECRET,
-  region: 'cn-beijing',
+  region: process.env.REGION || 'cn-beijing',
+  endpoint: process.env.ENDPOINT || '',
   proxy: {
     url: `${window.location.protocol}//${window.location.host}/api/proxy-tos/`,
     needProxyParams: true,
@@ -42,8 +43,9 @@ uploadObjectDom.addEventListener('click', async () => {
     '#put-getPresignedUrl-upload-object'
   );
   let url = null;
+  let file = null;
   inputDom.addEventListener('change', () => {
-    const file = inputDom.files[0];
+    file = inputDom.files[0];
     console.log('file: ', file);
     const key = file.name;
     url = client.getPreSignedUrl({
@@ -56,6 +58,40 @@ uploadObjectDom.addEventListener('click', async () => {
     await axios.request({
       method: 'PUT',
       url,
+      data: file,
+    });
+  });
+})();
+
+(function() {
+  const inputDom = document.querySelector(
+    '#put-getPresignedUrl-custom-domain-file-input'
+  );
+  const textDom = document.querySelector(
+    '#put-getPresignedUrl-custom-domain-url'
+  );
+  const uploadDom = document.querySelector(
+    '#put-getPresignedUrl-custom-domain-upload-object'
+  );
+  let url = null;
+  let file = null;
+
+  inputDom.addEventListener('change', () => {
+    file = inputDom.files[0];
+    console.log('file: ', file);
+    const key = file.name;
+    url = client.getPreSignedUrl({
+      key,
+      method: 'PUT',
+      alternativeEndpoint: '123.baidu.com',
+    });
+    textDom.innerHTML = url;
+  });
+  uploadDom.addEventListener('click', async () => {
+    await axios.request({
+      method: 'PUT',
+      url,
+      data: file,
     });
   });
 })();
@@ -168,5 +204,24 @@ uploadObjectDom.addEventListener('click', async () => {
         // 移除绑定的 URL。
         window.URL.revokeObjectURL(link.href);
       });
+  });
+})();
+
+(function() {
+  const btnEle = document.querySelector('#preSignedPolicyURL-btn');
+  btnEle.addEventListener('click', () => {
+    const prefix = `（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
+    const ret = client.preSignedPolicyURL({
+      conditions: [
+        {
+          key: 'key',
+          value: prefix,
+          operator: 'starts-with',
+        },
+      ],
+    });
+
+    const url = ret.getSignedURLForList({ prefix });
+    axios(url);
   });
 })();

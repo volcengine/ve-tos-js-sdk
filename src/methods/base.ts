@@ -128,6 +128,7 @@ interface GetSignatureQueryUrlInput {
   method: Method;
   path: string;
   subdomain: boolean;
+  endpoint: string;
   // unit: second
   expires: number;
   query?: Record<string, any>;
@@ -471,8 +472,8 @@ export class TOSBase {
         {
           method: input.method,
           path: input.path,
-          endpoints: input.subdomain ? this.opts.endpoint : undefined,
-          host: this.opts.endpoint,
+          endpoints: input.subdomain ? input.endpoint : undefined,
+          host: input.endpoint,
           query: input.query,
         },
         input.expires

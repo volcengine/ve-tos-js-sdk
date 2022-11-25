@@ -31,3 +31,5 @@ export const tosOptions: TOSConstructorOptions & { bucket: string } = {
   bucket,
   endpoint,
 };
+
+export const specialCharKey = `（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
