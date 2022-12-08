@@ -1,6 +1,7 @@
 import { Headers } from './interface';
 import { TOSConstructorOptions } from './methods/base';
 import { Readable } from 'stream';
+import { CancelError } from './CancelError';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: unknown) => (key: string) => {
@@ -189,3 +190,9 @@ export function obj2QueryStr(v?: Record<string, unknown>) {
     })
     .join('&');
 }
+
+export function isCancelError(err: any) {
+  return err instanceof CancelError;
+}
+
+export const DEFAULT_PART_SIZE = 20 * 1024 * 1024; // 20 MB
