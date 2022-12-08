@@ -9,7 +9,7 @@ import { getBucketAcl, putBucketAcl } from './methods/bucket/acl';
 import axios from 'axios';
 import { TosServerError, TosServerCode } from './TosServerError';
 import { TosClientError } from './TosClientError';
-import { isCancelError as isCancel } from './methods/object/multipart/uploadFile';
+import { isCancelError as isCancel } from './utils';
 import {
   getObject,
   getObjectV2,
@@ -59,6 +59,7 @@ import {
   putBucketVersioning,
 } from './methods/bucket/versioning';
 import { preSignedPolicyURL } from './methods/object/preSignedPolicyURL';
+import downloadFile from './methods/object/downloadFile';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -125,6 +126,7 @@ class TOS extends TOSBase {
   uploadPartCopy = uploadPartCopy;
   listMultipartUploads = listMultipartUploads;
   listParts = listParts;
+  downloadFile = downloadFile;
 
   // object others
   uploadFile = uploadFile;
