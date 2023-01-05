@@ -94,6 +94,48 @@ describe('resumableCopyObject in node.js environment', () => {
   );
 
   it(
+    'resumableCopyObject empty object pass headers',
+    async () => {
+      const srcKey = objectKeyEmpty;
+      const key = `copy_${srcKey}_empty_object_pass_headers`;
+      const client = new TOS(tosOptions);
+      await client.resumableCopyObject({
+        srcBucket: tosOptions.bucket,
+        srcKey,
+        key,
+        headers: {
+          'content-type': 'image/tiff',
+        },
+      });
+      const { data, headers } = await client.headObject(key);
+      expect(+data['content-length'] === 0).toBeTruthy();
+      expect(headers['content-type']).toBe('image/tiff');
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'resumableCopyObject pass headers',
+    async () => {
+      const srcKey = objectKey1K;
+      const key = `copy_${srcKey}_pass_headers`;
+      const client = new TOS(tosOptions);
+      await client.resumableCopyObject({
+        srcBucket: tosOptions.bucket,
+        srcKey,
+        key,
+        headers: {
+          'content-type': 'image/tiff',
+        },
+      });
+      const { data, headers } = await client.headObject(key);
+      expect(+data['content-length'] === 1024).toBeTruthy();
+      expect(headers['content-type']).toBe('image/tiff');
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
     'resumableCopyObject without checkpoint',
     async () => {
       const srcKey = objectKey100M;

@@ -518,6 +518,7 @@ export async function resumableCopyObject(
               curTask.partSize -
               1}`;
             const headers: Headers = {
+              ...input.headers,
               ['x-tos-copy-source']: copySource,
               ['x-tos-copy-source-if-match']: etag,
               ['x-tos-copy-source-range']: copyRange,
@@ -597,6 +598,7 @@ export async function resumableCopyObject(
       copySource += `?versionId=${input.srcVersionId}`;
     }
     const headers: Headers = {
+      ...input.headers,
       ['x-tos-copy-source']: copySource,
       ['x-tos-copy-source-if-match']: etag,
     };
