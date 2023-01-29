@@ -21,7 +21,7 @@ export async function deleteObject(
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
-  await this.fetchObject<DeleteObjectOutput>(
+  const res = await this.fetchObject<DeleteObjectOutput>(
     input,
     'DELETE',
     query,
@@ -29,6 +29,7 @@ export async function deleteObject(
     {},
     { handleResponse: res => res.headers }
   );
+  return res;
 }
 
 export default deleteObject;
