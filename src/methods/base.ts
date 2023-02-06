@@ -1,5 +1,6 @@
 import { hashMd5 } from '../universal/crypto';
 import axios, {
+  AxiosAdapter,
   AxiosInstance,
   AxiosRequestConfig,
   AxiosResponse,
@@ -26,6 +27,9 @@ import {
 import { makeAxiosInst } from '../axios';
 import type { CRCCls } from '../universal/crc';
 import * as log from '../log';
+import mpAdapter from 'axios-miniprogram-adapter'
+import uniappAdapter from 'axios-adapter-uniapp';
+
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -108,6 +112,11 @@ export interface TOSConstructorOptions {
    * CRC executed by js is slow currently, it's default value will be true if it is fast enough.
    */
   enableCRC?: boolean;
+
+  /**
+   * set request adapter to send request.
+   */
+  requestAdapter?: AxiosAdapter;
 }
 
 interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
@@ -235,6 +244,7 @@ export class TOSBase {
       idleConnectionTime: _default(_opts.idleConnectionTime, 60_000),
       maxRetryCount: _default(_opts.maxRetryCount, 3),
       enableCRC: _opts.enableCRC ?? false,
+      requestAdapter: getAdapter(),
     };
   }
 
@@ -360,7 +370,7 @@ export class TOSBase {
       log.TOS('reqOpts: ', logReqOpts);
 
       const res = await this.axiosInst({
-        ...{ maxBodyLength: Infinity, maxContentLength: Infinity },
+        ...{ maxBodyLength: Infinity, maxContentLength: Infinity, adapter: this.opts.requestAdapter },
         ...reqOpts,
         ...(opts?.axiosOpts || {}),
       });
@@ -562,3 +572,17 @@ export class TOSBase {
 }
 
 export default TOSBase;
+
+function getAdapter(): AxiosAdapter | undefined {
+  switch (true) {
+    case typeof wx !== 'undefined':
+    case typeof swan!== 'undefined':
+    case typeof dd !== 'undefined':
+    case typeof my !== 'undefined':
+      return mpAdapter as AxiosAdapter;
+    case typeof uni !== 'undefined':
+      return uniappAdapter as AxiosAdapter;
+    default:
+      return undefined
+  }
+}
