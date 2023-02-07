@@ -64,6 +64,13 @@ export const makeAxiosInst = (maxRetryCount: number) => {
     });
   }
 
+  // headers
+  const ensureHeaders = (v: any) => {
+    v.headers = v.headers || v.header;
+    return v;
+  };
+  axiosInst.interceptors.response.use(ensureHeaders, ensureHeaders);
+
   // decode header. Encode headers' value by encodeHeadersValue method before calling axios
   function handleResponseHeader(headers: Record<string, string>) {
     Object.entries(headers).forEach(([key, value]) => {

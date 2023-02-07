@@ -1,4 +1,4 @@
-import TOSBase from '../base';
+import TOSBase, { TosResponse } from '../base';
 import { normalizeHeadersKey, safeAwait } from '../../utils';
 import {
   Acl,
@@ -73,7 +73,7 @@ export async function putObject(this: TOSBase, input: PutObjectInput | string) {
 export async function _putObject(
   this: TOSBase,
   input: PutObjectInputInner | string
-) {
+): Promise<TosResponse<PutObjectOutput>> {
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeadersKey(input.headers);
   this.setObjectContentTypeHeader(input, headers);
@@ -137,7 +137,7 @@ export async function _putObject(
   });
 
   triggerDataTransfer(DataTransferType.Started);
-  const [err] = await safeAwait(
+  const [err, res] = await safeAwait(
     this.fetchObject<PutObjectOutput>(
       input,
       'PUT',
@@ -166,12 +166,13 @@ export async function _putObject(
     )
   );
 
-  if (err) {
+  if (err || !res) {
     triggerDataTransfer(DataTransferType.Failed);
     throw err;
   }
 
   triggerDataTransfer(DataTransferType.Succeed);
+  return res;
 }
 
 interface PutObjectFromFileInput extends Omit<PutObjectInput, 'body'> {
@@ -181,7 +182,7 @@ interface PutObjectFromFileInput extends Omit<PutObjectInput, 'body'> {
 export async function putObjectFromFile(
   this: TOSBase,
   input: PutObjectFromFileInput
-): Promise<void> {
+): Promise<TosResponse<PutObjectOutput>> {
   const normalizedHeaders = normalizeHeadersKey(input.headers);
   if (process.env.TARGET_ENVIRONMENT !== 'node') {
     throw new TosClientError(
