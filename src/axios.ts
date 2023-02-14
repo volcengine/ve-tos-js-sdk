@@ -66,10 +66,13 @@ export const makeAxiosInst = (maxRetryCount: number) => {
 
   // headers
   const ensureHeaders = (v: any) => {
-    v.headers = v.headers || v.header;
+    v.headers = v.headers || v.header || v?.response?.headers || {};
     return v;
   };
-  axiosInst.interceptors.response.use(ensureHeaders, ensureHeaders);
+  axiosInst.interceptors.response.use(ensureHeaders, error => {
+    ensureHeaders(error);
+    return Promise.reject(error);
+  });
 
   // decode header. Encode headers' value by encodeHeadersValue method before calling axios
   function handleResponseHeader(headers: Record<string, string>) {
