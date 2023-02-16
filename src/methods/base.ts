@@ -574,6 +574,15 @@ export class TOSBase {
 export default TOSBase;
 
 function getAdapter(): AxiosAdapter | undefined {
+  if (process.env.TARGET_ENVIRONMENT === 'node') {
+    // nodejs env
+    return undefined;
+  }
+  if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
+    // browser env
+    return undefined;
+  }
+
   switch (true) {
     case typeof wx !== 'undefined':
     case typeof swan!== 'undefined':
