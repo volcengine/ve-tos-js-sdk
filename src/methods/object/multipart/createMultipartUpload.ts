@@ -51,6 +51,7 @@ export async function createMultipartUpload(
     input,
     'POST',
     { uploads: '' },
-    headers
+    headers,
+    ''
   );
 }
