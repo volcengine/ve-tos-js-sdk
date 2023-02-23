@@ -1,5 +1,5 @@
 import TOSBase from '../base';
-import { Headers, Acl, StorageClass } from '../../interface';
+import { Acl, StorageClass } from '../../interface';
 import {
   fillRequestHeaders,
   makeArrayProp,
