@@ -38,7 +38,7 @@ export async function sleepCache() {
   await sleep(12 * 1000); // 12s
 }
 
-export const NEVER_TIMEOUT = 10 * 60 * 60 * 1000;
+export const NEVER_TIMEOUT = 5 * 60 * 1000;
 
 export async function testCheckErr(
   f: () => void,

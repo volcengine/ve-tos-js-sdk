@@ -143,7 +143,7 @@ export async function _putObject(
       'PUT',
       {},
       headers,
-      bodyConfig.body,
+      bodyConfig.body || '',
       {
         handleResponse: res => res.headers,
         crc: bodyConfig.crc,

@@ -1,13 +1,14 @@
 import fs from 'fs';
 import TosClientError from '../../TosClientError';
 import { Headers } from '../../interface';
-import { normalizeHeadersKey } from '../../utils';
+import { fillRequestHeaders, normalizeHeadersKey } from '../../utils';
 import TOSBase, { TosResponse } from '../base';
 
 export interface GetObjectInput {
   bucket?: string;
   key: string;
   versionId?: string;
+
   headers?: {
     [key: string]: string | undefined;
     'If-Modified-Since'?: string;
@@ -69,6 +70,19 @@ export interface GetObjectV2Input {
    */
   dataType?: DataType;
 
+  ifMatch?: string;
+  ifModifiedSince?: string;
+  ifNoneMatch?: string;
+  ifUnmodifiedSince?: string;
+
+  ssecAlgorithm?: string;
+  ssecKey?: string;
+  ssecKeyMD5?: string;
+
+  range?: string;
+  rangeStart?: number;
+  rangeEnd?: number;
+
   headers?: {
     [key: string]: string | undefined;
     'If-Modified-Since'?: string;
@@ -78,7 +92,7 @@ export interface GetObjectV2Input {
     'x-tos-server-side-encryption-customer-key'?: string;
     'x-tos-server-side-encryption-customer-key-md5'?: string;
     'x-tos-server-side-encryption-customer-algorithm'?: string;
-    Range?: string;
+    'content-range'?: string;
   };
   response?: Headers & {
     'cache-control'?: string;
@@ -156,6 +170,8 @@ async function getObjectV2(
   input: GetObjectV2Input | string
 ): Promise<TosResponse<GetObjectV2Output>> {
   const normalizedInput = typeof input === 'string' ? { key: input } : input;
+  const headers = normalizeHeadersKey(normalizedInput.headers);
+  normalizedInput.headers = headers;
   const dataType = normalizedInput.dataType || 'stream';
   normalizedInput.dataType = dataType;
 
@@ -165,7 +181,28 @@ async function getObjectV2(
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
-  const headers: Headers = normalizeHeadersKey(normalizedInput?.headers);
+
+  fillRequestHeaders(normalizedInput, [
+    'ifMatch',
+    'ifModifiedSince',
+    'ifNoneMatch',
+    'ifUnmodifiedSince',
+
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+
+    'range',
+  ]);
+  if (normalizedInput.rangeStart != null || normalizedInput.rangeEnd != null) {
+    const start =
+      normalizedInput.rangeStart != null ? `${normalizedInput.rangeStart}` : '';
+    const end =
+      normalizedInput.rangeEnd != null ? `${normalizedInput.rangeEnd}` : '';
+    const copyRange = `bytes=${start}-${end}`;
+    headers['content-range'] = headers['content-range'] ?? copyRange;
+  }
+
   const response: Partial<Headers> = normalizedInput?.response || {};
   Object.keys(response).forEach((key: string) => {
     const v = response[key];

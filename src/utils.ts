@@ -2,6 +2,7 @@ import { Headers } from './interface';
 import { TOSConstructorOptions } from './methods/base';
 import { Readable } from 'stream';
 import { CancelError } from './CancelError';
+import TosClientError from './TosClientError';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: unknown) => (key: string) => {
@@ -196,3 +197,106 @@ export function isCancelError(err: any) {
 }
 
 export const DEFAULT_PART_SIZE = 20 * 1024 * 1024; // 20 MB
+
+export const requestHeadersMap: Record<
+  string,
+  string | [string, (v: any) => string] | ((v: any) => Record<string, string>)
+> = {
+  encodingType: 'encoding-type',
+  cacheControl: 'cache-control',
+  contentDisposition: 'content-disposition',
+  contentEncoding: 'content-encoding',
+  contentLanguage: 'content-language',
+  contentType: 'content-type',
+  expires: ['expires', (v: Date) => v.toUTCString()],
+  range: 'content-range',
+
+  ifMatch: 'if-match',
+  ifModifiedSince: 'if-modified-since',
+  ifNoneMatch: 'if-none-match',
+  ifUnmodifiedSince: 'if-unmodified-since',
+
+  acl: 'x-tos-acl',
+  grantFullControl: 'x-tos-grant-full-control',
+  grantRead: 'x-tos-grant-read',
+  grantReadAcp: 'x-tos-grant-read-acp',
+  grantWrite: 'x-tos-grant-write',
+  grantWriteAcp: 'x-tos-grant-write-acp',
+
+  serverSideEncryption: 'x-tos-server-side-encryption',
+  ssecAlgorithm: 'x-tos-server-side-encryption-customer-algorithm',
+  ssecKey: 'x-tos-server-side-encryption-customer-key',
+  ssecKeyMD5: 'x-tos-server-side-encryption-customer-key-md5',
+
+  copySourceIfMatch: 'x-tos-copy-source-if-match',
+  copySourceIfModifiedSince: 'x-tos-copy-source-if-modified-since',
+  copySourceIfNoneMatch: 'x-tos-copy-source-if-none-match',
+  copySourceIfUnmodifiedSince: 'x-tos-copy-source-if-unmodified-since',
+  copySourceSSECAlgorithm:
+    'x-tos-copy-source-server-side-encryption-customer-algorithm',
+  copySourceSSECKey: 'x-tos-copy-source-server-side-encryption-customer-key',
+  copySourceSSECKeyMD5:
+    'x-tos-copy-source-server-side-encryption-customer-key-MD5',
+
+  metadataDirective: 'x-tos-metadata-directive',
+  meta: (v: any) => {
+    return Object.keys(v).reduce((prev, key) => {
+      prev[`x-tos-meta-${key}`] = `${v[key]}`;
+      return prev;
+    }, {} as Record<string, string>);
+  },
+  websiteRedirectLocation: 'x-tos-website-redirect-location',
+  storageClass: 'x-tos-storage-class',
+  azRedundancy: 'x-tos-az-redundancy',
+};
+// type RequestHeadersMapKeys = keyof typeof requestHeadersMap;
+
+export function fillRequestHeaders<T extends { headers?: Headers }>(
+  v: T,
+  // keys: (keyof T & RequestHeadersMapKeys)[]
+  keys: (keyof T & string)[]
+) {
+  if (!keys.length) {
+    return;
+  }
+
+  const headers = v.headers || {};
+  v.headers = headers;
+
+  function setOneHeader(k: string, v: string) {
+    if (headers[k] == null) {
+      headers[k] = v;
+    }
+  }
+
+  keys.forEach(k => {
+    const confV = requestHeadersMap[k];
+    if (!confV) {
+      // maybe warning
+      throw new TosClientError(
+        `\`${k}\` isn't in keys of \`requestHeadersMap\``
+      );
+    }
+
+    const oriValue = v[k];
+    if (oriValue == null) {
+      return;
+    }
+
+    const oriValueStr = `${oriValue}`;
+    if (typeof confV === 'string') {
+      return setOneHeader(confV, oriValueStr);
+    }
+
+    if (Array.isArray(confV)) {
+      const newKey = confV[0];
+      const newValue = confV[1](oriValue);
+      return setOneHeader(newKey, newValue);
+    }
+
+    const obj = confV(oriValue);
+    Object.entries(obj).forEach(([k, v]) => {
+      setOneHeader(k, v);
+    });
+  });
+}
