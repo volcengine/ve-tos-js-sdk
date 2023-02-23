@@ -1,9 +1,5 @@
 import TOSBase, { TosResponse } from '../base';
-import {
-  fillRequestHeaders,
-  normalizeHeadersKey,
-  safeAwait,
-} from '../../utils';
+import { normalizeHeadersKey, safeAwait } from '../../utils';
 import {
   Acl,
   DataTransferStatus,
@@ -16,7 +12,6 @@ import fs, { Stats } from 'fs';
 import { Readable } from 'stream';
 import { getSize, getNewBodyConfig } from './utils';
 import { retryNamespace } from '../../axios';
-import { StorageClassType } from '../../TosExportEnum';
 
 export interface PutObjectInput {
   bucket?: string;
@@ -25,31 +20,6 @@ export interface PutObjectInput {
    * body is empty buffer if it's falsy.
    */
   body?: SupportObjectBody;
-
-  contentLength?: number;
-  contentMD5?: string;
-  cacheControl?: string;
-  contentDisposition?: string;
-  contentEncoding?: string;
-  contentLanguage?: string;
-  contentType?: string;
-  expires?: Date;
-
-  acl?: Acl;
-  grantFullControl?: string;
-  grantRead?: string;
-  grantReadAcp?: string;
-  grantWriteAcp?: string;
-
-  ssecAlgorithm?: string;
-  ssecKey?: string;
-  ssecKeyMD5?: string;
-
-  serverSideEncryption?: string;
-
-  meta?: Record<string, string>;
-  websiteRedirectLocation?: string;
-  storageClass?: StorageClassType;
 
   dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
@@ -106,32 +76,6 @@ export async function _putObject(
 ): Promise<TosResponse<PutObjectOutput>> {
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeadersKey(input.headers);
-  input.headers = headers;
-  fillRequestHeaders(input, [
-    'contentLength',
-    'contentMD5',
-    'cacheControl',
-    'contentDisposition',
-    'contentEncoding',
-    'contentLanguage',
-    'contentType',
-    'expires',
-
-    'acl',
-    'grantFullControl',
-    'grantRead',
-    'grantReadAcp',
-    'grantWriteAcp',
-
-    'ssecAlgorithm',
-    'ssecKey',
-    'ssecKeyMD5',
-    'serverSideEncryption',
-
-    'meta',
-    'websiteRedirectLocation',
-    'storageClass',
-  ]);
   this.setObjectContentTypeHeader(input, headers);
 
   const totalSize = getSize(input.body, headers);

@@ -204,14 +204,12 @@ export const requestHeadersMap: Record<
 > = {
   encodingType: 'encoding-type',
   cacheControl: 'cache-control',
-  contentLength: 'content-length',
   contentDisposition: 'content-disposition',
   contentEncoding: 'content-encoding',
   contentLanguage: 'content-language',
   contentType: 'content-type',
   expires: ['expires', (v: Date) => v.toUTCString()],
   range: 'content-range',
-  contentMD5: 'content-md5',
 
   ifMatch: 'if-match',
   ifModifiedSince: 'if-modified-since',
