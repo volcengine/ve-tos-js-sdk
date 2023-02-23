@@ -1,6 +1,10 @@
 import TOSBase from '../base';
 import { Headers, Acl, StorageClass } from '../../interface';
-import { fillRequestHeaders, makeArrayProp } from '../../utils';
+import {
+  fillRequestHeaders,
+  makeArrayProp,
+  normalizeHeadersKey,
+} from '../../utils';
 import TosClientError from '../../TosClientError';
 import { AzRedundancyType, StorageClassType } from '../../TosExportEnum';
 
@@ -69,6 +73,7 @@ export async function createBucket(this: TOSBase, input: PutBucketInput) {
       );
     }
   }
+  const headers = (input.headers = normalizeHeadersKey(input.headers));
 
   fillRequestHeaders(input, [
     'acl',
@@ -80,7 +85,6 @@ export async function createBucket(this: TOSBase, input: PutBucketInput) {
     'storageClass',
     'azRedundancy',
   ]);
-  const headers: Headers = input.headers || {};
 
   const res = await this.fetchBucket(input.bucket, 'PUT', {}, headers);
   return res;
