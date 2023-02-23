@@ -1,10 +1,51 @@
-import { safeAwait } from '../../utils';
-import { StorageClass, ServerSideEncryption } from '../../interface';
+import {
+  safeAwait,
+  normalizeHeadersKey,
+  fillRequestHeaders,
+} from '../../utils';
+import { StorageClass, ServerSideEncryption, Acl } from '../../interface';
 import TOSBase, { TosResponse } from '../base';
+import { StorageClassType } from '../../TosExportEnum';
+import { getCopySourceHeaderValue } from './utils';
 
 export interface CopyObjectInput {
   bucket?: string;
   key: string;
+
+  srcBucket?: string;
+  srcKey?: string;
+  srcVersionID?: string;
+  cacheControl?: string;
+  contentDisposition?: string;
+  contentEncoding?: string;
+  contentLanguage?: string;
+  contentType?: string;
+  expires?: Date;
+
+  copySourceIfMatch?: string;
+  copySourceIfModifiedSince?: string;
+  copySourceIfNoneMatch?: string;
+  copySourceIfUnmodifiedSince?: string;
+  copySourceSSECAlgorithm?: string;
+  copySourceSSECKey?: string;
+  copySourceSSECKeyMD5?: string;
+
+  ssecAlgorithm?: string;
+  ssecKey?: string;
+  ssecKeyMD5?: string;
+  serverSideEncryption?: string;
+
+  acl?: Acl;
+  grantFullControl?: string;
+  grantRead?: string;
+  grantReadAcp?: string;
+  grantWriteAcp?: string;
+
+  metadataDirective?: string;
+  meta?: Record<string, string>;
+  websiteRedirectLocation?: string;
+  storageClass?: StorageClassType;
+
   headers?: {
     [key: string]: string | undefined;
     ['x-tos-copy-source']?: string;
@@ -36,8 +77,50 @@ export async function copyObject(
   this: TOSBase,
   input: CopyObjectInput
 ): Promise<TosResponse<CopyObjectOutput>> {
+  const headers = normalizeHeadersKey(input.headers);
+  input.headers = headers;
+  fillRequestHeaders(input, [
+    'cacheControl',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'expires',
+
+    'copySourceIfMatch',
+    'copySourceIfModifiedSince',
+    'copySourceIfNoneMatch',
+    'copySourceIfUnmodifiedSince',
+    'copySourceSSECAlgorithm',
+    'copySourceSSECKey',
+    'copySourceSSECKeyMD5',
+
+    'acl',
+    'grantFullControl',
+    'grantRead',
+    'grantReadAcp',
+    'grantWriteAcp',
+
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+    'serverSideEncryption',
+
+    'metadataDirective',
+    'meta',
+    'websiteRedirectLocation',
+    'storageClass',
+  ]);
+  if (input.srcBucket && input.srcKey) {
+    let copySource = getCopySourceHeaderValue(input.srcBucket, input.srcKey);
+    if (input.srcVersionID) {
+      copySource += `?versionId=${input.srcVersionID}`;
+    }
+    headers['x-tos-copy-source'] = headers['x-tos-copy-source'] ?? copySource;
+  }
+
   const [err, res] = await safeAwait(
-    this.fetchObject<CopyObjectBody>(input, 'PUT', {}, input.headers || {})
+    this.fetchObject<CopyObjectBody>(input, 'PUT', {}, headers)
   );
 
   if (err || !res || !res.data.ETag) {

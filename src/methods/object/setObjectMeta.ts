@@ -1,9 +1,20 @@
+import { fillRequestHeaders, normalizeHeadersKey } from '../../utils';
 import TOSBase from '../base';
 
 export interface SetObjectMetaInput {
   bucket?: string;
   key: string;
   versionId?: string;
+
+  cacheControl?: string;
+  contentDisposition?: string;
+  contentEncoding?: string;
+  contentLanguage?: string;
+  contentType?: string;
+  expires?: Date;
+
+  meta?: Record<string, string>;
+
   headers?: {
     [key: string]: string | undefined;
     'Cache-Control'?: string;
@@ -23,6 +34,16 @@ export async function setObjectMeta(
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
+  normalizedInput.headers = normalizeHeadersKey(normalizedInput.headers);
+  fillRequestHeaders(normalizedInput, [
+    'cacheControl',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'expires',
+    'meta',
+  ]);
 
   return this.fetchObject<undefined>(
     input,

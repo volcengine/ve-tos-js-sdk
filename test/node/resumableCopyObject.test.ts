@@ -105,6 +105,7 @@ describe('resumableCopyObject in node.js environment', () => {
         key,
         headers: {
           'content-type': 'image/tiff',
+          'x-tos-metadata-directive': 'REPLACE',
         },
       });
       const { data, headers } = await client.headObject(key);
@@ -126,6 +127,7 @@ describe('resumableCopyObject in node.js environment', () => {
         key,
         headers: {
           'content-type': 'image/tiff',
+          'x-tos-metadata-directive': 'REPLACE',
         },
       });
       const { data, headers } = await client.headObject(key);

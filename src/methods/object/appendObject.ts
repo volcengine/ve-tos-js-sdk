@@ -1,6 +1,7 @@
 import TOSBase from '../base';
-import { normalizeHeadersKey } from '../../utils';
+import { fillRequestHeaders, normalizeHeadersKey } from '../../utils';
 import { Acl } from '../../interface';
+import { StorageClassType } from '../../TosExportEnum';
 
 export interface AppendObjectInput {
   bucket?: string;
@@ -8,6 +9,24 @@ export interface AppendObjectInput {
   offset: number;
   // body is empty buffer if it's falsy
   body?: File | Blob | Buffer | NodeJS.ReadableStream;
+
+  contentLength: number;
+  cacheControl?: string;
+  contentDisposition?: string;
+  contentEncoding?: string;
+  contentLanguage?: string;
+  contentType?: string;
+  expires?: Date;
+
+  acl?: Acl;
+  grantFullControl?: string;
+  grantRead?: string;
+  grantReadAcp?: string;
+  grantWriteAcp?: string;
+
+  meta?: Record<string, string>;
+  websiteRedirectLocation?: string;
+  storageClass?: StorageClassType;
 
   headers?: {
     [key: string]: string | undefined;
@@ -34,6 +53,25 @@ export async function appendObject(
 ) {
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeadersKey(input.headers);
+  input.headers = headers;
+  fillRequestHeaders(input, [
+    'cacheControl',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'expires',
+
+    'acl',
+    'grantFullControl',
+    'grantRead',
+    'grantReadAcp',
+    'grantWriteAcp',
+
+    'meta',
+    'websiteRedirectLocation',
+    'storageClass',
+  ]);
   this.setObjectContentTypeHeader(input, headers);
 
   await this.fetchObject<AppendObjectOutput>(
