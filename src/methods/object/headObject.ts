@@ -1,10 +1,21 @@
 import { StorageClass } from '../../interface';
+import { fillRequestHeaders, normalizeHeadersKey } from '../../utils';
 import TOSBase from '../base';
 
 export interface HeadObjectInput {
   bucket?: string;
   key: string;
   versionId?: string;
+
+  ifMatch?: string;
+  ifModifiedSince?: string;
+  ifNoneMatch?: string;
+  ifUnmodifiedSince?: string;
+
+  ssecAlgorithm?: string;
+  ssecKey?: string;
+  ssecKeyMD5?: string;
+
   headers?: {
     [key: string]: string | undefined;
     'If-Match'?: string;
@@ -39,10 +50,24 @@ export async function headObject(
   input: HeadObjectInput | string
 ) {
   const normalizedInput = typeof input === 'string' ? { key: input } : input;
+  const headers = normalizeHeadersKey(normalizedInput.headers);
+  normalizedInput.headers = headers;
+
   const query: Record<string, any> = {};
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
+
+  fillRequestHeaders(normalizedInput, [
+    'ifMatch',
+    'ifModifiedSince',
+    'ifNoneMatch',
+    'ifUnmodifiedSince',
+
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+  ]);
 
   return this.fetchObject<HeadObjectOutput>(
     input,

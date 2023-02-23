@@ -1,7 +1,8 @@
 import TOSBase from '../base';
 import { Headers, Acl, StorageClass } from '../../interface';
-import { makeArrayProp } from '../../utils';
+import { fillRequestHeaders, makeArrayProp } from '../../utils';
 import TosClientError from '../../TosClientError';
+import { AzRedundancyType, StorageClassType } from '../../TosExportEnum';
 
 export interface Bucket {
   // '2021-07-20T09:22:05.000Z'
@@ -20,6 +21,14 @@ export interface ListBucketOutput {
 export interface PutBucketInput {
   bucket?: string;
   acl?: Acl;
+  grantFullControl?: string;
+  grantRead?: string;
+  grantReadAcp?: string;
+  grantWrite?: string;
+  grantWriteAcp?: string;
+  storageClass?: StorageClassType;
+  azRedundancy?: AzRedundancyType;
+
   headers?: {
     [key: string]: string | undefined;
     ['x-tos-acl']?: Acl;
@@ -61,13 +70,17 @@ export async function createBucket(this: TOSBase, input: PutBucketInput) {
     }
   }
 
+  fillRequestHeaders(input, [
+    'acl',
+    'grantFullControl',
+    'grantRead',
+    'grantReadAcp',
+    'grantWrite',
+    'grantWriteAcp',
+    'storageClass',
+    'azRedundancy',
+  ]);
   const headers: Headers = input.headers || {};
-
-  if (input.acl) {
-    if (!headers['x-tos-acl']) {
-      headers['x-tos-acl'] = input.acl;
-    }
-  }
 
   const res = await this.fetchBucket(input.bucket, 'PUT', {}, headers);
   return res;

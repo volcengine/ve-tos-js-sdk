@@ -20,6 +20,7 @@ export interface GetPreSignedUrlInput {
     contentDisposition?: string;
   };
   versionId?: string;
+  query?: Record<string, string>;
 }
 
 export function getPreSignedUrl(
@@ -48,15 +49,20 @@ export function getPreSignedUrl(
     return [endpoint, `/${objectKeyPath}`, `/${encodedKey}`];
   })();
 
-  const nextQuery: Record<string, any> = {};
+  const nextQuery: Record<string, any> = normalizedInput.query || {};
+  const setOneQuery = (k: string, v?: string) => {
+    if (nextQuery[k] == null && v != null) {
+      nextQuery[k] = v;
+    }
+  };
   const response = normalizedInput.response || {};
   Object.keys(response).forEach(_key => {
     const key = _key as keyof typeof response;
     const kebabKey = covertCamelCase2Kebab(key);
-    nextQuery[`response-${kebabKey}`] = response?.[key];
+    setOneQuery(`response-${kebabKey}`, response[key]);
   });
   if (normalizedInput.versionId) {
-    nextQuery.versionId = normalizedInput.versionId;
+    setOneQuery('versionId', normalizedInput.versionId);
   }
 
   const query = this.getSignatureQuery({

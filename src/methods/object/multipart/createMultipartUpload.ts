@@ -1,11 +1,35 @@
 import TOSBase from '../../base';
-import { normalizeHeadersKey } from '../../../utils';
+import { fillRequestHeaders, normalizeHeadersKey } from '../../../utils';
 import { Acl } from '../../../interface';
+import { StorageClassType } from '../../../TosExportEnum';
 
 export interface CreateMultipartUploadInput {
   bucket?: string;
   key: string;
+
+  encodingType?: string;
+  cacheControl?: string;
+  contentDisposition?: string;
+  contentEncoding?: string;
+  contentLanguage?: string;
+  contentType?: string;
+  expires?: Date;
+
   acl?: Acl;
+  grantFullControl?: string;
+  grantRead?: string;
+  grantReadAcp?: string;
+  grantWriteAcp?: string;
+
+  ssecAlgorithm?: string;
+  ssecKey?: string;
+  ssecKeyMD5?: string;
+
+  serverSideEncryption?: string;
+
+  meta?: Record<string, string>;
+  websiteRedirectLocation?: string;
+  storageClass?: StorageClassType;
 
   headers?: {
     [key: string]: string | undefined;
@@ -39,11 +63,30 @@ export async function createMultipartUpload(
 ) {
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeadersKey(input.headers);
-  if (input.acl) {
-    if (!headers['x-tos-acl']) {
-      headers['x-tos-acl'] = input.acl;
-    }
-  }
+  fillRequestHeaders(input, [
+    'encodingType',
+    'cacheControl',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'expires',
+
+    'acl',
+    'grantFullControl',
+    'grantRead',
+    'grantReadAcp',
+    'grantWriteAcp',
+
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+    'serverSideEncryption',
+
+    'meta',
+    'websiteRedirectLocation',
+    'storageClass',
+  ]);
 
   this.setObjectContentTypeHeader(input, headers);
 
