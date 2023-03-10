@@ -1,7 +1,7 @@
 import { covertCamelCase2Kebab, makeArrayProp } from '../../../utils';
 import TOSBase from '../../base';
 
-interface ListMultipartUploadsInput {
+export interface ListMultipartUploadsInput {
   bucket?: string;
   maxUploads?: number;
   keyMarker?: string;
