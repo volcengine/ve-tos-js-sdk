@@ -63,6 +63,7 @@ export async function createMultipartUpload(
 ) {
   input = this.normalizeObjectInput(input);
   const headers = normalizeHeadersKey(input.headers);
+  input.headers = headers;
   fillRequestHeaders(input, [
     'encodingType',
     'cacheControl',

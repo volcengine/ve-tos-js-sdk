@@ -22,6 +22,7 @@ import { uploadPartCopy } from './uploadPartCopy';
 import { Headers } from '../../../interface';
 import copyObject from '../copyObject';
 import { getCopySourceHeaderValue } from '../utils';
+import cloneDeep from 'lodash/cloneDeep';
 
 export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
   srcBucket: string;
@@ -456,7 +457,7 @@ export async function resumableCopyObject(
     try {
       const { data: multipartRes } = await createMultipartUpload.call(
         this,
-        input
+        cloneDeep(input)
       );
       if (isCancel()) {
         throw new CancelError('cancel uploadFile');
