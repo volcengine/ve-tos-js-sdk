@@ -26,25 +26,9 @@ export function lookupMimeType(key: string) {
 // for all object methods
 export function validateObjectName(input: { key: string } | string) {
   const key = typeof input === 'string' ? input : input.key;
-  if (key.length < 1 || key.length > 696) {
+  if (key.length < 1) {
     throw new TosClientError(
-      'invalid object name, the length must be [1, 696]'
-    );
-  }
-
-  if (key.length === 1) {
-    // only check one ascii code, otherwise server maybe produce strange problems
-    const charCode = key.charCodeAt(0);
-    if (charCode < 32 || (charCode > 127 && charCode < 256)) {
-      throw new TosClientError(
-        'invalid object name, the character set is illegal'
-      );
-    }
-  }
-
-  if (/^(\/|\\)/.test(key)) {
-    throw new TosClientError(
-      `invalid object name, the object name can not start with '/' or '\\'`
+      'invalid object name, the length must greater than 1'
     );
   }
 }
