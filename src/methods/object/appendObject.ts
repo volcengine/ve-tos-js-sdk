@@ -36,7 +36,7 @@ export async function appendObject(
   const headers = normalizeHeadersKey(input.headers);
   this.setObjectContentTypeHeader(input, headers);
 
-  await this.fetchObject<AppendObjectOutput>(
+  return await this.fetchObject<AppendObjectOutput>(
     input,
     'PUT',
     { append: '', offset: input.offset },
