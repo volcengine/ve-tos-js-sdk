@@ -208,7 +208,7 @@ export async function uploadPartFromFile(
 
   const stats: Stats = await fsp.stat(input.filePath);
   const start = input.offset ?? 0;
-  const end = start + (input.partSize ?? stats.size);
+  const end = Math.min(stats.size, start + (input.partSize ?? stats.size));
   const makeRetryStream = () => {
     const stream = fs.createReadStream(input.filePath, {
       start,
