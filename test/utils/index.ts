@@ -34,8 +34,8 @@ async function sleep(time: number) {
   await new Promise(r => setTimeout(r, time));
 }
 
-export async function sleepCache() {
-  await sleep(12 * 1000); // 12s
+export async function sleepCache(time = 12 * 1000) {
+  await sleep(time); // 12s
 }
 
 export const NEVER_TIMEOUT = 5 * 60 * 1000;

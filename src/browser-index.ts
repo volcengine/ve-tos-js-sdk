@@ -60,6 +60,12 @@ import {
 } from './methods/bucket/versioning';
 import { preSignedPolicyURL } from './methods/object/preSignedPolicyURL';
 import downloadFile from './methods/object/downloadFile';
+import { getBucketLocation } from './methods/bucket/getBucketLocation';
+import {
+  deleteBucketCORS,
+  getBucketCORS,
+  putBucketCORS,
+} from './methods/bucket/cors';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -85,6 +91,7 @@ class TOS extends TOSBase {
   headBucket = headBucket;
   deleteBucket = deleteBucket;
   listBuckets = listBuckets;
+  getBucketLocation = getBucketLocation;
 
   // bucket acl
   getBucketAcl = getBucketAcl;
@@ -98,6 +105,11 @@ class TOS extends TOSBase {
   // bucket versioning
   getBucketVersioning = getBucketVersioning;
   putBucketVersioning = putBucketVersioning;
+
+  // bucket cors
+  getBucketCORS = getBucketCORS;
+  putBucketCORS = putBucketCORS;
+  deleteBucketCORS = deleteBucketCORS;
 
   // object base
   copyObject = copyObject;
