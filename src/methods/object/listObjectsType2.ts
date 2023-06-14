@@ -1,7 +1,7 @@
 import { covertCamelCase2Kebab, makeArrayProp } from '../../utils';
 import TOSBase from '../base';
 
-export interface ListObjectsInput {
+export interface ListObjectsType2Input {
   bucket?: string;
   continuationToken?: string;
   delimiter?: string;
@@ -10,17 +10,16 @@ export interface ListObjectsInput {
   maxKeys?: string | number;
   prefix?: string;
   marker?: string;
-
   /**
    * use `marker` instead of `startAfter`
    */
   startAfter?: string;
-  versions?: string;
-  listType?: string;
+  // versions?: string;
+  // listType?: string;
   versionIdMarker?: string;
 }
 
-export interface ListObjectsContentItem {
+export interface ListObjectsType2ContentItem {
   ETag: string;
   Key: string;
   // "2021-08-02T09:53:27.000Z"
@@ -28,9 +27,10 @@ export interface ListObjectsContentItem {
   Owner: { ID: string; DisplayName: string };
   Size: number;
   StorageClass: string;
+  HashCrc64ecma?: string;
 }
 
-export interface ListObjectsVersionItem {
+export interface ListObjectsType2VersionItem {
   ETag: string;
   IsLatest: boolean;
   Key: string;
@@ -52,61 +52,41 @@ export interface ListObjectDeleteMarkerItem {
   VersionId: string;
 }
 
-export interface ListObjectsOutput {
-  CommonPrefixes: string[];
-  Contents: ListObjectsContentItem[];
-  IsTruncated: boolean;
-  Marker: string;
-  MaxKeys: number;
-  KeyMarker?: string;
+export interface ListObjectsType2Output {
   Name: string;
   Prefix: string;
-  ContinuationToken?: string;
-  NextContinuationToken?: string;
+  Marker: string;
+  MaxKeys: number;
   Delimiter?: string;
   EncodingType?: string;
-  NextMarker?: string;
-  VersionIdMarker?: string;
-  Versions: ListObjectsVersionItem[];
-  NextKeyMarker?: string;
-  DeleteMarkers: ListObjectDeleteMarkerItem[];
-  NextVersionIdMarker?: string;
+  IsTruncated: boolean;
+  StartAfter: string;
+  ContinuationToken?: string;
+  NextContinuationToken?: string;
+  CommonPrefixes: string[];
+  Contents: ListObjectsType2ContentItem[];
 }
 
-class TOSListObjects extends TOSBase {
-  listObjects = listObjects;
-  listObjectVersions = listObjectVersions;
+class TOSListObjectsType2 extends TOSBase {
+  listObjectsType2 = listObjectsType2;
 }
 
-/**
- *
- * @deprecated use listObjectsType2 instead
- * @returns
- */
-export async function listObjects(
-  this: TOSListObjects,
-  input: ListObjectsInput = {}
+export async function listObjectsType2(
+  this: TOSListObjectsType2,
+  input: ListObjectsType2Input = {}
 ) {
   const { bucket, ...nextQuery } = input;
-  const ret = await this.fetchBucket<ListObjectsOutput>(
+  const ret = await this.fetchBucket<ListObjectsType2Output>(
     input.bucket,
     'GET',
-    covertCamelCase2Kebab(nextQuery),
+    {
+      'list-type': 2,
+      ...covertCamelCase2Kebab(nextQuery),
+    },
     {}
   );
   const arrayProp = makeArrayProp(ret.data);
   arrayProp('CommonPrefixes');
   arrayProp('Contents');
-  arrayProp('Versions');
-  arrayProp('DeleteMarkers');
   return ret;
-}
-
-export type ListObjectVersionsInput = Omit<ListObjectsInput, 'versions'>;
-
-export async function listObjectVersions(
-  this: TOSListObjects,
-  input: ListObjectVersionsInput = {}
-) {
-  return this.listObjects({ versions: '', ...input });
 }

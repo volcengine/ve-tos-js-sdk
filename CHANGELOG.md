@@ -2,10 +2,23 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+[Unreleased]
+
 ### Added
 
 - add `getBucketLocation` method
-- add `getBucketCORS`, `putBucketCORS`, `deleteBucketCORS` CORS methods
+- add `listObjectsType2` method
+- add `putBucketStorageClass` method
+- add `(get|put|delete)BucketCORS` methods to modify bucket CORS
+- add `(get|put|delete)BucketLifecycle` methods to modify bucket lifecycle
+- add `(get|put|delete)BucketMirrorBack` methods to modify bucket MirrorBack
+- add `(get|put|delete)ObjectTagging` methods to modify object tagging
+- add `COLD_ARCHIVE`,`INTELLIGENT_TIERING` storage class
+- add `(get|put|delete)BucketReplication` methods to modify bucket replication
+- add `(get|put|delete)BucketWebsite` methods to modify bucket website
+- add `(get|put)BucketNotification` methods to modify bucket notification
+- add `(get|put|delete)BucketCustomDomain` methods to modify bucket customDomain
+- add `(get|put|delete)BucketRealTimeLog` methods to modify bucket realTimeLog
 
 ## [2.1.28] - 2023-05-30
 

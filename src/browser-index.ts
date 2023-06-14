@@ -4,6 +4,7 @@ import {
   createBucket,
   deleteBucket,
   headBucket,
+  putBucketStorageClass,
 } from './methods/bucket/base';
 import { getBucketAcl, putBucketAcl } from './methods/bucket/acl';
 import axios from 'axios';
@@ -66,6 +67,46 @@ import {
   getBucketCORS,
   putBucketCORS,
 } from './methods/bucket/cors';
+import { listObjectsType2 } from './methods/object/listObjectsType2';
+import {
+  deleteBucketLifecycle,
+  getBucketLifecycle,
+  putBucketLifecycle,
+} from './methods/bucket/lifecycle';
+import {
+  deleteBucketMirrorBack,
+  getBucketMirrorBack,
+  putBucketMirrorBack,
+} from './methods/bucket/mirrorback';
+import {
+  deleteObjectTagging,
+  getObjectTagging,
+  putObjectTagging,
+} from './methods/object/tagging';
+import {
+  deleteBucketReplication,
+  getBucketReplication,
+  putBucketReplication,
+} from './methods/bucket/replication';
+import {
+  deleteBucketWebsite,
+  getBucketWebsite,
+  putBucketWebsite,
+} from './methods/bucket/website';
+import {
+  getBucketNotification,
+  putBucketNotification,
+} from './methods/bucket/notification';
+import {
+  deleteBucketCustomDomain,
+  getBucketCustomDomain,
+  putBucketCustomDomain,
+} from './methods/bucket/customDomain';
+import {
+  deleteBucketRealTimeLog,
+  getBucketRealTimeLog,
+  putBucketRealTimeLog,
+} from './methods/bucket/realTimeLog';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -92,6 +133,7 @@ class TOS extends TOSBase {
   deleteBucket = deleteBucket;
   listBuckets = listBuckets;
   getBucketLocation = getBucketLocation;
+  putBucketStorageClass = putBucketStorageClass;
 
   // bucket acl
   getBucketAcl = getBucketAcl;
@@ -111,6 +153,40 @@ class TOS extends TOSBase {
   putBucketCORS = putBucketCORS;
   deleteBucketCORS = deleteBucketCORS;
 
+  // bucket lifecycle
+  putBucketLifecycle = putBucketLifecycle;
+  getBucketLifecycle = getBucketLifecycle;
+  deleteBucketLifecycle = deleteBucketLifecycle;
+
+  // bucket mirror back
+  putBucketMirrorBack = putBucketMirrorBack;
+  getBucketMirrorBack = getBucketMirrorBack;
+  deleteBucketMirrorBack = deleteBucketMirrorBack;
+
+  // bucket replication
+  putBucketReplication = putBucketReplication;
+  getBucketReplication = getBucketReplication;
+  deleteBucketReplication = deleteBucketReplication;
+
+  // bucket website
+  putBucketWebsite = putBucketWebsite;
+  getBucketWebsite = getBucketWebsite;
+  deleteBucketWebsite = deleteBucketWebsite;
+
+  // bucket notification
+  putBucketNotification = putBucketNotification;
+  getBucketNotification = getBucketNotification;
+
+  // bucket customdomain
+  putBucketCustomDomain = putBucketCustomDomain;
+  getBucketCustomDomain = getBucketCustomDomain;
+  deleteBucketCustomDomain = deleteBucketCustomDomain;
+
+  // bucket customdomain
+  putBucketRealTimeLog = putBucketRealTimeLog;
+  getBucketRealTimeLog = getBucketRealTimeLog;
+  deleteBucketRealTimeLog = deleteBucketRealTimeLog;
+
   // object base
   copyObject = copyObject;
   resumableCopyObject = resumableCopyObject;
@@ -123,6 +199,9 @@ class TOS extends TOSBase {
   headObject = headObject;
   appendObject = appendObject;
   listObjects = listObjects;
+
+  listObjectsType2 = listObjectsType2;
+
   listObjectVersions = listObjectVersions;
   putObject = putObject;
   putObjectFromFile = putObjectFromFile;
@@ -140,10 +219,19 @@ class TOS extends TOSBase {
   listParts = listParts;
   downloadFile = downloadFile;
 
+  // object tagging
+  putObjectTagging = putObjectTagging;
+  getObjectTagging = getObjectTagging;
+  deleteObjectTagging = deleteObjectTagging;
+
   // object others
   uploadFile = uploadFile;
   getPreSignedUrl = getPreSignedUrl;
+  /**
+   * alias to preSignedPostSignature
+   */
   calculatePostSignature = calculatePostSignature;
+  preSignedPostSignature = calculatePostSignature;
   preSignedPolicyURL = preSignedPolicyURL;
 }
 

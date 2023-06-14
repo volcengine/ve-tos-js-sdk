@@ -1,4 +1,4 @@
-import TOS, { ACLType } from '../../src/browser-index';
+import TOS, { ACLType, StorageClassType } from '../../src/browser-index';
 import {
   deleteBucket,
   NEVER_TIMEOUT,
@@ -770,6 +770,23 @@ describe('nodejs connection params', () => {
         const { data } = await client.getBucketVersioning();
         expect(data.Status).toEqual(BucketVersioningStatus.Suspended);
       }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'putBucketStorageClass',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+      });
+
+      const result = await client.putBucketStorageClass({
+        bucket: testBucketName,
+        storageClass: StorageClassType.StorageClassArchiveFr,
+      });
+
+      expect(result.data).toBe('');
     },
     NEVER_TIMEOUT
   );

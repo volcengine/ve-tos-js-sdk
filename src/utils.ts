@@ -1,8 +1,9 @@
-import { Headers } from './interface';
-import { TOSConstructorOptions } from './methods/base';
 import { Readable } from 'stream';
+import type { CamelCasedPropertiesDeep, KebabCasedPropertiesDeep, PascalCasedPropertiesDeep } from 'type-fest';
 import { CancelError } from './CancelError';
 import TosClientError from './TosClientError';
+import { Headers } from './interface';
+import { TOSConstructorOptions } from './methods/base';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: unknown) => (key: string) => {
@@ -45,19 +46,19 @@ const makeConvertProp = (convertMethod: (prop: string) => string) => {
 
 export const covertCamelCase2Kebab = makeConvertProp((camelCase: string) => {
   return camelCase.replace(/[A-Z]/g, '-$&').toLowerCase();
-});
+}) as <T = unknown>(target: T) =>  KebabCasedPropertiesDeep<T>;;;
 
 export const convertUpperCamelCase2Normal = makeConvertProp(
   (upperCamelCase: string) => {
     return upperCamelCase[0].toLocaleLowerCase() + upperCamelCase.slice(1);
   }
-);
+) as <T = unknown>(target: T) =>  CamelCasedPropertiesDeep<T>;;
 
 export const convertNormalCamelCase2Upper = makeConvertProp(
   (normalCamelCase: string) => {
     return normalCamelCase[0].toUpperCase() + normalCamelCase.slice(1);
   }
-);
+) as <T = unknown>(target: T) =>  PascalCasedPropertiesDeep<T>;
 
 export const getSortedQueryString = (query: Record<string, any>) => {
   const searchParts: string[] = [];

@@ -106,3 +106,26 @@ export async function headBucket(this: TOSBase, bucket?: string) {
     },
   });
 }
+
+export interface PutBucketStorageClassInput {
+  bucket: string;
+  storageClass: StorageClassType;
+}
+
+export interface PutBucketStorageClassOutput {}
+
+export async function putBucketStorageClass(
+  this: TOSBase,
+  input: PutBucketStorageClassInput
+) {
+  const { bucket, storageClass } = input;
+
+  return this.fetchBucket<PutBucketStorageClassOutput>(
+    bucket,
+    'PUT',
+    { storageClass: '' },
+    {
+      'x-tos-storage-class': storageClass,
+    }
+  );
+}

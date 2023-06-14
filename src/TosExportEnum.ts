@@ -12,6 +12,8 @@ export enum StorageClassType {
   StorageClassStandard = 'STANDARD',
   StorageClassIa = 'IA',
   StorageClassArchiveFr = 'ARCHIVE_FR',
+  StorageClassColdArchive = 'COLD_ARCHIVE',
+  StorageClassIntelligentTiering = 'INTELLIGENT_TIERING',
 }
 
 export enum MetadataDirectiveType {
@@ -48,4 +50,9 @@ export enum HttpMethodType {
   HttpMethodPost = 'POST',
   HttpMethodDelete = 'DELETE',
   HttpMethodHead = 'HEAD',
+}
+
+export enum StorageClassInheritDirectiveType {
+  StorageClassInheritDirectiveDestinationBucket = 'DESTINATION_BUCKET',
+  StorageClassInheritDirectiveSourceObject = 'SOURCE_OBJECT',
 }
