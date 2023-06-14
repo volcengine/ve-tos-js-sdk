@@ -5,6 +5,13 @@ import cloneDeep from 'lodash/cloneDeep';
 interface CreateTosProxyMiddlewareOpts {
   // destHost equals to /etc/hosts configuration
   destHost?: string | ((proxyParam: string) => string);
+  /**
+   * force change proxy request protocol.
+   * usage:
+   * 1. change localhost tos-sdk request http protocol to https protocol.
+   * 2. TOS server force https protocol
+   */
+  protocol?: 'http' | 'https';
 }
 
 /**
@@ -19,6 +26,11 @@ export function createTosProxyMiddleware(
 ) {
   const proxyParamKey = 'x-proxy-tos-host';
   return createProxyMiddleware(context, {
+    secure: false,
+    /**
+     * 这里不开可能会导致 https 转发建联失败
+     */
+    changeOrigin: true,
     pathRewrite: (_path, req) => {
       const path = req.path;
       const query = cloneDeep(req.query) as any;
@@ -30,15 +42,12 @@ export function createTosProxyMiddleware(
       });
       return newPath;
     },
-    onProxyReq: (proxyReq, req, _res) => {
-      const urlObj = url.parse((req as any).originalUrl, true);
-      proxyReq.setHeader('host', urlObj.query[proxyParamKey] as string);
-    },
     router: function(req) {
       let originHost = req.query[proxyParamKey] as string;
+      const realProtocol = opts?.protocol ?? req.protocol;
 
       if (!originHost) {
-        throw new Error(`proxy misses ${proxyParamKey} param`);
+        throw Error(`代理缺少 ${proxyParamKey} 参数`);
       }
 
       if (opts?.destHost) {
@@ -49,7 +58,7 @@ export function createTosProxyMiddleware(
         }
       }
 
-      return `http://${originHost}`;
+      return `${realProtocol}://${originHost}`;
     },
   });
 }

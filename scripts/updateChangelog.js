@@ -27,10 +27,4 @@ async function updateChangelog() {
   promisify(fs.writeFile)(changelogFilepath, newContent);
 }
 
-module.exports = {
-  updateChangelog,
-};
-
-if (require.main === module) {
-  updateChangelog();
-}
+updateChangelog();
