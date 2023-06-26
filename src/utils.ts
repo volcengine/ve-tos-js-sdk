@@ -1,9 +1,15 @@
 import { Readable } from 'stream';
-import type { CamelCasedPropertiesDeep, KebabCasedPropertiesDeep, PascalCasedPropertiesDeep } from 'type-fest';
+import {
+  CamelCasedPropertiesDeep,
+  KebabCasedPropertiesDeep,
+  PascalCasedPropertiesDeep,
+} from 'type-fest';
 import { CancelError } from './CancelError';
 import TosClientError from './TosClientError';
 import { Headers } from './interface';
-import { TOSConstructorOptions } from './methods/base';
+import { TOSConstructorOptions, TosResponse } from './methods/base';
+import qs from 'qs';
+import TosServerError from './TosServerError';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: unknown) => (key: string) => {
@@ -46,19 +52,19 @@ const makeConvertProp = (convertMethod: (prop: string) => string) => {
 
 export const covertCamelCase2Kebab = makeConvertProp((camelCase: string) => {
   return camelCase.replace(/[A-Z]/g, '-$&').toLowerCase();
-}) as <T = unknown>(target: T) =>  KebabCasedPropertiesDeep<T>;;;
+}) as <T = unknown>(target: T) => KebabCasedPropertiesDeep<T>;
 
 export const convertUpperCamelCase2Normal = makeConvertProp(
   (upperCamelCase: string) => {
     return upperCamelCase[0].toLocaleLowerCase() + upperCamelCase.slice(1);
   }
-) as <T = unknown>(target: T) =>  CamelCasedPropertiesDeep<T>;;
+) as <T = unknown>(target: T) => CamelCasedPropertiesDeep<T>;
 
 export const convertNormalCamelCase2Upper = makeConvertProp(
   (normalCamelCase: string) => {
     return normalCamelCase[0].toUpperCase() + normalCamelCase.slice(1);
   }
-) as <T = unknown>(target: T) =>  PascalCasedPropertiesDeep<T>;
+) as <T = unknown>(target: T) => PascalCasedPropertiesDeep<T>;
 
 export const getSortedQueryString = (query: Record<string, any>) => {
   const searchParts: string[] = [];
@@ -300,4 +306,32 @@ export function fillRequestHeaders<T extends { headers?: Headers }>(
       setOneHeader(k, v);
     });
   });
+}
+
+export const paramsSerializer = (params: Record<string, string>) => {
+  return qs.stringify(params);
+};
+
+export function getNormalDataFromError<T>(
+  data: T,
+  err: TosServerError
+): TosResponse<T> {
+  return {
+    data,
+    statusCode: err.statusCode,
+    headers: err.headers,
+    requestId: err.requestId,
+    id2: err.id2,
+  };
+}
+export function handleEmptyServerError<T>(
+  err: Error | TosServerError | unknown,
+  defaultResponse: T
+) {
+  if (err instanceof TosServerError) {
+    if (err.statusCode === 404) {
+      return getNormalDataFromError(defaultResponse, err);
+    }
+  }
+  throw err;
 }

@@ -11,9 +11,11 @@ if (!process.env.ACCESS_KEY_ID || !process.env.ACCESS_KEY_SECRET) {
 export const testBucketNameBase = 'test-cg-bucket-name';
 export const testBucketName = `${testBucketNameBase}-${new Date().valueOf()}`;
 export const testTargetBucketName = `${testBucketNameBase}-target-${new Date().valueOf()}`;
+export const testTargetBucketNameGuangzhou = `${testBucketNameBase}-target-guangzhou-${new Date().valueOf()}`;
 export const testTargetRegionGuangZhou = `cn-guangzhou`;
 export const testCloudFunctionId =
   process.env.TOS_NODE_SDK_CLOUD_FUNCTION_ID ?? '';
+export const testAccountId = process.env.TOS_NODE_SDK_ACCOUNT_ID ?? '';
 
 // because one account has at most 100 buckets,
 // we delete some bucket when there can't create more buckets.

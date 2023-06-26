@@ -1,4 +1,7 @@
-import { convertNormalCamelCase2Upper } from '../../utils';
+import {
+  convertNormalCamelCase2Upper,
+  handleEmptyServerError,
+} from '../../utils';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'website';
@@ -76,12 +79,18 @@ export async function getBucketWebsite(
 ) {
   const { bucket } = input;
 
-  return this.fetchBucket<GetBucketWebsiteOutput>(
-    bucket,
-    'GET',
-    { [CommonQueryKey]: '' },
-    {}
-  );
+  try {
+    return this.fetchBucket<GetBucketWebsiteOutput>(
+      bucket,
+      'GET',
+      { [CommonQueryKey]: '' },
+      {}
+    );
+  } catch (error) {
+    return handleEmptyServerError<GetBucketWebsiteOutput>(error, {
+      RoutingRules: [],
+    });
+  }
 }
 
 export interface DeleteBucketWebsiteInput {

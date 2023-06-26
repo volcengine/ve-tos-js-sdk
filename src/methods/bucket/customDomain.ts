@@ -1,4 +1,7 @@
-import { convertNormalCamelCase2Upper } from '../../utils';
+import {
+  convertNormalCamelCase2Upper,
+  handleEmptyServerError,
+} from '../../utils';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'customdomain';
@@ -52,14 +55,19 @@ export async function getBucketCustomDomain(
   this: TOSBase,
   input: GetBucketCustomDomainInput
 ) {
-  const { bucket } = input;
-
-  return this.fetchBucket<GetBucketCustomDomainOutput>(
-    bucket,
-    'GET',
-    { [CommonQueryKey]: '' },
-    {}
-  );
+  try {
+    const { bucket } = input;
+    return await this.fetchBucket<GetBucketCustomDomainOutput>(
+      bucket,
+      'GET',
+      { [CommonQueryKey]: '' },
+      {}
+    );
+  } catch (error) {
+    return handleEmptyServerError<GetBucketCustomDomainOutput>(error, {
+      CustomDomainRules: [],
+    });
+  }
 }
 
 export interface DeleteBucketCustomDomainInput {

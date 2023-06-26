@@ -20,19 +20,20 @@ npm i @volcengine/tos-sdk
 
   ```js
   // use import
-  import TOS from '@volcengine/tos-sdk';
+  import { TosClient } from '@volcengine/tos-sdk';
 
   // use require
-  const { TOS } = require('@volcengine/tos-sdk');
+  const { TosClient } = require('@volcengine/tos-sdk');
   ```
 
 - Create a client
 
   ```js
-  const client = new TOS({
+  const client = new TosClient({
     accessKeyId: 'Your Access Key',
     accessKeySecret: 'Your Secret Key',
     region: 'cn-beijing',
+    endpoint: 'endpoint',
   });
   ```
 

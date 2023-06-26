@@ -1,6 +1,22 @@
 # Changelog of @volcengine/tos-sdk
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [2.5.2] - 2023-06-26
+
+### Added
+
+- add `(get|put|delete|list)BucketInventory` private methods to modify bucket Inventory
+- add `(describe|create|delete|list)Job`,`updateJobStatus`, `updateJobPriority` private methods to modify batch jobs
+- add `(get|put|delete)BucketTagging` private methods to modify bucket Tagging
+- add `(get|put)BucketPayByTraffic` private methods to modify bucket PayByTraffic
+- change `getBucketReplication|getBucketCustomDomain|getBucketInventory|getBucketMirrorBack|getBucketNotification|getBucketRealTimeLog|getBucketRealTimeLog|getBucketWebsite` methods empty error to normal data
+- add `TosClient` export
+
+### Fixed
+
+- fixed: `uploadFile`,`resumableCopyObject` correct support relative checkpoint filepath
+- fixed: `uploadFile` change default checkpoint filename
+- fixed: ensure directory exist when write checkpoint file
 
 ## [2.5.1] - 2023-06-14
 

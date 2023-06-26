@@ -417,6 +417,10 @@ export async function downloadFile(
         checkpointRichInfo.filePath
       ) {
         const content = JSON.stringify(getCheckpointContent(), null, 2);
+        const dirPath = path.dirname(checkpointRichInfo.filePath); // ensure directory exist
+        await fsp.mkdir(dirPath, {
+          recursive: true,
+        });
         await fsp.writeFile(checkpointRichInfo.filePath, content, 'utf-8');
       }
     };
@@ -665,5 +669,7 @@ function getDefaultCheckpointFilePath(
   key: string,
   versionId?: string
 ) {
-  return `${bucket}_${key}.${versionId}.json`;
+  const originPath = `${bucket}_${key}.${versionId}.json`;
+  const normalizePath = originPath.replace(/[\\/]/g, '');
+  return normalizePath;
 }

@@ -53,7 +53,7 @@ describe('nodejs connection params', () => {
   }, NEVER_TIMEOUT);
 
   it(
-    `${CommonTestCasePrefix} getBucketReplication empty error`,
+    `${CommonTestCasePrefix} getBucketReplication empty case`,
     async () => {
       const client = new TOS({
         ...tosOptions,
@@ -63,9 +63,9 @@ describe('nodejs connection params', () => {
         const result = await client.getBucketReplication({
           bucket: testBucketName,
         });
-        console.log(result);
+        expect(result.data.Rules.length).toBe(0);
       } catch (error) {
-        expect(error).toBeTruthy();
+        expect(error).toBeFalsy();
       }
     },
     NEVER_TIMEOUT

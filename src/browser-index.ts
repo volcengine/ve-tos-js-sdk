@@ -74,6 +74,11 @@ import {
   putBucketLifecycle,
 } from './methods/bucket/lifecycle';
 import {
+  putBucketEncryption,
+    getBucketEncryption,
+    deleteBucketEncryption
+} from './methods/bucket/encryption';
+import {
   deleteBucketMirrorBack,
   getBucketMirrorBack,
   putBucketMirrorBack,
@@ -107,10 +112,44 @@ import {
   getBucketRealTimeLog,
   putBucketRealTimeLog,
 } from './methods/bucket/realTimeLog';
+import {
+  deleteBucketInventory,
+  getBucketInventory,
+  listBucketInventory,
+  putBucketInventory,
+} from './methods/bucket/inventory';
+import {
+  createJob,
+  deleteJob,
+  describeJob,
+  updateJobStatus,
+  updateJobPriority,
+  listJobs,
+} from './methods/batch';
+import {
+  deleteBucketTagging,
+  getBucketTagging,
+  putBucketTagging,
+} from './methods/bucket/tag';
+import {
+  getBucketPayByTraffic,
+  putBucketPayByTraffic,
+} from './methods/bucket/payByTraffic';
+import {
+  getBucketImageStyle,
+  getBucketImageStyleList,
+  deleteBucketImageStyle,
+  putBucketImageStyle,
+  putBucketImageStyleSeparator,
+  putBucketImageProtect,
+  getBucketImageProtect,
+  getBucketImageStyleSeparator,
+} from './methods/bucket/img';
+import { getBucketIntelligenttiering } from './methods/bucket/intelligenttiering';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
-class TOS extends TOSBase {
+class TosClient extends TOSBase {
   // for umd bundle
   static TosServerError = TosServerError;
   static isCancel = isCancel;
@@ -158,6 +197,12 @@ class TOS extends TOSBase {
   getBucketLifecycle = getBucketLifecycle;
   deleteBucketLifecycle = deleteBucketLifecycle;
 
+
+  //bucket encryption
+  putBucketEncryption = putBucketEncryption;
+  getBucketEncryption=getBucketEncryption;
+  deleteBucketEncryption=deleteBucketEncryption;
+
   // bucket mirror back
   putBucketMirrorBack = putBucketMirrorBack;
   getBucketMirrorBack = getBucketMirrorBack;
@@ -182,10 +227,35 @@ class TOS extends TOSBase {
   getBucketCustomDomain = getBucketCustomDomain;
   deleteBucketCustomDomain = deleteBucketCustomDomain;
 
-  // bucket customdomain
+  // bucket timelog
   putBucketRealTimeLog = putBucketRealTimeLog;
   getBucketRealTimeLog = getBucketRealTimeLog;
   deleteBucketRealTimeLog = deleteBucketRealTimeLog;
+
+  // bucket Inventory
+  getBucketInventory = getBucketInventory;
+  listBucketInventory = listBucketInventory;
+  putBucketInventory = putBucketInventory;
+  deleteBucketInventory = deleteBucketInventory;
+
+  // bucket tag
+  putBucketTagging = putBucketTagging;
+  getBucketTagging = getBucketTagging;
+  deleteBucketTagging = deleteBucketTagging;
+
+  // bucket pay by traffic
+  putBucketPayByTraffic = putBucketPayByTraffic;
+  getBucketPayByTraffic = getBucketPayByTraffic;
+
+  // bucket imgStyle
+  getBucketImageStyle = getBucketImageStyle;
+  getBucketImageStyleList = getBucketImageStyleList;
+  deleteBucketImageStyle = deleteBucketImageStyle;
+  putBucketImageStyle = putBucketImageStyle;
+  putBucketImageStyleSeparator = putBucketImageStyleSeparator;
+  putBucketImageProtect = putBucketImageProtect;
+  getBucketImageProtect = getBucketImageProtect;
+  getBucketImageStyleSeparator = getBucketImageStyleSeparator;
 
   // object base
   copyObject = copyObject;
@@ -224,6 +294,14 @@ class TOS extends TOSBase {
   getObjectTagging = getObjectTagging;
   deleteObjectTagging = deleteObjectTagging;
 
+  // 批量处理
+  listJobs = listJobs;
+  createJob = createJob;
+  deleteJob = deleteJob;
+  describeJob = describeJob;
+  updateJobStatus = updateJobStatus;
+  updateJobPriority = updateJobPriority;
+
   // object others
   uploadFile = uploadFile;
   getPreSignedUrl = getPreSignedUrl;
@@ -233,11 +311,13 @@ class TOS extends TOSBase {
   calculatePostSignature = calculatePostSignature;
   preSignedPostSignature = calculatePostSignature;
   preSignedPolicyURL = preSignedPolicyURL;
+  // object intelligenttiering
+  getBucketIntelligenttiering = getBucketIntelligenttiering;
 }
 
-export default TOS;
+export default TosClient;
 
-export { TOS };
+export { TosClient as TOS, TosClient };
 export {
   TosServerError,
   TosClientError,
@@ -261,5 +341,7 @@ if (
   process.env.BUILD_FORMAT === 'umd'
 ) {
   // @ts-ignore
-  window.TOS = TOS;
+  window.TOS = TosClient;
+  // @ts-ignore
+  window.TosClient = TosClient;
 }

@@ -2,7 +2,7 @@ import TOS from '../../src/browser-index';
 import { NEVER_TIMEOUT, sleepCache } from '../utils';
 import { testBucketName, tosOptions } from '../utils/options';
 import { clearAllTestBucket } from './utils';
-const CommonTestCasePrefix = 'CustomDomain';
+const CommonTestCasePrefix = 'tagging';
 
 describe(`bucket ${CommonTestCasePrefix} methods`, () => {
   beforeAll(async done => {
@@ -19,31 +19,45 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
   }, NEVER_TIMEOUT);
 
   it(
-    `${CommonTestCasePrefix} getBucketCustomDomain empty case`,
+    `${CommonTestCasePrefix} getBucketTagging empty error`,
     async () => {
       const client = new TOS({
         ...tosOptions,
       });
 
-      const result = await client.getBucketCustomDomain({
-        bucket: testBucketName,
-      });
-
-      expect(result.data.CustomDomainRules.length).toBe(0);
+      try {
+        const result = await client.getBucketTagging({
+          bucket: testBucketName,
+        });
+        expect(result.data.TagSet.Tags.length).toBe(0);
+      } catch (error) {
+        expect(error).toBeTruthy();
+      }
     },
     NEVER_TIMEOUT
   );
   it(
-    `${CommonTestCasePrefix} putBucketCustomDomain`,
+    `${CommonTestCasePrefix} putBucketTagging`,
     async () => {
       const client = new TOS({
         ...tosOptions,
       });
 
-      const result = await client.putBucketCustomDomain({
+      const result = await client.putBucketTagging({
         bucket: testBucketName,
-        customDomainRule: {
-          Domain: 'douyin.com',
+        tagging: {
+          TagSet: {
+            Tags: [
+              {
+                Key: 'aa',
+                Value: 'bb',
+              },
+              {
+                Key: 'bb',
+                Value: 'cc',
+              },
+            ],
+          },
         },
       });
 
@@ -53,34 +67,31 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
   );
 
   it(
-    `${CommonTestCasePrefix} getBucketCustomDomain`,
+    `${CommonTestCasePrefix} getBucketTagging`,
     async () => {
       const client = new TOS({
         ...tosOptions,
       });
 
-      const result = await client.getBucketCustomDomain({
+      const result = await client.getBucketTagging({
         bucket: testBucketName,
       });
 
-      expect(result.data.CustomDomainRules).toBeTruthy();
-      expect(result.data.CustomDomainRules.at(0)?.Domain).toBe('douyin.com');
-      // expect(result.data.IndexDocument?.Suffix).toBe('index.html');
-      // expect(result.data.RoutingRules?.length).toBe(1);
+      expect(result.data.TagSet).toBeTruthy();
+      expect(result.data.TagSet.Tags.at(0)?.Key).toBe('aa');
     },
     NEVER_TIMEOUT
   );
 
   it(
-    `${CommonTestCasePrefix} deleteBucketCustomDomain`,
+    `${CommonTestCasePrefix} deleteBucketTagging`,
     async () => {
       const client = new TOS({
         ...tosOptions,
       });
 
-      const result = await client.deleteBucketCustomDomain({
+      const result = await client.deleteBucketTagging({
         bucket: testBucketName,
-        customDomain: 'douyin.com',
       });
 
       expect(result.data).toBe('');

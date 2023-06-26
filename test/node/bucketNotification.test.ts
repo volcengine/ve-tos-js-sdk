@@ -23,16 +23,17 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
   }, NEVER_TIMEOUT);
 
   it(
-    `${CommonTestCasePrefix} getBucketNotification empty error`,
+    `${CommonTestCasePrefix} getBucketNotification empty case`,
     async () => {
       const client = new TOS({
         ...tosOptions,
       });
 
       try {
-        await client.getBucketNotification({
+        const result = await client.getBucketNotification({
           bucket: testBucketName,
         });
+        expect(result.data.CloudFunctionConfigurations.length).toBe(0);
       } catch (error) {
         expect(error).toBeTruthy();
       }

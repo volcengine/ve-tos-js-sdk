@@ -1,3 +1,4 @@
+import { handleEmptyServerError } from '../../utils';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'mirror';
@@ -73,12 +74,18 @@ export async function getBucketMirrorBack(
 ) {
   const { bucket } = input;
 
-  return this.fetchBucket<GetBucketMirrorBackOutput>(
-    bucket,
-    'GET',
-    { [CommonQueryKey]: '' },
-    {}
-  );
+  try {
+    return await this.fetchBucket<GetBucketMirrorBackOutput>(
+      bucket,
+      'GET',
+      { [CommonQueryKey]: '' },
+      {}
+    );
+  } catch (error) {
+    return handleEmptyServerError<GetBucketMirrorBackOutput>(error, {
+      Rules: [],
+    });
+  }
 }
 
 export interface DeleteBucketMirrorBackInput {

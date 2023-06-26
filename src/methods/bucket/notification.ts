@@ -1,4 +1,7 @@
-import { convertNormalCamelCase2Upper } from '../../utils';
+import {
+  convertNormalCamelCase2Upper,
+  handleEmptyServerError,
+} from '../../utils';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'notification';
@@ -55,11 +58,16 @@ export async function getBucketNotification(
   input: GetBucketNotificationInput
 ) {
   const { bucket } = input;
-
-  return this.fetchBucket<GetBucketNotificationOutput>(
-    bucket,
-    'GET',
-    { [CommonQueryKey]: '' },
-    {}
-  );
+  try {
+    return await this.fetchBucket<GetBucketNotificationOutput>(
+      bucket,
+      'GET',
+      { [CommonQueryKey]: '' },
+      {}
+    );
+  } catch (error) {
+    return handleEmptyServerError<GetBucketNotificationOutput>(error, {
+      CloudFunctionConfigurations: [],
+    });
+  }
 }

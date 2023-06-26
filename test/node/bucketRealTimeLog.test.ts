@@ -19,7 +19,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
   }, NEVER_TIMEOUT);
 
   it(
-    `${CommonTestCasePrefix} getBucketRealTimeLog empty error`,
+    `${CommonTestCasePrefix} getBucketRealTimeLog empty case`,
     async () => {
       const client = new TOS({
         ...tosOptions,
@@ -29,7 +29,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         const result = await client.getBucketRealTimeLog({
           bucket: testBucketName,
         });
-        console.log(result);
+        expect(result.data.RealTimeLogConfiguration).toBe(0);
       } catch (error) {
         expect(error).toBeTruthy();
       }
@@ -70,7 +70,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
       });
 
       expect(result.data.RealTimeLogConfiguration).toBeTruthy();
-      expect(result.data.RealTimeLogConfiguration.Role).toBe(
+      expect(result.data.RealTimeLogConfiguration?.Role).toBe(
         'TOSLogArchiveTLSRole'
       );
       // expect(result.data.IndexDocument?.Suffix).toBe('index.html');

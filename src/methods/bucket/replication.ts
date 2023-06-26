@@ -2,7 +2,7 @@ import {
   StorageClassInheritDirectiveType,
   StorageClassType,
 } from '../../TosExportEnum';
-import { normalizeHeadersKey } from '../../utils';
+import { handleEmptyServerError, normalizeHeadersKey } from '../../utils';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'replication';
@@ -66,12 +66,20 @@ export async function getBucketReplication(
     progress,
     ruleId,
   });
-  return this.fetchBucket<GetBucketReplicationOutput>(
-    bucket,
-    'GET',
-    { [CommonQueryKey]: '', ...headers },
-    {}
-  );
+
+  try {
+    return await this.fetchBucket<GetBucketReplicationOutput>(
+      bucket,
+      'GET',
+      { [CommonQueryKey]: '', ...headers },
+      {}
+    );
+  } catch (err) {
+    return handleEmptyServerError<GetBucketReplicationOutput>(err, {
+      Rules: [],
+      Role: '',
+    });
+  }
 }
 
 export interface DeleteBucketReplicationInput {

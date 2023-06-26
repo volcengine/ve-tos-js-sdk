@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { hashSha256, hmacSha256, stringify, parse } from './universal/crypto';
-import qs from 'querystring';
 import { getSortedQueryString } from './utils';
 
 export interface ISign {

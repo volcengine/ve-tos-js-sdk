@@ -1,4 +1,7 @@
-import { convertNormalCamelCase2Upper } from '../../utils';
+import {
+  convertNormalCamelCase2Upper,
+  handleEmptyServerError,
+} from '../../utils';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'realtimeLog';
@@ -44,7 +47,7 @@ export interface GetBucketRealTimeLogInput {
 }
 
 export interface GetBucketRealTimeLogOutput {
-  RealTimeLogConfiguration: RealTimeLogConfiguration;
+  RealTimeLogConfiguration?: RealTimeLogConfiguration;
 }
 
 export async function getBucketRealTimeLog(
@@ -53,12 +56,16 @@ export async function getBucketRealTimeLog(
 ) {
   const { bucket } = input;
 
-  return this.fetchBucket<GetBucketRealTimeLogOutput>(
-    bucket,
-    'GET',
-    { [CommonQueryKey]: '' },
-    {}
-  );
+  try {
+    return await this.fetchBucket<GetBucketRealTimeLogOutput>(
+      bucket,
+      'GET',
+      { [CommonQueryKey]: '' },
+      {}
+    );
+  } catch (error) {
+    return handleEmptyServerError<GetBucketRealTimeLogOutput>(error, {});
+  }
 }
 
 export interface DeleteBucketRealTimeLogInput {

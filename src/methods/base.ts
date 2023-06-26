@@ -12,6 +12,7 @@ import TosServerError, { TosServerErrorData } from '../TosServerError';
 import {
   encodeHeadersValue,
   getEndpoint,
+  getNormalDataFromError,
   getSortedQueryString,
   normalizeProxy,
 } from '../utils';
@@ -534,18 +535,7 @@ export class TOSBase {
     }
   };
 
-  protected getNormalDataFromError<T>(
-    data: T,
-    err: TosServerError
-  ): TosResponse<T> {
-    return {
-      data,
-      statusCode: err.statusCode,
-      headers: err.headers,
-      requestId: err.requestId,
-      id2: err.id2,
-    };
-  }
+  protected getNormalDataFromError = getNormalDataFromError
 
   protected checkCRC64(crc: CRCCls, headers: Headers) {
     if (!this.opts.enableCRC) {

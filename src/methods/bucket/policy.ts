@@ -1,5 +1,4 @@
-import TosServerError from '../../TosServerError';
-import { makeArrayProp } from '../../utils';
+import { handleEmptyServerError, makeArrayProp } from '../../utils';
 import TOSBase, { TosResponse } from '../base';
 
 export interface BucketPolicyStatement {
@@ -75,20 +74,11 @@ export async function getBucketPolicy(
       arrayProp('Resource');
     });
     return res;
-  } catch (err) {
-    if (err instanceof TosServerError) {
-      if (err.statusCode === 404) {
-        return this.getNormalDataFromError(
-          {
-            Statement: [],
-            Version: '2012-10-17',
-          },
-          err
-        );
-      }
-    }
-
-    throw err;
+  } catch (error) {
+    return handleEmptyServerError<GetBucketPolicyOutput>(error, {
+      Statement: [],
+      Version: '2012-10-17',
+    });
   }
 }
 

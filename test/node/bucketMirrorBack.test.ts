@@ -30,7 +30,7 @@ describe('nodejs connection params', () => {
   }, NEVER_TIMEOUT);
 
   it(
-    `${CommonTestCasePrefix} getBucketMirrorBack empty error`,
+    `${CommonTestCasePrefix} getBucketMirrorBack empty case`,
     async () => {
       const client = new TOS({
         ...tosOptions,
@@ -40,7 +40,8 @@ describe('nodejs connection params', () => {
         const result = await client.getBucketMirrorBack({
           bucket: testBucketName,
         });
-        console.log(result);
+
+        expect(result.data.Rules?.length).toBe(0);
       } catch (error) {
         expect(error).toBeTruthy();
       }

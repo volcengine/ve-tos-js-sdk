@@ -19,7 +19,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
   }, NEVER_TIMEOUT);
 
   it(
-    `${CommonTestCasePrefix} getBucketWebsite empty error`,
+    `${CommonTestCasePrefix} getBucketWebsite empty case`,
     async () => {
       const client = new TOS({
         ...tosOptions,
@@ -29,7 +29,9 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         const result = await client.getBucketWebsite({
           bucket: testBucketName,
         });
-        console.log(result);
+
+        expect(result.data.RoutingRules?.length).toBe(0);
+        expect(result.data.ErrorDocument).toBe(undefined);
       } catch (error) {
         expect(error).toBeTruthy();
       }
