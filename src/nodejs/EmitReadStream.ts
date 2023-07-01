@@ -12,7 +12,7 @@ export class EmitReadStream extends Readable {
   ) {
     super();
     if (isReadable(underlying)) {
-      underlying.on('data', d => {
+      underlying.on('data', (d) => {
         readCb(d.length);
       });
       underlying.pause();

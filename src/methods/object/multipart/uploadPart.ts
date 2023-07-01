@@ -126,7 +126,7 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
   const bodyConfig = await getNewBodyConfig({
     body: input.body,
     totalSize,
-    dataTransferCallback: n => triggerDataTransfer(DataTransferType.Rw, n),
+    dataTransferCallback: (n) => triggerDataTransfer(DataTransferType.Rw, n),
     beforeRetry: input.beforeRetry,
     makeRetryStream: input.makeRetryStream,
     enableCRC: this.opts.enableCRC,
@@ -142,7 +142,7 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
       bodyConfig.body,
       {
         crc: bodyConfig.crc,
-        handleResponse: res => ({ ETag: res.headers.etag }),
+        handleResponse: (res) => ({ ETag: res.headers.etag }),
         axiosOpts: {
           [retryNamespace]: {
             beforeRetry: () => {
@@ -151,7 +151,7 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
             },
             makeRetryStream: bodyConfig.makeRetryStream,
           },
-          onUploadProgress: event => {
+          onUploadProgress: (event) => {
             triggerDataTransfer(
               DataTransferType.Rw,
               event.loaded - consumedBytes

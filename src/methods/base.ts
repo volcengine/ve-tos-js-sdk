@@ -28,9 +28,8 @@ import {
 import { makeAxiosInst } from '../axios';
 import type { CRCCls } from '../universal/crc';
 import * as log from '../log';
-import mpAdapter from 'axios-miniprogram-adapter'
+import mpAdapter from 'axios-miniprogram-adapter';
 import uniappAdapter from 'axios-adapter-uniapp';
-
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -156,7 +155,6 @@ type GetSignatureQueryInput =
   | GetSignatureQueryUrlInput
   | GetSignaturePolicyQueryInput;
 
-
 interface FetchOpts<T> {
   needMd5?: boolean;
   crc?: CRCCls;
@@ -208,7 +206,7 @@ export class TOSBase {
   private normalizeOpts(_opts: TOSConstructorOptions) {
     const mustKeys = ['accessKeyId', 'accessKeySecret', 'region'];
     const mustKeysErrorStr = mustKeys
-      .filter(key => !(_opts as any)[key])
+      .filter((key) => !(_opts as any)[key])
       .join(', ');
 
     if (mustKeysErrorStr) {
@@ -264,7 +262,7 @@ export class TOSBase {
     body?: Object | File | Blob | NodeJS.ReadableStream,
     opts?: FetchOpts<Data>
   ): Promise<TosResponse<Data>> {
-    const handleResponse = opts?.handleResponse || (res => res.data);
+    const handleResponse = opts?.handleResponse || ((res) => res.data);
     const needMd5 = opts?.needMd5 || false;
 
     if (body && needMd5) {
@@ -371,7 +369,11 @@ export class TOSBase {
       log.TOS('reqOpts: ', logReqOpts);
 
       const res = await this.axiosInst({
-        ...{ maxBodyLength: Infinity, maxContentLength: Infinity, adapter: this.opts.requestAdapter },
+        ...{
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+          adapter: this.opts.requestAdapter,
+        },
         ...reqOpts,
         ...(opts?.axiosOpts || {}),
       });
@@ -535,7 +537,7 @@ export class TOSBase {
     }
   };
 
-  protected getNormalDataFromError = getNormalDataFromError
+  protected getNormalDataFromError = getNormalDataFromError;
 
   protected checkCRC64(crc: CRCCls, headers: Headers) {
     if (!this.opts.enableCRC) {
@@ -575,13 +577,13 @@ function getAdapter(): AxiosAdapter | undefined {
 
   switch (true) {
     case typeof wx !== 'undefined':
-    case typeof swan!== 'undefined':
+    case typeof swan !== 'undefined':
     case typeof dd !== 'undefined':
     case typeof my !== 'undefined':
       return mpAdapter as AxiosAdapter;
     case typeof uni !== 'undefined':
       return uniappAdapter as AxiosAdapter;
     default:
-      return undefined
+      return undefined;
   }
 }

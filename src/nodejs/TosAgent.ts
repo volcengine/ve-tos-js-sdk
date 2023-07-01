@@ -40,7 +40,7 @@ export function TosAgent(opts: TosAgentOptions) {
   agent.maxTotalSockets = tosOpts.maxConnections;
 
   const oriCreateConnection = agent.createConnection;
-  agent.createConnection = function(...args) {
+  agent.createConnection = function (...args) {
     const socket = oriCreateConnection.call(this, ...args);
     let isTimeout = false;
     let isConnected = false;

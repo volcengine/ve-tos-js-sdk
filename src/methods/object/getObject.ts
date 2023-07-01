@@ -269,7 +269,7 @@ export async function getObjectToFile(
 
     const fsWriteStream = fs.createWriteStream(input.filePath);
     stream.pipe(fsWriteStream);
-    fsWriteStream.on('error', err => reject(err));
+    fsWriteStream.on('error', (err) => reject(err));
     fsWriteStream.on('finish', () => {
       const newData: any = { ...getObjectRes.data };
       delete newData.content;

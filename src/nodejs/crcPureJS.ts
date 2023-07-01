@@ -72,7 +72,7 @@ export class CRC {
   async updateBlob(value: Blob) {
     // avoid memory boat
     const unit = 1 * 1024 * 1024;
-    this.blobUpdatePromise = new Promise(async resolve => {
+    this.blobUpdatePromise = new Promise(async (resolve) => {
       let i = 0;
       const handleOne = async () => {
         this.update(

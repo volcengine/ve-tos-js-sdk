@@ -65,8 +65,8 @@ export async function getBucketPolicy(
       const arrayProp = makeArrayProp(it);
 
       arrayProp('Action');
-      Object.keys(it.Condition || {}).forEach(key => {
-        Object.keys(it.Condition[key]).forEach(key2 => {
+      Object.keys(it.Condition || {}).forEach((key) => {
+        Object.keys(it.Condition[key]).forEach((key2) => {
           arrayProp(`Condition["${key}"]["${key2}"]`);
         });
       });

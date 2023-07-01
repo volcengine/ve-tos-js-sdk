@@ -131,7 +131,7 @@ export async function _putObject(
   const bodyConfig = await getNewBodyConfig({
     body: input.body,
     totalSize,
-    dataTransferCallback: n => triggerDataTransfer(DataTransferType.Rw, n),
+    dataTransferCallback: (n) => triggerDataTransfer(DataTransferType.Rw, n),
     makeRetryStream: input.makeRetryStream,
     enableCRC: this.opts.enableCRC,
   });
@@ -145,7 +145,7 @@ export async function _putObject(
       headers,
       bodyConfig.body || '',
       {
-        handleResponse: res => res.headers,
+        handleResponse: (res) => res.headers,
         crc: bodyConfig.crc,
         axiosOpts: {
           [retryNamespace]: {
@@ -155,7 +155,7 @@ export async function _putObject(
             },
             makeRetryStream: bodyConfig.makeRetryStream,
           },
-          onUploadProgress: event => {
+          onUploadProgress: (event) => {
             triggerDataTransfer(
               DataTransferType.Rw,
               event.loaded - consumedBytes

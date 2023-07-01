@@ -27,7 +27,7 @@ export async function deleteObject(
     query,
     {},
     {},
-    { handleResponse: res => res.headers }
+    { handleResponse: (res) => res.headers }
   );
   return res;
 }

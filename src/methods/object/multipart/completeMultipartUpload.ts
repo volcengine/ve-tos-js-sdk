@@ -31,7 +31,7 @@ export async function completeMultipartUpload(
     },
     {},
     {
-      Parts: input.parts.map(it => ({
+      Parts: input.parts.map((it) => ({
         ETag: it.eTag,
         PartNumber: it.partNumber,
       })),

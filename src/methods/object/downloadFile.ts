@@ -217,10 +217,8 @@ export async function downloadFile(
   // check if file info is matched
   await (async () => {
     if (checkpointRichInfo.record?.object_info) {
-      const {
-        last_modified,
-        object_size,
-      } = checkpointRichInfo.record?.object_info;
+      const { last_modified, object_size } =
+        checkpointRichInfo.record?.object_info;
       if (
         // TODO: `last-modified` aligns to number
         objectStats['last-modified'] !== last_modified ||
@@ -256,16 +254,14 @@ export async function downloadFile(
   let tasks: Task[] = [];
   const allTasks: Task[] = getAllTasks(objectSize, partSize);
   const initConsumedBytes = (checkpointRichInfo.record?.parts_info || [])
-    .filter(it => it.is_completed)
+    .filter((it) => it.is_completed)
     .reduce((prev, it) => prev + (it.range_end - it.range_start + 1), 0);
 
   // recorded tasks
   const recordedTasks = checkpointRichInfo.record?.parts_info || [];
-  const recordedTaskMap: Map<
-    number,
-    DownloadFileCheckpointRecordPartInfo
-  > = new Map();
-  recordedTasks.forEach(it => recordedTaskMap.set(it.part_number, it));
+  const recordedTaskMap: Map<number, DownloadFileCheckpointRecordPartInfo> =
+    new Map();
+  recordedTasks.forEach((it) => recordedTaskMap.set(it.part_number, it));
 
   const filePath = await (async () => {
     let filePathStats: Stats | null = null;
@@ -511,10 +507,10 @@ export async function downloadFile(
       // checkpoint info exists, so need to calculate remain tasks
       const uploadedPartSet: Set<number> = new Set(
         (checkpointRichInfo.record.parts_info || [])
-          .filter(it => it.is_completed)
-          .map(it => it.part_number)
+          .filter((it) => it.is_completed)
+          .map((it) => it.part_number)
       );
-      tasks = allTasks.filter(it => !uploadedPartSet.has(it.partNumber));
+      tasks = allTasks.filter((it) => !uploadedPartSet.has(it.partNumber));
     } else {
       try {
         tempFileFd = await fsp.open(tempFilePath, 'w+');
@@ -570,7 +566,7 @@ export async function downloadFile(
                 },
               });
               // 上面的 call 调用，ts 丢失了类型推断
-              const buffer = (res.data.content as unknown) as Buffer;
+              const buffer = res.data.content as unknown as Buffer;
               await fsp.write(
                 tempFileFd,
                 buffer,

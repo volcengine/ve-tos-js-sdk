@@ -13,11 +13,11 @@ interface CryptoModule {
   stringify: (str: string, decoding: 'utf-8' | 'base64' | 'hex') => string;
 }
 
-let crypto = (null as unknown) as CryptoModule;
+let crypto = null as unknown as CryptoModule;
 if (process.env.TARGET_ENVIRONMENT === 'node') {
-  crypto = (cryptoNode as unknown) as CryptoModule;
+  crypto = cryptoNode as unknown as CryptoModule;
 } else {
-  crypto = (cryptoBrowser as unknown) as CryptoModule;
+  crypto = cryptoBrowser as unknown as CryptoModule;
 }
 
 const { hmacSha256, hashSha256, hashMd5, parse, stringify } = crypto;

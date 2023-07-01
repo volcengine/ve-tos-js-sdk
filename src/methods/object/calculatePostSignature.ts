@@ -105,11 +105,8 @@ function getDateTimeStr(opt?: { date?: Date; type?: 'Z' | 'ISO' }) {
   }
 
   const dateTime =
-    date
-      .toISOString()
-      .replace(/\..+/, '')
-      .replace(/-/g, '')
-      .replace(/:/g, '') + 'Z';
+    date.toISOString().replace(/\..+/, '').replace(/-/g, '').replace(/:/g, '') +
+    'Z';
 
   return dateTime;
 }

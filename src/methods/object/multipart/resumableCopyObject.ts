@@ -225,10 +225,8 @@ export async function resumableCopyObject(
   // check if file info is matched
   await (async () => {
     if (checkpointRichInfo.record?.copy_source_object_info) {
-      const {
-        last_modified,
-        object_size,
-      } = checkpointRichInfo.record?.copy_source_object_info;
+      const { last_modified, object_size } =
+        checkpointRichInfo.record?.copy_source_object_info;
       if (
         // TODO: `last-modified` aligns to number
         objectStats['last-modified'] !== last_modified ||
@@ -268,7 +266,7 @@ export async function resumableCopyObject(
   let tasks: Task[] = [];
   const allTasks: Task[] = getAllTasks(objectSize, partSize);
   const initConsumedBytes = (checkpointRichInfo.record?.parts_info || [])
-    .filter(it => it.is_completed)
+    .filter((it) => it.is_completed)
     .reduce(
       (prev, it) =>
         prev + it.copy_source_range_end - it.copy_source_range_start + 1,
@@ -278,11 +276,9 @@ export async function resumableCopyObject(
 
   // recorded tasks
   const recordedTasks = checkpointRichInfo.record?.parts_info || [];
-  const recordedTaskMap: Map<
-    number,
-    ResumableCopyCheckpointRecordPart
-  > = new Map();
-  recordedTasks.forEach(it => recordedTaskMap.set(it.part_number, it));
+  const recordedTaskMap: Map<number, ResumableCopyCheckpointRecordPart> =
+    new Map();
+  recordedTasks.forEach((it) => recordedTaskMap.set(it.part_number, it));
 
   const getCheckpointContent = () => {
     const checkpointContent: ResumableCopyCheckpointRecord = {
@@ -452,10 +448,10 @@ export async function resumableCopyObject(
     // checkpoint info exists, so need to calculate remain tasks
     const uploadedPartSet: Set<number> = new Set(
       (checkpointRichInfo.record.parts_info || [])
-        .filter(it => it.is_completed)
-        .map(it => it.part_number)
+        .filter((it) => it.is_completed)
+        .map((it) => it.part_number)
     );
-    tasks = allTasks.filter(it => !uploadedPartSet.has(it.partNumber));
+    tasks = allTasks.filter((it) => !uploadedPartSet.has(it.partNumber));
   } else {
     // createMultipartUpload will check bucket
     try {
@@ -519,9 +515,9 @@ export async function resumableCopyObject(
             if (input.srcVersionId) {
               copySource += `?versionId=${input.srcVersionId}`;
             }
-            const copyRange = `bytes=${curTask.offset}-${curTask.offset +
-              curTask.partSize -
-              1}`;
+            const copyRange = `bytes=${curTask.offset}-${
+              curTask.offset + curTask.partSize - 1
+            }`;
             const headers: Headers = {
               ...input.headers,
               ['x-tos-copy-source']: copySource,
@@ -565,7 +561,7 @@ export async function resumableCopyObject(
       throw firstErr;
     }
 
-    const parts = (getCheckpointContent().parts_info || []).map(it => ({
+    const parts = (getCheckpointContent().parts_info || []).map((it) => ({
       eTag: it.etag,
       partNumber: it.part_number,
     }));

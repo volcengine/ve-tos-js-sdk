@@ -101,7 +101,7 @@ export interface HeadBucketOutput {
 
 export async function headBucket(this: TOSBase, bucket?: string) {
   return this.fetchBucket<HeadBucketOutput>(bucket, 'HEAD', {}, {}, undefined, {
-    handleResponse: res => {
+    handleResponse: (res) => {
       return res.headers;
     },
   });

@@ -42,7 +42,7 @@ export async function appendObject(
     { append: '', offset: input.offset },
     headers,
     input.body,
-    { handleResponse: res => res.headers }
+    { handleResponse: (res) => res.headers }
   );
 }
 

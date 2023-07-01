@@ -40,7 +40,7 @@ export function getPreSignedUrl(
     const encodedKey = encodeURIComponent(normalizedInput.key);
     const objectKeyPath = normalizedInput.key
       .split('/')
-      .map(it => encodeURIComponent(it))
+      .map((it) => encodeURIComponent(it))
       .join('/');
 
     if (subdomain) {
@@ -56,7 +56,7 @@ export function getPreSignedUrl(
     }
   };
   const response = normalizedInput.response || {};
-  Object.keys(response).forEach(_key => {
+  Object.keys(response).forEach((_key) => {
     const key = _key as keyof typeof response;
     const kebabKey = covertCamelCase2Kebab(key);
     setOneQuery(`response-${kebabKey}`, response[key]);
@@ -87,7 +87,7 @@ export function getPreSignedUrl(
   }
 
   const queryStr = Object.keys(query)
-    .map(key => {
+    .map((key) => {
       return `${encodeURIComponent(key)}=${encodeURIComponent(query[key])}`;
     })
     .join('&');

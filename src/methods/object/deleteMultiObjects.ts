@@ -35,7 +35,7 @@ export async function deleteMultiObjects(
 ) {
   const body = {
     Quiet: input.quiet,
-    Objects: input.objects.map(it => ({
+    Objects: input.objects.map((it) => ({
       Key: it.key,
       VersionId: it.versionId,
     })),

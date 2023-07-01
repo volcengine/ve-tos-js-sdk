@@ -78,20 +78,20 @@ export function preSignedPolicyURL(
 
   const queryStr = obj2QueryStr(query);
 
-  const getSignedURLForList: PreSignedPolicyURLOutput['getSignedURLForList'] = additionalQuery => {
-    const str2 = obj2QueryStr(additionalQuery);
-    const q = [queryStr, str2].filter(Boolean).join('&');
-    return `${baseURL}?${q}`;
-  };
-  const getSignedURLForGetOrHead: PreSignedPolicyURLOutput['getSignedURLForGetOrHead'] = (
-    key,
+  const getSignedURLForList: PreSignedPolicyURLOutput['getSignedURLForList'] = (
     additionalQuery
   ) => {
     const str2 = obj2QueryStr(additionalQuery);
     const q = [queryStr, str2].filter(Boolean).join('&');
-    const keyPath = encodeURIComponent(key);
-    return `${baseURL}/${keyPath}?${q}`;
+    return `${baseURL}?${q}`;
   };
+  const getSignedURLForGetOrHead: PreSignedPolicyURLOutput['getSignedURLForGetOrHead'] =
+    (key, additionalQuery) => {
+      const str2 = obj2QueryStr(additionalQuery);
+      const q = [queryStr, str2].filter(Boolean).join('&');
+      const keyPath = encodeURIComponent(key);
+      return `${baseURL}/${keyPath}?${q}`;
+    };
   return {
     getSignedURLForList,
     getSignedURLForGetOrHead,
@@ -111,9 +111,8 @@ function normalizeInput(
   }
 
   validateConditions(input.conditions);
-  const normalizedConditions: NormalizedPolicySignatureCondition[] = input.conditions.map(
-    it => [it.operator || 'eq', '$key', it.value]
-  );
+  const normalizedConditions: NormalizedPolicySignatureCondition[] =
+    input.conditions.map((it) => [it.operator || 'eq', '$key', it.value]);
   normalizedConditions.push(['eq', '$bucket', actualBucket]);
 
   return {

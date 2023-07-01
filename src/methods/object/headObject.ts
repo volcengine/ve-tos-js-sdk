@@ -76,7 +76,7 @@ export async function headObject(
     normalizedInput?.headers || {},
     undefined,
     {
-      handleResponse: res => {
+      handleResponse: (res) => {
         return res.headers;
       },
     }
