@@ -3,20 +3,12 @@ import TOSBase from '../base';
 
 export interface ListObjectsType2Input {
   bucket?: string;
-  continuationToken?: string;
+  prefix?: string;
   delimiter?: string;
   encodingType?: string;
-  fetchOwner?: string;
   maxKeys?: string | number;
-  prefix?: string;
-  marker?: string;
-  /**
-   * use `marker` instead of `startAfter`
-   */
+  continuationToken?: string;
   startAfter?: string;
-  // versions?: string;
-  // listType?: string;
-  versionIdMarker?: string;
 }
 
 export interface ListObjectsType2ContentItem {
@@ -24,7 +16,7 @@ export interface ListObjectsType2ContentItem {
   Key: string;
   // "2021-08-02T09:53:27.000Z"
   LastModified: string;
-  Owner: { ID: string; DisplayName: string };
+  Owner?: { ID: string; DisplayName: string };
   Size: number;
   StorageClass: string;
   HashCrc64ecma?: string;
@@ -52,18 +44,21 @@ export interface ListObjectDeleteMarkerItem {
   VersionId: string;
 }
 
+export interface ListedCommonPrefix {
+  Prefix: string;
+}
+
 export interface ListObjectsType2Output {
   Name: string;
   Prefix: string;
-  Marker: string;
   MaxKeys: number;
   Delimiter?: string;
   EncodingType?: string;
   IsTruncated: boolean;
-  StartAfter: string;
+  StartAfter?: string;
   ContinuationToken?: string;
   NextContinuationToken?: string;
-  CommonPrefixes: string[];
+  CommonPrefixes: ListedCommonPrefix[];
   Contents: ListObjectsType2ContentItem[];
 }
 
