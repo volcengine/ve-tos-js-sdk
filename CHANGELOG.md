@@ -2,11 +2,20 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.5] - 2023-07-06
+
+### Added
+
+- `ACLType` enum add `ACLBucketOwnerEntrusted`
+- `GetObjectAclOutput` support `BucketOwnerEntrusted` field
+- S3 endpoint will throw TosClientError
+- downgrade `type-fest` version
+
 ## [2.5.4] - 2023-07-03
 
 ### Fixed
 
-- Aligning horizontal design for the `listObjectsType2` API
+- Aligning horizontal design for the `listObjectsType2` API.
 
 ## [2.5.3] - 2023-07-01
 

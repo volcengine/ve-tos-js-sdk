@@ -7,7 +7,9 @@ export interface GetObjectAclInput {
   versionId?: string;
 }
 
-export type GetObjectAclOutput = AclInterface;
+export type GetObjectAclOutput = AclInterface & {
+  BucketOwnerEntrusted?: boolean;
+};
 
 export async function getObjectAcl(
   this: TOSBase,

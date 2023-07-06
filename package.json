@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.5.4",
+  "version": "2.5.5",
   "license": "MIT",
   "files": [
     "browser",
@@ -96,7 +96,7 @@
     "prettier": "^2.8.8",
     "lodash": "^4.17.21",
     "qs": "^6.11.2",
-    "type-fest": "^3.11.1"
+    "type-fest": "^1.4.0"
   },
   "resolutions": {
     "**/typescript": "^4.3.5"

@@ -220,6 +220,12 @@ export class TOSBase {
       );
     }
 
+    if (endpoint.includes('s3')) {
+      throw new TosClientError(
+        `do not support s3 endpoint, please use tos endpoint.`
+      );
+    }
+
     const secure = _opts.secure == null ? true : !!_opts.secure;
     const _default = <T extends unknown>(
       v: T | undefined | null,

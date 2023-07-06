@@ -5,6 +5,8 @@ export enum ACLType {
   ACLAuthenticatedRead = 'authenticated-read',
   ACLBucketOwnerRead = 'bucket-owner-read',
   ACLBucketOwnerFullControl = 'bucket-owner-full-control',
+  // only works for object ACL
+  ACLBucketOwnerEntrusted = 'bucket-owner-entrusted',
 }
 
 export enum StorageClassType {
