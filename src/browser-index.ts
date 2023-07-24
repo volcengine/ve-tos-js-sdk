@@ -75,8 +75,8 @@ import {
 } from './methods/bucket/lifecycle';
 import {
   putBucketEncryption,
-    getBucketEncryption,
-    deleteBucketEncryption
+  getBucketEncryption,
+  deleteBucketEncryption,
 } from './methods/bucket/encryption';
 import {
   deleteBucketMirrorBack,
@@ -197,11 +197,10 @@ class TosClient extends TOSBase {
   getBucketLifecycle = getBucketLifecycle;
   deleteBucketLifecycle = deleteBucketLifecycle;
 
-
   //bucket encryption
   putBucketEncryption = putBucketEncryption;
-  getBucketEncryption=getBucketEncryption;
-  deleteBucketEncryption=deleteBucketEncryption;
+  getBucketEncryption = getBucketEncryption;
+  deleteBucketEncryption = deleteBucketEncryption;
 
   // bucket mirror back
   putBucketMirrorBack = putBucketMirrorBack;
@@ -341,7 +340,22 @@ if (
   process.env.BUILD_FORMAT === 'umd'
 ) {
   // @ts-ignore
-  window.TOS = TosClient;
-  // @ts-ignore
-  window.TosClient = TosClient;
+  if (window) {
+    // @ts-ignore
+    window.TOS = TosClient;
+    // @ts-ignore
+    window.TosClient = TosClient;
+  }
+  if (global) {
+    // @ts-ignore
+    global.TOS = TosClient;
+    // @ts-ignore
+    global.TosClient = TosClient;
+  }
+  if (globalThis) {
+    // @ts-ignore
+    globalThis.TOS = TosClient;
+    // @ts-ignore
+    globalThis.TosClient = TosClient;
+  }
 }
