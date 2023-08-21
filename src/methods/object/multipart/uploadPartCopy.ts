@@ -1,4 +1,9 @@
-import { safeAwait } from '../../../utils';
+import {
+  fillRequestHeaders,
+  requestHeadersMap,
+  safeAwait,
+  normalizeHeadersKey,
+} from '../../../utils';
 import TOSBase from '../../base';
 
 export interface UploadPartCopyInput {
@@ -6,6 +11,12 @@ export interface UploadPartCopyInput {
   key: string;
   partNumber: number;
   uploadId: string;
+  copySourceSSECAlgorithm?: string;
+  copySourceSSECKey?: string;
+  copySourceSSECKeyMD5?: string;
+  ssecAlgorithm?: string;
+  ssecKey?: string;
+  ssecKeyMD5?: string;
   headers?: {
     [key: string]: string | undefined;
     'x-tos-copy-source'?: string;
@@ -23,6 +34,8 @@ export interface UploadPartCopyInput {
 export interface UploadPartCopyOutput {
   ETag: string;
   LastModified: string;
+  SSECAlgorithm: string;
+  SSECKeyMD5: string;
 }
 
 export async function uploadPartCopy(
@@ -30,14 +43,35 @@ export async function uploadPartCopy(
   input: UploadPartCopyInput
 ) {
   const { uploadId, partNumber } = input;
-  const headers = input.headers || {};
+  const headers = normalizeHeadersKey(input.headers);
+  input.headers = headers;
+  fillRequestHeaders(input, [
+    'copySourceSSECAlgorithm',
+    'copySourceSSECKey',
+    'copySourceSSECKeyMD5',
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+  ]);
 
   const [err, res] = await safeAwait(
     this.fetchObject<UploadPartCopyOutput>(
       input,
       'PUT',
       { partNumber, uploadId },
-      headers
+      headers,
+      undefined,
+      {
+        handleResponse(response) {
+          return {
+            ...response.data,
+            SSECAlgorithm:
+              response.headers[requestHeadersMap['ssecAlgorithm'] as string],
+            SSECKeyMD5:
+              response.headers[requestHeadersMap['ssecKeyMD5'] as string],
+          };
+        },
+      }
     )
   );
 

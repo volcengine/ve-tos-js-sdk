@@ -1,13 +1,13 @@
-import TOS, { StorageClassType } from '../../src/browser-index';
-import { deleteBucket, sleepCache, NEVER_TIMEOUT } from './utils';
+import TOS from '../../src/browser-index';
 import {
-  tosOptions,
   isNeedDeleteBucket,
   testBucketName,
+  tosOptions,
 } from '../utils/options';
+import { NEVER_TIMEOUT, deleteBucket, sleepCache } from '../utils';
 
 describe('nodejs connection params', () => {
-  beforeAll(async done => {
+  beforeAll(async (done) => {
     const client = new TOS(tosOptions);
     // clear all bucket
     const { data: buckets } = await client.listBuckets();
@@ -29,71 +29,71 @@ describe('nodejs connection params', () => {
   }, NEVER_TIMEOUT);
 
   it(
-      'lifecycle putBucketEncryption',
-      async () => {
-        const client = new TOS({
-          ...tosOptions,
-        });
+    'lifecycle putBucketEncryption',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+      });
 
-        const result = await client.putBucketEncryption({
-          bucket: testBucketName,
-          Rule:{
-            ApplyServerSideEncryptionByDefault:{
-              SSEAlgorithm:'string',
-              KMSMasterKeyID:'string',
-            }
-          }
-        });
+      const result = await client.putBucketEncryption({
+        bucket: testBucketName,
+        rule: {
+          ApplyServerSideEncryptionByDefault: {
+            SSEAlgorithm: 'string',
+            KMSMasterKeyID: 'string',
+          },
+        },
+      });
 
-        expect(result.data).toBe('');
-      },
-      NEVER_TIMEOUT
+      expect(result.data).toBe('');
+    },
+    NEVER_TIMEOUT
   );
 
   it(
-      'lifecycle getBucketEncryption',
-      async () => {
-        const client = new TOS({
-          ...tosOptions,
-        });
+    'lifecycle getBucketEncryption',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+      });
 
-        const result = await client.getBucketEncryption({
-          bucket: testBucketName,
-        });
+      const result = await client.getBucketEncryption({
+        bucket: testBucketName,
+      });
 
-        expect(result.data.Rule).toBe(Object);
-      },
-      NEVER_TIMEOUT
+      expect(result.data.Rule).toBe(Object);
+    },
+    NEVER_TIMEOUT
   );
   it(
-      'lifecycle deleteBucketEncryption',
-      async () => {
-        const client = new TOS({
-          ...tosOptions,
-        });
+    'lifecycle deleteBucketEncryption',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+      });
 
-        const result = await client.deleteBucketEncryption({
-          bucket: testBucketName,
-        });
+      const result = await client.deleteBucketEncryption({
+        bucket: testBucketName,
+      });
 
-        expect(result.data).toBe('');
-      },
-      NEVER_TIMEOUT
+      expect(result.data).toBe('');
+    },
+    NEVER_TIMEOUT
   );
 
   it(
-      'lifecycle deleteBucketLifecycle',
-      async () => {
-        const client = new TOS({
-          ...tosOptions,
-        });
+    'lifecycle deleteBucketLifecycle',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+      });
 
-        const result = await client.deleteBucketLifecycle({
-          bucket: testBucketName,
-        });
+      const result = await client.deleteBucketLifecycle({
+        bucket: testBucketName,
+      });
 
-        expect(result.data).toBe('');
-      },
-      NEVER_TIMEOUT
+      expect(result.data).toBe('');
+    },
+    NEVER_TIMEOUT
   );
 });

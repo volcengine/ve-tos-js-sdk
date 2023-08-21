@@ -6,23 +6,38 @@ import TOSBase from '../base';
 
 const CommonQueryKey = 'notification';
 
+export interface Filter {
+  TOSKey?: {
+    FilterRules: {
+      Name: string;
+      Value: string;
+    }[];
+  };
+}
 interface CloudFunctionConfiguration {
   Events: string[];
-  Filter?: {
-    TOSKey?: {
-      FilterRules: {
-        Name: string;
-        Value: string;
-      }[];
-    };
-  };
+  Filter?: Filter;
   RuleId?: string;
   CloudFunction: string;
 }
 
+export interface RocketMQConf {
+  InstanceId: string;
+  Topic: string;
+  AccessKeyId: string;
+}
+export interface RocketMQConfiguration {
+  RuleId: string;
+  Role: string;
+  Events: string[]; // 支持的值在不断增加，不定义成枚举
+  Filter?: Filter;
+  RocketMQ: RocketMQConf;
+}
+
 export interface PutBucketNotificationInput {
   bucket: string;
-  cloudFunctionConfigurations: CloudFunctionConfiguration[];
+  cloudFunctionConfigurations?: CloudFunctionConfiguration[];
+  rocketMQConfigurations?: RocketMQConfiguration[];
 }
 
 export interface PutBucketNotificationOutput {}
@@ -51,6 +66,7 @@ export interface GetBucketNotificationInput {
 
 export interface GetBucketNotificationOutput {
   CloudFunctionConfigurations: CloudFunctionConfiguration[];
+  RocketMQConfigurations: RocketMQConfiguration[];
 }
 
 export async function getBucketNotification(
@@ -68,6 +84,7 @@ export async function getBucketNotification(
   } catch (error) {
     return handleEmptyServerError<GetBucketNotificationOutput>(error, {
       CloudFunctionConfigurations: [],
+      RocketMQConfigurations: [],
     });
   }
 }

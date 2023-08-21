@@ -34,8 +34,7 @@
     "noEmit": true,
 
     "resolveJsonModule": true,
-
-    "paths": {
-    },
+    "types": ["node", "miniprogram-api-typings"],
+    "paths": {}
   }
 }

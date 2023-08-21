@@ -83,6 +83,8 @@ export interface GetObjectV2Input {
   rangeStart?: number;
   rangeEnd?: number;
 
+  process?: string;
+
   headers?: {
     [key: string]: string | undefined;
     'If-Modified-Since'?: string;
@@ -193,6 +195,7 @@ async function getObjectV2(
     'ssecKeyMD5',
 
     'range',
+    'process',
   ]);
   if (normalizedInput.rangeStart != null || normalizedInput.rangeEnd != null) {
     const start =

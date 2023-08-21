@@ -2,6 +2,23 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2023-08-21
+
+### Fixed
+
+- fix sdk has a dependency on a high-risk version of axios
+
+### Added
+
+- `completeMultipartUpload` support `completeAll` field
+- `getObjectV2` support `process` field
+- `putBucketMirrorBack` add `FixedEndpoint` field
+- `putBucketNotification` add `rocketMQConfigurations` field
+- `getBucketNotification` add `RocketMQConfigurations` field
+- add `(get|put|delete)BucketRename` methods to rename bucket
+- add `restoreObject` method to restore object
+- `uploadPartCopy` support `SSEC`
+
 ## [2.5.6] - 2023-07-24
 
 ### Fixed

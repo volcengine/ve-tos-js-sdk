@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.5.6",
+  "version": "2.6.0",
   "license": "MIT",
   "files": [
     "browser",
@@ -27,7 +27,7 @@
     "docs": "npx typedoc src/*",
     "deploy:docs": "./scripts/deployDocs.sh",
     "lint": "tsdx lint",
-    "prettier": "npx prettier --write src/**/* "
+    "prettier": "npx prettier --write src/**/*.ts "
   },
   "husky": {
     "hooks": {
@@ -74,6 +74,7 @@
     "@types/node": "^17.0.24",
     "dotenv": "16.0.0",
     "execa": "^5.1.1",
+    "miniprogram-api-typings": "^2.10.1-1",
     "form-data": "^4.0.0",
     "fs-extra": "^10.0.0",
     "husky": "^4.3.6",
@@ -89,7 +90,6 @@
     "@types/debug": "^4.1.7",
     "axios": "^0.21.1",
     "axios-adapter-uniapp": "^0.1.4",
-    "axios-miniprogram-adapter": "^0.3.5",
     "crypto-js": "^4.1.1",
     "debug": "^4.3.4",
     "http-proxy-middleware": "^2.0.1",

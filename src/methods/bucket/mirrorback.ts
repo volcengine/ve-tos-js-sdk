@@ -16,6 +16,7 @@ interface MirrorBackRule {
     PublicSource: {
       SourceEndpoint: {
         Primary: string[];
+        FixedEndpoint?: boolean;
       };
     };
     PassQuery?: boolean;

@@ -28,7 +28,7 @@ import {
 import { makeAxiosInst } from '../axios';
 import type { CRCCls } from '../universal/crc';
 import * as log from '../log';
-import mpAdapter from 'axios-miniprogram-adapter';
+import mpAdapter from '../axios-miniprogram-adapter';
 import uniappAdapter from 'axios-adapter-uniapp';
 
 export interface TOSConstructorOptions {

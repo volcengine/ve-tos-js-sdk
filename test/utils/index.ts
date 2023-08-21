@@ -31,7 +31,7 @@ export const deleteBucket = async (client: TOS, bucket: string) => {
 };
 
 async function sleep(time: number) {
-  await new Promise(r => setTimeout(r, time));
+  await new Promise((r) => setTimeout(r, time));
 }
 
 export async function sleepCache(time = 12 * 1000) {
@@ -67,13 +67,13 @@ export const streamToBuf = async (
 ): Promise<Buffer> => {
   let buf = Buffer.from([]);
   return new Promise((resolve, reject) => {
-    stream.on('data', data => {
+    stream.on('data', (data) => {
       buf = Buffer.concat([buf, data]);
     });
     stream.on('end', () => {
       resolve(buf);
     });
-    stream.on('error', err => {
+    stream.on('error', (err) => {
       reject(err);
     });
   });

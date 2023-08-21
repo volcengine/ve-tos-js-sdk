@@ -146,6 +146,12 @@ import {
   getBucketImageStyleSeparator,
 } from './methods/bucket/img';
 import { getBucketIntelligenttiering } from './methods/bucket/intelligenttiering';
+import {
+  putBucketRename,
+  getBucketRename,
+  deleteBucketRename,
+} from './methods/bucket/rename';
+import restoreObject from './methods/object/restoreObject';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -256,6 +262,11 @@ class TosClient extends TOSBase {
   getBucketImageProtect = getBucketImageProtect;
   getBucketImageStyleSeparator = getBucketImageStyleSeparator;
 
+  // bucket tag
+  putBucketRename = putBucketRename;
+  getBucketRename = getBucketRename;
+  deleteBucketRename = deleteBucketRename;
+
   // object base
   copyObject = copyObject;
   resumableCopyObject = resumableCopyObject;
@@ -293,7 +304,7 @@ class TosClient extends TOSBase {
   getObjectTagging = getObjectTagging;
   deleteObjectTagging = deleteObjectTagging;
 
-  // 批量处理
+  // batch job
   listJobs = listJobs;
   createJob = createJob;
   deleteJob = deleteJob;
@@ -301,6 +312,8 @@ class TosClient extends TOSBase {
   updateJobStatus = updateJobStatus;
   updateJobPriority = updateJobPriority;
 
+  // restore object
+  restoreObject = restoreObject;
   // object others
   uploadFile = uploadFile;
   getPreSignedUrl = getPreSignedUrl;

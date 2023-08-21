@@ -27,11 +27,11 @@ export const makeArrayProp = (obj: unknown) => (key: string) => {
 const makeConvertProp = (convertMethod: (prop: string) => string) => {
   const finalMethod = <T = unknown>(target: T): T => {
     if (Array.isArray(target)) {
-      return (target.map(it => finalMethod(it)) as unknown) as T;
+      return target.map((it) => finalMethod(it)) as unknown as T;
     }
 
     if (typeof target === 'string') {
-      return (convertMethod(target) as unknown) as T;
+      return convertMethod(target) as unknown as T;
     }
 
     if (typeof target === 'object' && target != null) {
@@ -41,7 +41,7 @@ const makeConvertProp = (convertMethod: (prop: string) => string) => {
         acc[nextKey] = (target as Obj)[key];
         return acc;
       }, {});
-      return (ret as unknown) as T;
+      return ret as unknown as T;
     }
 
     return target;
@@ -70,7 +70,7 @@ export const getSortedQueryString = (query: Record<string, any>) => {
   const searchParts: string[] = [];
   Object.keys(query)
     .sort()
-    .forEach(key => {
+    .forEach((key) => {
       searchParts.push(
         `${encodeURIComponent(key)}=${encodeURIComponent(query[key])}`
       );
@@ -192,7 +192,7 @@ export function obj2QueryStr(v?: Record<string, unknown>) {
     return '';
   }
   return Object.keys(v)
-    .map(key => {
+    .map((key) => {
       const vStr = `${v[key]}`;
       return `${encodeURIComponent(key)}=${encodeURIComponent(vStr)}`;
     })
@@ -255,6 +255,7 @@ export const requestHeadersMap: Record<
   websiteRedirectLocation: 'x-tos-website-redirect-location',
   storageClass: 'x-tos-storage-class',
   azRedundancy: 'x-tos-az-redundancy',
+  process: 'x-tos-process',
 };
 // type RequestHeadersMapKeys = keyof typeof requestHeadersMap;
 
@@ -276,7 +277,7 @@ export function fillRequestHeaders<T extends { headers?: Headers }>(
     }
   }
 
-  keys.forEach(k => {
+  keys.forEach((k) => {
     const confV = requestHeadersMap[k];
     if (!confV) {
       // maybe warning
