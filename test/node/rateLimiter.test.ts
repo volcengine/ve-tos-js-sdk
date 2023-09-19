@@ -1,4 +1,4 @@
-import TOS, { NewRateLimiter } from '../../src/browser-index';
+import TOS from '../../src/browser-index';
 import { createDefaultRateLimiter } from '../../src/rate-limiter';
 import { NEVER_TIMEOUT, deleteBucket } from '../utils';
 import fs from 'fs';
@@ -167,7 +167,7 @@ describe('rateLimiter  data transfer in node.js environment', () => {
       const res = await client.getObjectV2({
         key,
         headers: {},
-        rateLimiter: NewRateLimiter(commonCapacity, commonCapacity),
+        rateLimiter: createDefaultRateLimiter(commonCapacity, commonCapacity),
       });
       const { duration } = await readAllData(res.data.content, now);
 

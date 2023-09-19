@@ -346,7 +346,7 @@ export {
   GranteeType,
   CannedType,
   HttpMethodType,
-  createDefaultRateLimiter as NewRateLimiter,
+  createDefaultRateLimiter,
 };
 
 // TODO: hack for umd
