@@ -1,14 +1,23 @@
 import { covertCamelCase2Kebab, makeArrayProp } from '../../utils';
-import TOSBase from '../base';
+import TOSBase, { TosResponse } from '../base';
 
 export interface ListObjectsType2Input {
   bucket?: string;
   prefix?: string;
   delimiter?: string;
   encodingType?: string;
-  maxKeys?: string | number;
+  /**
+   * if not specify `maxKeys` field, default maxKeys value is 1000.
+   */
+  maxKeys?: number;
   continuationToken?: string;
   startAfter?: string;
+  /**
+   * default value: false
+   * if set false, the method will keep fetch objects until get `maxKeys` objects.
+   * if set true,  the method will fetch objects once
+   */
+  listOnlyOnce?: boolean;
 }
 
 export interface ListObjectsType2ContentItem {
@@ -55,6 +64,7 @@ export interface ListObjectsType2Output {
   Delimiter?: string;
   EncodingType?: string;
   IsTruncated: boolean;
+  KeyCount: number;
   StartAfter?: string;
   ContinuationToken?: string;
   NextContinuationToken?: string;
@@ -65,12 +75,62 @@ export interface ListObjectsType2Output {
 class TOSListObjectsType2 extends TOSBase {
   listObjectsType2 = listObjectsType2;
 }
+const DefaultListMaxKeys = 1000;
 
 export async function listObjectsType2(
   this: TOSListObjectsType2,
   input: ListObjectsType2Input = {}
+): Promise<TosResponse<ListObjectsType2Output>> {
+  const { listOnlyOnce = false } = input;
+
+  let output;
+  if (!input.maxKeys) {
+    input.maxKeys = DefaultListMaxKeys;
+  }
+
+  if (listOnlyOnce) {
+    output = await listObjectsType2Once.call(this, input);
+  } else {
+    const maxKeys = input.maxKeys;
+    let params = {
+      ...input,
+      maxKeys,
+    };
+    while (true) {
+      const res = await listObjectsType2Once.call(this, params);
+      if (output == null) {
+        output = res;
+      } else {
+        output = {
+          ...res,
+          data: output.data,
+        };
+        output.data.KeyCount += res.data.KeyCount;
+        output.data.IsTruncated = res.data.IsTruncated;
+        output.data.NextContinuationToken = res.data.NextContinuationToken;
+        output.data.Contents = output.data.Contents.concat(res.data.Contents);
+        output.data.CommonPrefixes = output.data.CommonPrefixes.concat(
+          res.data.CommonPrefixes
+        );
+      }
+
+      if (!res.data.IsTruncated || output.data.Contents.length >= maxKeys) {
+        break;
+      }
+
+      params.continuationToken = res.data.NextContinuationToken;
+      params.maxKeys = params.maxKeys - res.data.KeyCount;
+    }
+  }
+
+  return output;
+}
+async function listObjectsType2Once(
+  this: TOSListObjectsType2,
+  input: ListObjectsType2Input
 ) {
   const { bucket, ...nextQuery } = input;
+
   const ret = await this.fetchBucket<ListObjectsType2Output>(
     input.bucket,
     'GET',

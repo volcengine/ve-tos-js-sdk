@@ -1,6 +1,12 @@
 import TOSBase from '../base';
-import { normalizeHeadersKey } from '../../utils';
+import {
+  fillRequestHeaders,
+  isReadable,
+  normalizeHeadersKey,
+} from '../../utils';
 import { Acl } from '../../interface';
+import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
+import { isValidRateLimiter } from './utils';
 
 export interface AppendObjectInput {
   bucket?: string;
@@ -9,6 +15,15 @@ export interface AppendObjectInput {
   // body is empty buffer if it's falsy
   body?: File | Blob | Buffer | NodeJS.ReadableStream;
 
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
+  /**
+   * only works for nodejs environment
+   */
+  rateLimiter?: IRateLimiter;
   headers?: {
     [key: string]: string | undefined;
     'Cache-Control'?: string;
@@ -33,8 +48,14 @@ export async function appendObject(
   input: AppendObjectInput | string
 ) {
   input = this.normalizeObjectInput(input);
+  fillRequestHeaders(input, ['trafficLimit']);
   const headers = normalizeHeadersKey(input.headers);
   this.setObjectContentTypeHeader(input, headers);
+  if (process.env.TARGET_ENVIRONMENT === 'node' && isReadable(input.body)) {
+    if (input.rateLimiter && isValidRateLimiter(input.rateLimiter)) {
+      input.body = createRateLimiterStream(input.body, input.rateLimiter);
+    }
+  }
 
   return await this.fetchObject<AppendObjectOutput>(
     input,

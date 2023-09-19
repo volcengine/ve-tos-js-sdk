@@ -28,6 +28,7 @@ import {
 import { EmptyReadStream } from '../../../nodejs/EmptyReadStream';
 import { CancelError } from '../../../CancelError';
 import { hashMd5 } from '../../../universal/crypto';
+import { IRateLimiter } from '../../../rate-limiter';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -83,6 +84,17 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
    * default: false
    */
   enableContentMD5?: boolean;
+
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
+
+  /**
+   * only works for nodejs environment
+   */
+  rateLimiter?: IRateLimiter;
 }
 
 export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
@@ -175,6 +187,7 @@ export async function uploadFile(
   input: UploadFileInput
 ): Promise<TosResponse<UploadFileOutput>> {
   const { cancelToken, enableContentMD5 = false } = input;
+
   const isCancel = () => cancelToken && !!cancelToken.reason;
 
   const fileStats: Stats | null = await (async () => {
@@ -580,6 +593,8 @@ export async function uploadFile(
                 consumedBytesThisTask += status.rwOnceBytes;
                 triggerDataTransfer(status.type, status.rwOnceBytes);
               },
+              trafficLimit: input.trafficLimit,
+              rateLimiter: input.rateLimiter,
             });
 
             if (isCancel()) {

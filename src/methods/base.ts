@@ -117,6 +117,12 @@ export interface TOSConstructorOptions {
    * set request adapter to send request.
    */
   requestAdapter?: AxiosAdapter;
+
+  /**
+   * default value: false  ${bucket}.${endpoint}
+   * if true request will not combine `${bucket}.${endpoint}`
+   */
+  isCustomDomain?: boolean;
 }
 
 interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
@@ -277,7 +283,8 @@ export class TOSBase {
     }
 
     const [endpoint, newPath] = (() => {
-      if (opts?.subdomainBucket) {
+      // if isCustomDomain true, not add subdomainBucket
+      if (opts?.subdomainBucket && !this.opts.isCustomDomain) {
         // endpoint is ip address
         if (/^(\d|:)/.test(this.opts.endpoint)) {
           return [this.opts.endpoint, `/${opts.subdomainBucket}${path}`];
@@ -563,7 +570,7 @@ export class TOSBase {
 
     if (!crc.equalsTo(serverCRC64)) {
       throw new TosClientError(
-        `expect crc64 ${crc.toString()}, actual crc64 ${serverCRC64}`
+        `expect crc64 ${serverCRC64}, actual crc64 ${crc.toString()}`
       );
     }
   }

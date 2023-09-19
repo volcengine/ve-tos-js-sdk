@@ -49,12 +49,12 @@ export const makeAxiosInst = (maxRetryCount: number) => {
 
   // delete browser headers
   if (process.env.TARGET_ENVIRONMENT === 'browser') {
-    axiosInst.interceptors.request.use(config => {
+    axiosInst.interceptors.request.use((config) => {
       if (!config.headers) {
         return config;
       }
 
-      Object.keys(config.headers).forEach(key => {
+      Object.keys(config.headers).forEach((key) => {
         if (BROWSER_NEED_DELETE_HEADERS.includes(key.toLowerCase())) {
           delete config.headers[key];
         }
@@ -69,7 +69,7 @@ export const makeAxiosInst = (maxRetryCount: number) => {
     v.headers = v.headers || v.header || v?.response?.headers || {};
     return v;
   };
-  axiosInst.interceptors.response.use(ensureHeaders, error => {
+  axiosInst.interceptors.response.use(ensureHeaders, (error) => {
     ensureHeaders(error);
     return Promise.reject(error);
   });
@@ -106,14 +106,14 @@ export const makeAxiosInst = (maxRetryCount: number) => {
     });
   }
   axiosInst.interceptors.response.use(
-    res => {
+    (res) => {
       if (!res.headers) {
         return res;
       }
       handleResponseHeader(res.headers);
       return res;
     },
-    async error => {
+    async (error) => {
       if (!axios.isAxiosError(error)) {
         return Promise.reject(error);
       }
@@ -128,7 +128,7 @@ export const makeAxiosInst = (maxRetryCount: number) => {
   );
 
   // retry
-  axiosInst.interceptors.response.use(undefined, async error => {
+  axiosInst.interceptors.response.use(undefined, async (error) => {
     const { config } = error;
     if (!config) {
       return Promise.reject(error);

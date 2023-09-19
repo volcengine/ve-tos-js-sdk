@@ -17,6 +17,11 @@ export interface UploadPartCopyInput {
   ssecAlgorithm?: string;
   ssecKey?: string;
   ssecKeyMD5?: string;
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
   headers?: {
     [key: string]: string | undefined;
     'x-tos-copy-source'?: string;
@@ -52,6 +57,7 @@ export async function uploadPartCopy(
     'ssecAlgorithm',
     'ssecKey',
     'ssecKeyMD5',
+    'trafficLimit',
   ]);
 
   const [err, res] = await safeAwait(

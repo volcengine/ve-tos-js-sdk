@@ -1,5 +1,9 @@
 import TOSBase, { TosResponse } from '../base';
-import { normalizeHeadersKey, safeAwait } from '../../utils';
+import {
+  fillRequestHeaders,
+  normalizeHeadersKey,
+  safeAwait,
+} from '../../utils';
 import {
   Acl,
   DataTransferStatus,
@@ -12,6 +16,7 @@ import fs, { Stats } from 'fs';
 import { Readable } from 'stream';
 import { getSize, getNewBodyConfig } from './utils';
 import { retryNamespace } from '../../axios';
+import { IRateLimiter } from '../../rate-limiter';
 
 export interface PutObjectInput {
   bucket?: string;
@@ -32,6 +37,18 @@ export interface PutObjectInput {
    * if you need `percent` start from the previous value, you can use `uploadFile` instead.
    */
   progress?: (percent: number) => void;
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
+  /**
+   * only works for nodejs environment
+   **/
+  rateLimiter?: IRateLimiter;
+
+  callback?: string;
+  callbackVar?: string;
 
   headers?: {
     [key: string]: string | undefined;
@@ -64,6 +81,7 @@ export interface PutObjectOutput {
   'x-tos-version-id'?: string;
   'x-tos-hash-crc64ecma'?: string;
   'x-tos-server-side-encryption'?: string;
+  CallbackResult?: string;
 }
 
 export async function putObject(this: TOSBase, input: PutObjectInput | string) {
@@ -75,6 +93,8 @@ export async function _putObject(
   input: PutObjectInputInner | string
 ): Promise<TosResponse<PutObjectOutput>> {
   input = this.normalizeObjectInput(input);
+  fillRequestHeaders(input, ['trafficLimit', 'callback', 'callbackVar']);
+
   const headers = normalizeHeadersKey(input.headers);
   this.setObjectContentTypeHeader(input, headers);
 
@@ -134,6 +154,7 @@ export async function _putObject(
     dataTransferCallback: (n) => triggerDataTransfer(DataTransferType.Rw, n),
     makeRetryStream: input.makeRetryStream,
     enableCRC: this.opts.enableCRC,
+    rateLimiter: input.rateLimiter,
   });
 
   triggerDataTransfer(DataTransferType.Started);
@@ -145,7 +166,13 @@ export async function _putObject(
       headers,
       bodyConfig.body || '',
       {
-        handleResponse: (res) => res.headers,
+        handleResponse: (res) => {
+          const result = { ...res.headers };
+          if ((input as PutObjectInputInner)?.callback && res.data) {
+            result.CallbackResult = `${JSON.stringify(res.data)}`;
+          }
+          return result;
+        },
         crc: bodyConfig.crc,
         axiosOpts: {
           [retryNamespace]: {

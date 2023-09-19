@@ -203,6 +203,18 @@ export function isCancelError(err: any) {
   return err instanceof CancelError;
 }
 
+export async function readAllDataToBuffer(
+  readableStream: NodeJS.ReadableStream
+): Promise<Buffer> {
+  let chunks = '';
+
+  for await (const chunk of readableStream) {
+    chunks += chunk;
+  }
+
+  return Buffer.from(chunks);
+}
+
 export const DEFAULT_PART_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export const requestHeadersMap: Record<
@@ -256,6 +268,9 @@ export const requestHeadersMap: Record<
   storageClass: 'x-tos-storage-class',
   azRedundancy: 'x-tos-az-redundancy',
   process: 'x-tos-process',
+  trafficLimit: 'x-tos-traffic-limit',
+  callback: 'x-tos-callback',
+  callbackVar: 'x-tos-callback-var',
 };
 // type RequestHeadersMapKeys = keyof typeof requestHeadersMap;
 

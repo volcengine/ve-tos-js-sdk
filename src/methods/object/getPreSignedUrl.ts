@@ -21,6 +21,11 @@ export interface GetPreSignedUrlInput {
   };
   versionId?: string;
   query?: Record<string, string>;
+  /**
+   * default: false
+   * if set true. generate domain will direct use `endpoint` or `alternativeEndpoint`.
+   */
+  isCustomDomain?: boolean;
 }
 
 export function getPreSignedUrl(
@@ -30,7 +35,10 @@ export function getPreSignedUrl(
   validateObjectName(input);
   const normalizedInput = typeof input === 'string' ? { key: input } : input;
   const endpoint = normalizedInput.alternativeEndpoint || this.opts.endpoint;
-  const subdomain = normalizedInput.alternativeEndpoint ? false : true;
+  const subdomain =
+    normalizedInput.alternativeEndpoint || normalizedInput.isCustomDomain
+      ? false
+      : true;
   const bucket = normalizedInput.bucket || this.opts.bucket || '';
   if (subdomain && !bucket) {
     throw new TosClientError('Must provide bucket param');

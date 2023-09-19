@@ -1,8 +1,14 @@
 import fs from 'fs';
 import TosClientError from '../../TosClientError';
 import { Headers } from '../../interface';
-import { fillRequestHeaders, normalizeHeadersKey } from '../../utils';
+import {
+  fillRequestHeaders,
+  isReadable,
+  normalizeHeadersKey,
+} from '../../utils';
 import TOSBase, { TosResponse } from '../base';
+import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
+import { isValidRateLimiter } from './utils';
 
 export interface GetObjectInput {
   bucket?: string;
@@ -78,6 +84,15 @@ export interface GetObjectV2Input {
   ssecAlgorithm?: string;
   ssecKey?: string;
   ssecKeyMD5?: string;
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
+  /**
+   * only works for nodejs environment
+   */
+  rateLimiter?: IRateLimiter;
 
   range?: string;
   rangeStart?: number;
@@ -196,6 +211,7 @@ async function getObjectV2(
 
     'range',
     'process',
+    'trafficLimit',
   ]);
   if (normalizedInput.rangeStart != null || normalizedInput.rangeEnd != null) {
     const start =
@@ -234,11 +250,24 @@ async function getObjectV2(
 
   let resHeaders = res.headers;
   let newData: NodeJS.ReadableStream | Blob | Buffer = res.data;
+
   if (dataType === 'blob') {
     newData = new Blob([res.data], {
       type: resHeaders['content-type'],
     });
   }
+  if (process.env.TARGET_ENVIRONMENT === 'node' && isReadable(newData)) {
+    if (
+      normalizedInput.rateLimiter &&
+      isValidRateLimiter(normalizedInput.rateLimiter)
+    ) {
+      newData = createRateLimiterStream(
+        newData as NodeJS.ReadableStream,
+        normalizedInput.rateLimiter
+      );
+    }
+  }
+
   const actualRes: TosResponse<GetObjectV2Output> = {
     ...res,
     data: {

@@ -14,6 +14,11 @@ export interface PreSignedPolicyURLInput {
   conditions: PolicySignatureCondition[];
 
   alternativeEndpoint?: string;
+  /**
+   * default: false
+   * if set true. generate domain will direct use `endpoint` or `alternativeEndpoint`.
+   */
+  isCustomDomain?: boolean;
 }
 
 export interface PreSignedPolicyURLOutput {
@@ -64,7 +69,9 @@ export function preSignedPolicyURL(
 
   const endpoint =
     input.alternativeEndpoint ||
-    `${normalizedInput.bucket}.${this.opts.endpoint}`;
+    (input.isCustomDomain
+      ? this.opts.endpoint
+      : `${normalizedInput.bucket}.${this.opts.endpoint}`);
 
   const baseURL = `http${this.opts.secure ? 's' : ''}://${endpoint}`;
 
@@ -89,7 +96,11 @@ export function preSignedPolicyURL(
     (key, additionalQuery) => {
       const str2 = obj2QueryStr(additionalQuery);
       const q = [queryStr, str2].filter(Boolean).join('&');
-      const keyPath = encodeURIComponent(key);
+      // keep   '/'
+      const keyPath = key
+        .split('/')
+        .map((it) => encodeURIComponent(it))
+        .join('/');
       return `${baseURL}/${keyPath}?${q}`;
     };
   return {

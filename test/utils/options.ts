@@ -15,6 +15,8 @@ export const testTargetBucketNameGuangzhou = `${testBucketNameBase}-target-guang
 export const testTargetRegionGuangZhou = `cn-guangzhou`;
 export const testCloudFunctionId =
   process.env.TOS_NODE_SDK_CLOUD_FUNCTION_ID ?? '';
+export const testCallBackUrl = process.env.TOS_NODE_SDK_CALLBACK_URL ?? '';
+
 export const testAccountId = process.env.TOS_NODE_SDK_ACCOUNT_ID ?? '';
 
 // because one account has at most 100 buckets,

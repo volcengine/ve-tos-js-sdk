@@ -68,6 +68,12 @@ export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
    * is axios CancelToken
    */
   cancelToken?: CancelToken;
+
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
 }
 
 export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
@@ -534,6 +540,7 @@ export async function resumableCopyObject(
               uploadId,
               partNumber: curTask.partNumber,
               headers,
+              trafficLimit: input.trafficLimit,
             });
 
             if (isCancel()) {
@@ -609,6 +616,7 @@ export async function resumableCopyObject(
         bucket: input.bucket,
         key: input.key,
         headers,
+        trafficLimit: input.trafficLimit,
       })
     );
     if (err || !res) {

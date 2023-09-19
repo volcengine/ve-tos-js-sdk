@@ -152,6 +152,7 @@ import {
   deleteBucketRename,
 } from './methods/bucket/rename';
 import restoreObject from './methods/object/restoreObject';
+import { createDefaultRateLimiter } from './rate-limiter';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -345,6 +346,7 @@ export {
   GranteeType,
   CannedType,
   HttpMethodType,
+  createDefaultRateLimiter as NewRateLimiter,
 };
 
 // TODO: hack for umd

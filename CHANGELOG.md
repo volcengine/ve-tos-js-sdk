@@ -2,6 +2,24 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2023-09-19
+
+### Added
+
+- `getObjectV2/getObjectToFile/putObject/uploadPart/copyObject/uploadPartCopy/appendObject/uploadFile/downloadFile/resumableCopyObject` methods support server side traffic limit field `trafficLimit`
+- `getObjectV2/getObjectToFile/putObject/uploadPart/appendObject/uploadFile/downloadFile` methods support client side rate limit field `rateLimiter`. only support in node environment
+- TOS Client Init Options support `isCustomDomain`. default value is false. if set true, request will not add bucketName before endpoint.
+- `getPreSignedUrl/preSignedPolicyURL` support `isCustomDomain` field
+- `CompleteMultipartUpload/putObject` support `callback|callbackVar|CallbackResult` fields
+- `listObjectsType2` now will try to list objects until get maxKeys Objects by default
+- `listObjectsType2` support `listOnlyOnce` field. default value is `false`
+- `listObjectsType2` default `maxKeys` field value is 1000
+- `downloadFile` support crc64
+
+### Fixed
+
+- `preSignedPolicyURL` will not encode character `/`
+
 ## [2.6.0] - 2023-08-21
 
 ### Fixed

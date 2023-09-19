@@ -4,6 +4,7 @@ import { Headers, SupportObjectBody } from '../../interface';
 import { EmitReadStream } from '../../nodejs/EmitReadStream';
 import { isBuffer, isBlob, isReadable } from '../../utils';
 import { CRC, CRCCls } from '../../universal/crc';
+import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -56,6 +57,7 @@ interface GetNewBodyConfigIn<T> {
   beforeRetry?: () => void;
   makeRetryStream?: () => NodeJS.ReadableStream | undefined;
   enableCRC: boolean;
+  rateLimiter?: IRateLimiter;
 }
 interface GetNewBodyConfigOut<T> {
   body: T | NodeJS.ReadableStream;
@@ -69,6 +71,7 @@ interface GetEmitReadBodyConfigIn<T> {
   totalSize: number | null | undefined;
   dataTransferCallback: (n: number) => void;
   makeRetryStream?: () => NodeJS.ReadableStream | undefined;
+  rateLimiter?: IRateLimiter;
 }
 interface GetEmitReadBodyConfigOut<T> {
   body: T | NodeJS.ReadableStream;
@@ -80,6 +83,7 @@ export function getEmitReadBodyConfig<T extends SupportObjectBody>({
   totalSize,
   dataTransferCallback,
   makeRetryStream,
+  rateLimiter,
 }: GetEmitReadBodyConfigIn<T>): GetEmitReadBodyConfigOut<T> {
   let newBody: T | NodeJS.ReadableStream = body;
 
@@ -110,6 +114,10 @@ export function getEmitReadBodyConfig<T extends SupportObjectBody>({
         totalSize,
         dataTransferCallback
       ).stream();
+      // add rateLimiter
+      if (rateLimiter && isValidRateLimiter(rateLimiter)) {
+        newBody = createRateLimiterStream(newBody, rateLimiter);
+      }
     }
 
     if (makeRetryStream) {
@@ -124,7 +132,10 @@ export function getEmitReadBodyConfig<T extends SupportObjectBody>({
               dataTransferCallback
             ).stream();
           }
-
+          // TODO: retryStream need rateLimiter?
+          if (rateLimiter && isValidRateLimiter(rateLimiter) && stream) {
+            stream = createRateLimiterStream(stream, rateLimiter);
+          }
           return stream;
         },
       };
@@ -183,4 +194,11 @@ export async function getNewBodyConfig<T extends SupportObjectBody>(
 
 export function getCopySourceHeaderValue(srcBucket: string, srcKey: string) {
   return `/${srcBucket}/${encodeURIComponent(srcKey)}`;
+}
+
+export function isValidRateLimiter(rateLimiter?: IRateLimiter) {
+  if (!rateLimiter?.Acquire || !(rateLimiter?.Acquire instanceof Function)) {
+    throw new TosClientError(`The rateLimiter is not valid function`);
+  }
+  return true;
 }

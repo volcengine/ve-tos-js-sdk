@@ -1,5 +1,9 @@
 import TOSBase, { TosResponse } from '../base';
-import { DEFAULT_PART_SIZE, isCancelError } from '../../utils';
+import {
+  DEFAULT_PART_SIZE,
+  isCancelError,
+  readAllDataToBuffer,
+} from '../../utils';
 import * as fsp from '../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../interface';
 import headObject, { HeadObjectInput, HeadObjectOutput } from './headObject';
@@ -10,6 +14,8 @@ import TosClientError from '../../TosClientError';
 import { getObjectV2, GetObjectV2Output } from './getObject';
 import TosServerError from '../../TosServerError';
 import { CancelError } from '../../CancelError';
+import { IRateLimiter } from '../../rate-limiter';
+import { CRC } from '../../universal/crc';
 
 export interface DownloadFileCheckpointRecord {
   bucket: string;
@@ -85,6 +91,15 @@ export interface DownloadFileInput extends HeadObjectInput {
    * cancel this upload progress
    */
   cancelToken?: CancelToken;
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
+  /**
+   * only works for nodejs environment
+   */
+  rateLimiter?: IRateLimiter;
 }
 export interface DownloadFileOutput extends HeadObjectOutput {}
 
@@ -541,6 +556,8 @@ export async function downloadFile(
       let firstErr: Error | null = null;
       let index = 0;
 
+      const crcInstance = new CRC();
+
       // TODO: how to test parallel does work, measure time is not right
       await Promise.all(
         Array.from({ length: input.taskNum || 1 }).map(async () => {
@@ -556,7 +573,8 @@ export async function downloadFile(
                 bucket,
                 key,
                 versionId,
-                dataType: 'buffer',
+                // support rateLimiter so changed to stream
+                // dataType: 'buffer',
                 headers: {
                   'if-match': etag,
                   range: `bytes=${curTask.offset}-${Math.min(
@@ -564,9 +582,15 @@ export async function downloadFile(
                     objectSize - 1
                   )}`,
                 },
+                trafficLimit: input.trafficLimit,
+                rateLimiter: input.rateLimiter,
               });
               // 上面的 call 调用，ts 丢失了类型推断
-              const buffer = res.data.content as unknown as Buffer;
+              const buffer = await readAllDataToBuffer(res.data.content);
+              // 开启 crc 的时候再计算
+              if (this.opts.enableCRC) {
+                crcInstance.update(buffer);
+              }
               await fsp.write(
                 tempFileFd,
                 buffer,
@@ -595,6 +619,17 @@ export async function downloadFile(
         })
       );
 
+      // 计算最终的 crc 并比对
+      const serverCRC64 = headObjectRes.data['x-tos-hash-crc64ecma'];
+
+      if (this.opts.enableCRC && serverCRC64) {
+        crcInstance.final();
+        if (!crcInstance.equalsTo(serverCRC64)) {
+          throw new TosClientError(
+            `expect crc64 ${serverCRC64}, actual crc64 ${crcInstance.toString()}`
+          );
+        }
+      }
       if (firstErr) {
         throw firstErr;
       }

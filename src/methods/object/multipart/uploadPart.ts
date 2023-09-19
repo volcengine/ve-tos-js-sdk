@@ -5,9 +5,10 @@ import fs, { Stats } from 'fs';
 import * as fsp from '../../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
 import { Readable } from 'stream';
-import { safeAwait } from '../../../utils';
+import { fillRequestHeaders, safeAwait } from '../../../utils';
 import { retryNamespace } from '../../../axios';
 import { hashMd5 } from '../../../universal/crypto';
+import { IRateLimiter } from '../../../rate-limiter';
 
 export interface UploadPartInput {
   body: Blob | Buffer | NodeJS.ReadableStream;
@@ -24,6 +25,15 @@ export interface UploadPartInput {
    * `percent` will start from 0 again rather than from the previous value.
    */
   progress?: (percent: number) => void;
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
+  /**
+   * only works for nodejs environment
+   */
+  rateLimiter?: IRateLimiter;
   headers?: {
     [key: string]: string | undefined;
     'content-length'?: string;
@@ -49,6 +59,7 @@ export interface UploadPartOutput {
 
 export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
   const { uploadId, partNumber, body, enableContentMD5 = false } = input;
+  fillRequestHeaders(input, ['trafficLimit']);
   const headers = input.headers || {};
   const size = getSize(body);
   if (size && headers['content-length'] == null) {
@@ -130,6 +141,7 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
     beforeRetry: input.beforeRetry,
     makeRetryStream: input.makeRetryStream,
     enableCRC: this.opts.enableCRC,
+    rateLimiter: input.rateLimiter,
   });
 
   triggerDataTransfer(DataTransferType.Started);

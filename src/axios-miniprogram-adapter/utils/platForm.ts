@@ -17,13 +17,13 @@ interface MpRequestConfig extends WechatMiniprogram.RequestOption {
 }
 
 const enum EnumPlatForm {
-  微信 = 'wechat',
-  支付宝 = 'alipay',
-  百度 = 'baidu',
-  钉钉 = 'dd',
+  weixin = 'wexin',
+  zhifubao = 'alipay',
+  baidu = 'baidu',
+  dingding = 'dd',
 }
 
-let platFormName: EnumPlatForm = EnumPlatForm.微信;
+let platFormName: EnumPlatForm = EnumPlatForm.weixin;
 
 /**
  * 获取各个平台的请求函数
@@ -33,13 +33,13 @@ export function getRequest(): (
 ) => WechatMiniprogram.RequestTask {
   switch (true) {
     case typeof wx === 'object':
-      platFormName = EnumPlatForm.微信;
+      platFormName = EnumPlatForm.weixin;
       return wx.request.bind(wx);
     case typeof swan === 'object':
-      platFormName = EnumPlatForm.百度;
+      platFormName = EnumPlatForm.baidu;
       return swan.request.bind(swan);
     case typeof dd === 'object':
-      platFormName = EnumPlatForm.钉钉;
+      platFormName = EnumPlatForm.dingding;
       // https://open.dingtalk.com/document/orgapp-client/send-network-requests
       return dd.httpRequest.bind(dd);
     case typeof my === 'object':
@@ -50,7 +50,7 @@ export function getRequest(): (
        * my.request的请求头默认值为{'content-type': 'application/json'}。
        * 还有个 dd.httpRequest
        */
-      platFormName = EnumPlatForm.支付宝;
+      platFormName = EnumPlatForm.zhifubao;
       return (my.request || my.httpRequest).bind(my);
     default:
       return wx.request.bind(wx);
@@ -97,7 +97,7 @@ export function transformResponse(
  */
 export function transformError(error: any, reject: any, config: any) {
   switch (platFormName) {
-    case EnumPlatForm.微信:
+    case EnumPlatForm.weixin:
       if (error.errMsg.indexOf('request:fail abort') !== -1) {
         // Handle request cancellation (as opposed to a manual cancellation)
         reject(createError('Request aborted', config, 'ECONNABORTED', ''));
@@ -116,8 +116,8 @@ export function transformError(error: any, reject: any, config: any) {
         reject(createError('Network Error', config, null, ''));
       }
       break;
-    case EnumPlatForm.钉钉:
-    case EnumPlatForm.支付宝:
+    case EnumPlatForm.dingding:
+    case EnumPlatForm.zhifubao:
       // https://docs.alipay.com/mini/api/network
       if ([14, 19].includes(error.error)) {
         reject(
@@ -139,7 +139,7 @@ export function transformError(error: any, reject: any, config: any) {
         reject(createError('Network Error', config, null, '', error));
       }
       break;
-    case EnumPlatForm.百度:
+    case EnumPlatForm.baidu:
       // TODO error.errCode
       reject(createError('Network Error', config, null, ''));
       break;
@@ -151,11 +151,11 @@ export function transformError(error: any, reject: any, config: any) {
  * @param config
  */
 export function transformConfig(config: MpRequestConfig): any {
-  if ([EnumPlatForm.支付宝, EnumPlatForm.钉钉].includes(platFormName)) {
+  if ([EnumPlatForm.zhifubao, EnumPlatForm.dingding].includes(platFormName)) {
     config.headers = config.header;
     delete config.header;
     if (
-      EnumPlatForm.钉钉 === platFormName &&
+      EnumPlatForm.dingding === platFormName &&
       config.method !== 'GET' &&
       config.headers?.['Content-Type'] === 'application/json' &&
       Object.prototype.toString.call(config.data) === '[object Object]'

@@ -34,6 +34,11 @@ export interface CopyObjectInput {
   ssecKey?: string;
   ssecKeyMD5?: string;
   serverSideEncryption?: string;
+  /**
+   * unit: bit/s
+   * server side traffic limit
+   **/
+  trafficLimit?: number;
 
   acl?: Acl;
   grantFullControl?: string;
@@ -110,6 +115,7 @@ export async function copyObject(
     'meta',
     'websiteRedirectLocation',
     'storageClass',
+    'trafficLimit',
   ]);
   if (input.srcBucket && input.srcKey) {
     let copySource = getCopySourceHeaderValue(input.srcBucket, input.srcKey);

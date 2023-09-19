@@ -7,7 +7,7 @@ import {
 } from '../utils/options';
 
 describe('nodejs listObjectsType2', () => {
-  beforeAll(async done => {
+  beforeAll(async (done) => {
     const client = new TOS(tosOptions);
     // clear all bucket
     const { data: buckets } = await client.listBuckets();
@@ -36,22 +36,41 @@ describe('nodejs listObjectsType2', () => {
       });
 
       const key = 'listObjectsType2-test';
-      await client.putObject({
+      for (let index = 0; index < 50; index++) {
+        await client.putObject({
+          bucket: testBucketName,
+          key: key + index,
+          body: Buffer.from('hello world'),
+        });
+      }
+
+      const resultOnce = await client.listObjectsType2({
         bucket: testBucketName,
-        key: key,
-        body: Buffer.from('hello world'),
+        prefix: key,
+        listOnlyOnce: true,
+        maxKeys: 100,
       });
+      console.log(
+        '%c [ resultOnce ]-76',
+        'font-size:13px; background:pink; color:#bf2c9f;',
+        resultOnce.data.KeyCount
+      );
+      expect(resultOnce.data.KeyCount).toBe(50);
 
       const result = await client.listObjectsType2({
         bucket: testBucketName,
         prefix: key,
+        listOnlyOnce: false,
+        maxKeys: 10,
       });
-
-      expect(result.data.Contents?.[0].Key).toBe(key);
-      expect(result.data.Contents?.[0].Size).toBe(11);
-      expect(result.data.Contents?.[0].HashCrc64ecma).toBe(
-        '5981764153023615706'
+      console.log(
+        '%c [ result.data ]-83',
+        'font-size:13px; background:pink; color:#bf2c9f;',
+        result.data
       );
+
+      expect(result.data.KeyCount).toBe(10);
+      expect(result.data.Contents.length).toBe(10);
     },
     NEVER_TIMEOUT
   );
