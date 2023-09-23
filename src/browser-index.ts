@@ -355,19 +355,19 @@ if (
   process.env.BUILD_FORMAT === 'umd'
 ) {
   // @ts-ignore
-  if (window) {
+  if (typeof window !== 'undefined') {
     // @ts-ignore
     window.TOS = TosClient;
     // @ts-ignore
     window.TosClient = TosClient;
   }
-  if (global) {
+  if (typeof global !== 'undefined') {
     // @ts-ignore
     global.TOS = TosClient;
     // @ts-ignore
     global.TosClient = TosClient;
   }
-  if (globalThis) {
+  if (typeof globalThis !== 'undefined') {
     // @ts-ignore
     globalThis.TOS = TosClient;
     // @ts-ignore
