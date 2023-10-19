@@ -39,6 +39,7 @@ export interface TOSConstructorOptions {
   endpoint?: string;
   /**
    * default value: true
+   * when using proxyHost&proxyPort, it needs to be set to false
    */
   secure?: boolean;
   region: string;
@@ -56,6 +57,7 @@ export interface TOSConstructorOptions {
    * proxy to general http proxy server, this feature doesn't work in browser environment.
    * only support http proxy server.
    * proxyHost and proxyPort are required if the proxy function works.
+   * HINT: need set `secure` field false
    */
   proxyHost?: string;
   proxyPort?: number;
@@ -94,7 +96,7 @@ export interface TOSConstructorOptions {
 
   /**
    * unit: ms
-   * default value: 60s
+   * default value: 30s
    */
   idleConnectionTime?: number;
 
@@ -252,7 +254,7 @@ export class TOSBase {
       requestTimeout: _default(_opts.requestTimeout, 120_000),
       connectionTimeout: _default(_opts.connectionTimeout, 10_000),
       maxConnections: _default(_opts.maxConnections, 1024),
-      idleConnectionTime: _default(_opts.idleConnectionTime, 60_000),
+      idleConnectionTime: _default(_opts.idleConnectionTime, 30_000),
       maxRetryCount: _default(_opts.maxRetryCount, 3),
       enableCRC: _opts.enableCRC ?? false,
       requestAdapter: getAdapter(),
