@@ -1,6 +1,6 @@
 import url from 'url';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import cloneDeep from 'lodash/cloneDeep';
+import cloneDeep from 'lodash.clonedeep';
 
 interface CreateTosProxyMiddlewareOpts {
   // destHost equals to /etc/hosts configuration

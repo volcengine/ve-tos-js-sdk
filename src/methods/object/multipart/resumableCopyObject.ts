@@ -22,7 +22,7 @@ import { uploadPartCopy } from './uploadPartCopy';
 import { Headers } from '../../../interface';
 import copyObject from '../copyObject';
 import { getCopySourceHeaderValue } from '../utils';
-import cloneDeep from 'lodash/cloneDeep';
+import cloneDeep from 'lodash.clonedeep';
 
 export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
   srcBucket: string;
