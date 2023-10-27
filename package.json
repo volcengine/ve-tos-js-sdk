@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.6.5",
+  "version": "2.6.6",
   "license": "MIT",
   "files": [
     "browser",
@@ -89,7 +89,7 @@
     "@types/debug": "^4.1.7",
     "axios": "^0.21.1",
     "axios-adapter-uniapp": "^0.1.4",
-    "crypto-js": "^4.1.1",
+    "crypto-js": "^4.2.0",
     "debug": "^4.3.4",
     "http-proxy-middleware": "^2.0.1",
     "lodash": "^4.17.21",
