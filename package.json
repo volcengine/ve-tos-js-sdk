@@ -1,10 +1,11 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "license": "MIT",
   "files": [
     "browser",
-    "dist"
+    "dist",
+    "miniprogram_dist"
   ],
   "repository": {
     "type": "git",
@@ -64,6 +65,7 @@
     "dist/index.js": "./browser/index.js",
     "dist/tos.esm.js": "./browser/tos.esm.js"
   },
+  "miniprogram": "miniprogram_dist",
   "author": "chengang.07@bytedance.com",
   "devDependencies": {
     "@types/debug": "^4.1.7",
