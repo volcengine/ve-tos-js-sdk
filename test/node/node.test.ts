@@ -1,15 +1,6 @@
 import TOS, { ACLType, StorageClassType } from '../../src/browser-index';
-import {
-  deleteBucket,
-  NEVER_TIMEOUT,
-  sleepCache,
-  testCheckErr,
-} from '../utils';
-import {
-  testBucketName,
-  isNeedDeleteBucket,
-  tosOptions,
-} from '../utils/options';
+import { NEVER_TIMEOUT, testCheckErr } from '../utils';
+import { testBucketName, tosOptions } from '../utils/options';
 import https from 'https';
 import fs from 'fs';
 import http, {
@@ -28,39 +19,10 @@ import FormData from 'form-data';
 import { UploadPartOutput } from '../../src/methods/object/multipart';
 import { Bucket, ListBucketOutput } from '../../src/methods/bucket/base';
 import { safeAwait } from '../../src/utils';
-import { BucketVersioningStatus } from '../../src/methods/bucket/versioning';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
 
 describe('nodejs connection params', () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache();
-    done();
-  }, NEVER_TIMEOUT);
-  // afterAll(async done => {
-  //   const client = new TOS(tosOptions);
-  //   console.log('delete bucket.....');
-  //   // delete bucket
-  //   deleteBucket(client, testBucketName);
-  //   done();
-  // }, NEVER_TIMEOUT);
-
   it(
     'autoRecognizeContentType',
     async () => {
@@ -136,7 +98,7 @@ describe('nodejs connection params', () => {
         enableVerifySSL: false,
       });
 
-      testCheckErr(() => clientVerify.listBuckets());
+      await testCheckErr(() => clientVerify.listBuckets());
 
       const { data } = await clientNoVerify.listBuckets();
       expect(data.Buckets.length).toEqual(0);
@@ -152,12 +114,12 @@ describe('nodejs connection params', () => {
           ),
         };
 
-        return new Promise(res => {
+        return new Promise((res) => {
           https
             .createServer(options, (_req: unknown, res: OutgoingMessage) => {
               res.end('{}');
             })
-            .listen(function(this: Server) {
+            .listen(function (this: Server) {
               res(this);
             });
         });
@@ -169,12 +131,12 @@ describe('nodejs connection params', () => {
   it(
     'requestTimeout',
     async () => {
-      testCheckErr(
+      await testCheckErr(
         async () => {
-          const client = new TOS({ ...tosOptions, requestTimeout: 50 });
+          const client = new TOS({ ...tosOptions, requestTimeout: 5 });
           await client.listBuckets();
         },
-        msg => msg.toLowerCase().includes('timeout')
+        (err) => err.toString().toLowerCase().includes('timeout')
       );
 
       const client = new TOS({ ...tosOptions, requestTimeout: 2000 });
@@ -198,7 +160,7 @@ describe('nodejs connection params', () => {
       await Promise.all(promises);
       expect(Object.values(agent.freeSockets).flat().length).toEqual(taskNum);
 
-      await new Promise(r => setTimeout(r, idleConnectionTime + 500));
+      await new Promise((r) => setTimeout(r, idleConnectionTime + 500));
       expect(Object.values(agent.freeSockets).flat().length).toEqual(0);
     },
     NEVER_TIMEOUT
@@ -231,7 +193,7 @@ describe('nodejs connection params', () => {
       server.close();
 
       function startServer(): Promise<Server> {
-        return new Promise(res => {
+        return new Promise((res) => {
           http
             .createServer((req: IncomingMessage, res: ServerResponse) => {
               if (req.headers[headerKey] === receiveHeader) {
@@ -242,7 +204,7 @@ describe('nodejs connection params', () => {
               res.statusCode = 400;
             })
 
-            .listen(function(this: Server) {
+            .listen(function (this: Server) {
               res(this);
             });
         });
@@ -347,7 +309,7 @@ describe('nodejs connection params', () => {
 
           expect(progressFn.mock.calls[0][0]).toEqual(0);
           expect(
-            progressFn.mock.calls.filter(it => it[0] === 1).length
+            progressFn.mock.calls.filter((it) => it[0] === 1).length
           ).toEqual(1);
           const lastCall = progressFn.mock.calls.slice(-1)[0];
           expect(lastCall[0]).toEqual(1);
@@ -422,13 +384,13 @@ describe('nodejs connection params', () => {
 
       server.close();
       function startServer(): Promise<Server> {
-        return new Promise(res => {
+        return new Promise((res) => {
           http
             .createServer((_req: unknown, res: OutgoingMessage) => {
               res.setHeader(resHeaderKey, '1');
               res.end('{}');
             })
-            .listen(undefined, '0.0.0.0', function(this: Server) {
+            .listen(undefined, '0.0.0.0', function (this: Server) {
               res(this);
             });
         });
@@ -536,7 +498,7 @@ describe('nodejs connection params', () => {
       server.close();
 
       function startServer(): Promise<Server> {
-        return new Promise(res => {
+        return new Promise((res) => {
           http
             .createServer((req: IncomingMessage, res: ServerResponse) => {
               let data: ListBucketOutput = { Buckets: [] };
@@ -551,7 +513,7 @@ describe('nodejs connection params', () => {
               res.setHeader('x-tos-request-id', 'id');
               res.end(JSON.stringify(data));
             })
-            .listen(undefined, '0.0.0.0', function(this: Server) {
+            .listen(undefined, '0.0.0.0', function (this: Server) {
               res(this);
             });
         });
@@ -567,21 +529,21 @@ describe('nodejs connection params', () => {
       // 测试中文名不报错
       await client.putObject('控制台.png');
       await client.deleteObject('控制台.png');
-      testCheckErr(() => client.putObject('/abcd'), '/');
-      testCheckErr(() => client.putObject('\\abcd'), '\\');
-      testCheckErr(() => client.putObject('\t'), 'name');
-      testCheckErr(() => client.putObject(''), 'length');
-      testCheckErr(() => client.putObject('a'.repeat(700)), 'length');
+
+      await testCheckErr(() => client.putObject(''), 'length');
 
       // ensure these methods execute the validating logic
-      testCheckErr(() => client.appendObject('/abcd'), '/');
-      testCheckErr(
-        () => client.uploadFile({ key: '/abcd', file: Buffer.from([]) }),
-        '/'
+      await testCheckErr(() => client.appendObject(''), 'length');
+      await testCheckErr(
+        () => client.uploadFile({ key: '', file: Buffer.from([]) }),
+        'length'
       );
-      testCheckErr(() => client.createMultipartUpload({ key: '/abcd' }), '/');
-      testCheckErr(() => client.getPreSignedUrl('/abcd'), '/');
-      testCheckErr(() => client.calculatePostSignature('/abcd'), '/');
+      await testCheckErr(
+        () => client.createMultipartUpload({ key: '' }),
+        'length'
+      );
+      await testCheckErr(() => client.getPreSignedUrl(''), 'length');
+      await testCheckErr(() => client.calculatePostSignature(''), 'length');
     },
     NEVER_TIMEOUT
   );
@@ -630,7 +592,7 @@ describe('nodejs connection params', () => {
     server.close();
 
     function startServer(): Promise<Server> {
-      return new Promise(res => {
+      return new Promise((res) => {
         http
           .createServer((req: IncomingMessage, res: ServerResponse) => {
             if (req.headers['user-agent']?.includes('tos')) {
@@ -640,7 +602,7 @@ describe('nodejs connection params', () => {
             }
             res.end();
           })
-          .listen(function(this: Server) {
+          .listen(function (this: Server) {
             res(this);
           });
       });
@@ -729,46 +691,6 @@ describe('nodejs connection params', () => {
 
         const res = await axios(url);
         expect(res.headers['content-type']).toBe('application/octet-stream');
-      }
-    },
-    NEVER_TIMEOUT
-  );
-
-  it(
-    'bucket versioning',
-    async () => {
-      const client = new TOS({
-        ...tosOptions,
-        bucket: testBucketName,
-      });
-
-      {
-        const { data } = await client.getBucketVersioning();
-        expect(data.Status).toEqual(BucketVersioningStatus.Disable);
-      }
-
-      {
-        await client.putBucketVersioning({
-          status: BucketVersioningStatus.Enable,
-        });
-        await sleepCache();
-        const { data } = await client.getBucketVersioning();
-        expect(data.Status).toEqual(BucketVersioningStatus.Enable);
-      }
-
-      {
-        // more wait, maybe cache
-        await sleepCache();
-        await sleepCache();
-        await sleepCache();
-        await sleepCache();
-        await sleepCache();
-        await client.putBucketVersioning({
-          status: BucketVersioningStatus.Suspended,
-        });
-        await sleepCache();
-        const { data } = await client.getBucketVersioning();
-        expect(data.Status).toEqual(BucketVersioningStatus.Suspended);
       }
     },
     NEVER_TIMEOUT

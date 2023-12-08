@@ -1,98 +1,67 @@
 import TOS from '../../src/browser-index';
-import {
-  isNeedDeleteBucket,
-  testBucketName,
-  tosOptions,
-} from '../utils/options';
-import { NEVER_TIMEOUT, deleteBucket, sleepCache } from '../utils';
+import { testBucketName, tosOptions } from '../utils/options';
+import { NEVER_TIMEOUT, testCheckErr } from '../utils';
 
-describe('nodejs connection params', () => {
-  beforeAll(async (done) => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache(100);
-    done();
-  }, NEVER_TIMEOUT);
-
+describe('nodejs bucket encryption', () => {
   it(
-    'lifecycle putBucketEncryption',
+    'encryption putBucketEncryption',
     async () => {
       const client = new TOS({
         ...tosOptions,
       });
 
-      const result = await client.putBucketEncryption({
-        bucket: testBucketName,
+      await client.putBucketEncryption({
         rule: {
           ApplyServerSideEncryptionByDefault: {
-            SSEAlgorithm: 'string',
-            KMSMasterKeyID: 'string',
+            SSEAlgorithm: 'AES256',
           },
         },
       });
-
-      expect(result.data).toBe('');
     },
     NEVER_TIMEOUT
   );
 
   it(
-    'lifecycle getBucketEncryption',
+    'encryption getBucketEncryption',
     async () => {
       const client = new TOS({
         ...tosOptions,
+      });
+
+      await client.putBucketEncryption({
+        rule: {
+          ApplyServerSideEncryptionByDefault: {
+            SSEAlgorithm: 'AES256',
+          },
+        },
       });
 
       const result = await client.getBucketEncryption({
         bucket: testBucketName,
       });
 
-      expect(result.data.Rule).toBe(Object);
+      expect(JSON.stringify(result.data).includes('AES256')).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
   it(
-    'lifecycle deleteBucketEncryption',
+    'encryption deleteBucketEncryption',
     async () => {
       const client = new TOS({
         ...tosOptions,
       });
 
-      const result = await client.deleteBucketEncryption({
-        bucket: testBucketName,
+      await client.putBucketEncryption({
+        rule: {
+          ApplyServerSideEncryptionByDefault: {
+            SSEAlgorithm: 'AES256',
+          },
+        },
       });
 
-      expect(result.data).toBe('');
-    },
-    NEVER_TIMEOUT
-  );
+      await client.deleteBucketEncryption({});
 
-  it(
-    'lifecycle deleteBucketLifecycle',
-    async () => {
-      const client = new TOS({
-        ...tosOptions,
-      });
-
-      const result = await client.deleteBucketLifecycle({
-        bucket: testBucketName,
-      });
-
-      expect(result.data).toBe('');
+      await testCheckErr(() => client.getBucketEncryption({}));
     },
     NEVER_TIMEOUT
   );

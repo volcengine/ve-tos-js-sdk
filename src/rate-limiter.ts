@@ -88,7 +88,6 @@ function createRateLimiterTransform(rateLimiter: IRateLimiter) {
         this.push(chunk);
         callback();
       } catch (error: any) {
-        console.log('%c [ Error ]-122', Error);
         callback(error);
       }
     },

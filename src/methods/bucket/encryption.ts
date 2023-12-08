@@ -6,8 +6,9 @@ export interface EncryptionData {
 }
 export interface EncryptionDataRule {
   ApplyServerSideEncryptionByDefault: {
+    // SSEAlgorithm support 'kms' and 'AES256'
     SSEAlgorithm: string;
-    KMSMasterKeyID: string;
+    KMSMasterKeyID?: string;
   };
 }
 /**
@@ -15,7 +16,7 @@ export interface EncryptionDataRule {
  */
 export async function putBucketEncryption(
   this: TOSBase,
-  input: { rule: EncryptionDataRule } & { bucket: string }
+  input: { rule: EncryptionDataRule } & { bucket?: string }
 ) {
   const { bucket, rule } = input;
 
@@ -42,7 +43,7 @@ export async function putBucketEncryption(
  */
 export async function getBucketEncryption(
   this: TOSBase,
-  input: { bucket: string }
+  input: { bucket?: string }
 ) {
   const { bucket } = input;
 
@@ -59,7 +60,7 @@ export async function getBucketEncryption(
  */
 export async function deleteBucketEncryption(
   this: TOSBase,
-  input: { bucket: string }
+  input: { bucket?: string }
 ) {
   const { bucket } = input;
 

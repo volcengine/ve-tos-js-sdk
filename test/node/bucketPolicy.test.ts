@@ -8,34 +8,6 @@ import {
 } from '../utils/options';
 
 describe('bucketPolicy in node.js environment', () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache();
-    done();
-  }, NEVER_TIMEOUT);
-  // afterAll(async done => {
-  //   const client = new TOS(tosOptions);
-  //   console.log('delete bucket.....');
-  //   // delete bucket
-  //   deleteBucket(client, testBucketName);
-  //   done();
-  // }, NEVER_TIMEOUT);
-
   it(
     'test policy',
     async () => {

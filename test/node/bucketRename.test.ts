@@ -1,23 +1,19 @@
 import TOS from '../../src/browser-index';
-import { NEVER_TIMEOUT, sleepCache } from '../utils';
-import { testBucketName, tosOptions } from '../utils/options';
-import { clearAllTestBucket } from './utils';
+import { NEVER_TIMEOUT } from '../utils';
+import {
+  tosOptions as commonTosOptions,
+  testBucketRenameBucketName,
+} from '../utils/options';
 const CommonTestCasePrefix = 'Rename';
 
+// The rename configuration conflicts with multi-version configuration
+// 需要一个重未开过多版本的 bucket 来测试
+const tosOptions = {
+  ...commonTosOptions,
+  bucket: testBucketRenameBucketName,
+};
+
 describe(`bucket ${CommonTestCasePrefix} methods`, () => {
-  beforeAll(async (done) => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    await clearAllTestBucket(client);
-
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache(100);
-    done();
-  }, NEVER_TIMEOUT);
-
   it(
     `${CommonTestCasePrefix} getBucketRename empty case`,
     async () => {
@@ -25,9 +21,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
-      const result = await client.getBucketRename({
-        bucket: testBucketName,
-      });
+      const result = await client.getBucketRename({});
 
       expect(result.data.RenameEnable).toBe(false);
     },
@@ -41,7 +35,6 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
       });
 
       const result = await client.putBucketRename({
-        bucket: testBucketName,
         renameEnable: true,
       });
 
@@ -57,9 +50,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
-      const result = await client.getBucketRename({
-        bucket: testBucketName,
-      });
+      const result = await client.getBucketRename({});
 
       expect(result.data.RenameEnable).toBeTruthy();
     },
@@ -73,15 +64,11 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
-      const result = await client.deleteBucketRename({
-        bucket: testBucketName,
-      });
+      const result = await client.deleteBucketRename({});
 
       expect(result.data).toBe('');
 
-      const getResult = await client.getBucketRename({
-        bucket: testBucketName,
-      });
+      const getResult = await client.getBucketRename({});
 
       expect(getResult.data.RenameEnable).toBe(false);
     },

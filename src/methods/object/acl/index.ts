@@ -1,4 +1,5 @@
 import { Acl, AclInterface } from '../../../interface';
+import { fillRequestHeaders, normalizeHeadersKey } from '../../../utils';
 import TOSBase from '../../base';
 
 export interface GetObjectAclInput {
@@ -7,9 +8,11 @@ export interface GetObjectAclInput {
   versionId?: string;
 }
 
-export type GetObjectAclOutput = AclInterface & {
+export type ObjectAclBody = AclInterface & {
   BucketOwnerEntrusted?: boolean;
 };
+
+export type GetObjectAclOutput = ObjectAclBody;
 
 export async function getObjectAcl(
   this: TOSBase,
@@ -21,29 +24,34 @@ export async function getObjectAcl(
     query.versionId = normalizedInput.versionId;
   }
 
-  return this.fetchObject<GetObjectAclOutput>(input, 'GET', query, {});
+  return this._fetchObject<GetObjectAclOutput>(input, 'GET', query, {});
 }
 
 export interface PutObjectAclInput {
   bucket?: string;
   key: string;
   versionId?: string;
-  acl: 'default' | Acl;
+  acl?: Acl;
+  aclBody?: ObjectAclBody;
   headers?: {
     [key: string]: string | undefined;
-    'x-tos-acl'?: 'default' | Acl;
+    'x-tos-acl'?: Acl;
   };
 }
 
 export async function putObjectAcl(this: TOSBase, input: PutObjectAclInput) {
+  const headers = (input.headers = normalizeHeadersKey(input.headers));
   const query: Record<string, any> = { acl: '' };
   if (input.versionId) {
     query.versionId = input.versionId;
   }
-  const headers = input.headers || {};
-  if (!headers['x-tos-acl']) {
-    headers['x-tos-acl'] = input.acl;
-  }
+  fillRequestHeaders(input, ['acl']);
 
-  return this.fetchObject<undefined>(input, 'PUT', query, headers);
+  return this._fetchObject<undefined>(
+    input,
+    'PUT',
+    query,
+    headers,
+    input.aclBody
+  );
 }

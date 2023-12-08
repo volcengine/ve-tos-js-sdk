@@ -1,21 +1,16 @@
 import axios from 'axios';
 import TOS from '../../src/browser-index';
+import { NEVER_TIMEOUT, sleepCache, testCheckErr } from '../utils';
 import {
-  deleteBucket,
-  // deleteBucket,
-  NEVER_TIMEOUT,
-  sleepCache,
-  testCheckErr,
-} from '../utils';
-import {
-  isNeedDeleteBucket,
   specialCharKey,
-  testBucketName as _testBucketName,
-  tosOptions as _tosOptions,
+  tosOptions as commonTosOptions,
+  testPreSignedPolicyBucketName,
 } from '../utils/options';
 
-const testBucketName = `${_testBucketName}-presignedpolicyurl`;
-const tosOptions = { ..._tosOptions, bucket: testBucketName };
+const tosOptions = {
+  ...commonTosOptions,
+  bucket: testPreSignedPolicyBucketName,
+};
 
 const allTestObjectKeys = [
   '1',
@@ -31,25 +26,8 @@ const allTestObjectKeys = [
   `${specialCharKey}/2`,
 ];
 describe('preSignedPolicyURL', () => {
-  beforeAll(async done => {
+  beforeAll(async (done) => {
     const client = new TOS(tosOptions);
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache();
-
     for (const key of allTestObjectKeys) {
       await client.putObject(key);
     }
@@ -92,8 +70,10 @@ describe('preSignedPolicyURL', () => {
           },
         ],
       });
-      testCheckErr(() => axios(preSignedPolicyURLRet.getSignedURLForList()));
-      testCheckErr(() =>
+      await testCheckErr(() =>
+        axios(preSignedPolicyURLRet.getSignedURLForList())
+      );
+      await testCheckErr(() =>
         axios(preSignedPolicyURLRet.getSignedURLForList({ prefix: '1' }))
       );
       const { headers } = await axios(
@@ -122,15 +102,17 @@ describe('preSignedPolicyURL', () => {
         preSignedPolicyURLRet.getSignedURLForList({ prefix: startOne })
       );
       expect(data.Contents.length).toEqual(
-        allTestObjectKeys.filter(it => it.startsWith(startOne)).length
+        allTestObjectKeys.filter((it) => it.startsWith(startOne)).length
       );
       const { headers } = await axios(
         preSignedPolicyURLRet.getSignedURLForGetOrHead('2/2')
       );
       expect(+headers['content-length']).toEqual(0);
 
-      testCheckErr(() => axios(preSignedPolicyURLRet.getSignedURLForList()));
-      testCheckErr(() =>
+      await testCheckErr(() =>
+        axios(preSignedPolicyURLRet.getSignedURLForList())
+      );
+      await testCheckErr(() =>
         axios(preSignedPolicyURLRet.getSignedURLForList({ prefix: '22/' }))
       );
     },
@@ -166,10 +148,10 @@ describe('preSignedPolicyURL', () => {
       });
       await axios(preSignedPolicyURLRet.getSignedURLForList({ prefix: '2/' }));
       await axios(preSignedPolicyURLRet.getSignedURLForList({ prefix: '22/' }));
-      testCheckErr(() =>
+      await testCheckErr(() =>
         axios(preSignedPolicyURLRet.getSignedURLForList({ prefix: '2' }))
       );
-      testCheckErr(() =>
+      await testCheckErr(() =>
         axios(preSignedPolicyURLRet.getSignedURLForList({ prefix: '3/' }))
       );
 
@@ -183,7 +165,7 @@ describe('preSignedPolicyURL', () => {
       await testOneObj('2');
       await testOneObj('2/1');
       await testOneObj('22/1');
-      testCheckErr(() =>
+      await testCheckErr(() =>
         axios(preSignedPolicyURLRet.getSignedURLForGetOrHead('3'))
       );
     },
@@ -193,7 +175,7 @@ describe('preSignedPolicyURL', () => {
   it(
     'invalid params',
     async () => {
-      testCheckErr(() => {
+      await testCheckErr(() => {
         const client = new TOS({ ...tosOptions, bucket: undefined });
 
         client.preSignedPolicyURL({
@@ -207,7 +189,7 @@ describe('preSignedPolicyURL', () => {
       }, 'bucket');
 
       const client = new TOS(tosOptions);
-      testCheckErr(
+      await testCheckErr(
         () =>
           client.preSignedPolicyURL({
             conditions: [],
@@ -215,7 +197,7 @@ describe('preSignedPolicyURL', () => {
         'conditions'
       );
 
-      testCheckErr(
+      await testCheckErr(
         () =>
           client.preSignedPolicyURL({
             conditions: [
@@ -228,7 +210,7 @@ describe('preSignedPolicyURL', () => {
         'key'
       );
 
-      testCheckErr(
+      await testCheckErr(
         () =>
           client.preSignedPolicyURL({
             conditions: [

@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "license": "MIT",
   "files": [
     "browser",
@@ -21,9 +21,8 @@
     "build:browser": "tsdx build --format cjs,esm,umd --name TOS",
     "build:proxy": "tsc --esModuleInterop --declaration --outDir ./out ./src/proxy.ts",
     "test": "yarn build && yarn test:node && cp ./coverage/coverage-final.json ./coverage/coverage-node-final.json && yarn test:browser && cp ./coverage/coverage-final.json ./coverage/coverage-browser-final.json && node ./scripts/mapCoverage.js",
-    "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --testEnvironment=node -i -t \"\"",
-    "test:node-case": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --testEnvironment=node -i -t ",
-    "test:browser": "NODE_ENV=development TARGET_ENVIRONMENT=browser tsdx test test/browser/** --coverage --testEnvironment=node -t \"\"",
+    "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --config=test/node/jest.config.js --testEnvironment=node --bail --forceExit --no-cache -t ",
+    "test:browser": "NODE_ENV=development TARGET_ENVIRONMENT=browser tsdx test test/browser/** --coverage --config=test/browser/jest.config.js --testEnvironment=node --bail --forceExit --no-cache -t ",
     "docs": "npx typedoc src/*",
     "deploy:docs": "./scripts/deployDocs.sh",
     "lint": "tsdx lint",

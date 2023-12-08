@@ -17,10 +17,12 @@ import {
   getObjectToFile,
 } from './methods/object/getObject';
 import putObject, { putObjectFromFile } from './methods/object/putObject';
+import { fetchObject, putFetchTask } from './methods/object/fetch';
 import { listObjectVersions, listObjects } from './methods/object/listObjects';
 import getPreSignedUrl from './methods/object/getPreSignedUrl';
 import headObject from './methods/object/headObject';
 import deleteObject from './methods/object/deleteObject';
+import renameObject from './methods/object/renameObject';
 import deleteMultiObjects from './methods/object/deleteMultiObjects';
 import copyObject from './methods/object/copyObject';
 import { getObjectAcl, putObjectAcl } from './methods/object/acl';
@@ -47,6 +49,12 @@ import {
   GranteeType,
   CannedType,
   HttpMethodType,
+  LifecycleStatusType,
+  StatusType,
+  RedirectType,
+  StorageClassInheritDirectiveType,
+  TierType,
+  VersioningStatusType,
 } from './TosExportEnum';
 import { CancelError } from './CancelError';
 import { resumableCopyObject } from './methods/object/multipart/resumableCopyObject';
@@ -172,6 +180,13 @@ class TosClient extends TOSBase {
   static GranteeType = GranteeType;
   static CannedType = CannedType;
   static HttpMethodType = HttpMethodType;
+  static LifecycleStatusType = LifecycleStatusType;
+  static StatusType = StatusType;
+  static RedirectType = RedirectType;
+  static StorageClassInheritDirectiveType = StorageClassInheritDirectiveType;
+  static TierType = TierType;
+  static VersioningStatusType = VersioningStatusType;
+  static createDefaultRateLimiter = createDefaultRateLimiter;
 
   // bucket base
   createBucket = createBucket;
@@ -280,6 +295,9 @@ class TosClient extends TOSBase {
   headObject = headObject;
   appendObject = appendObject;
   listObjects = listObjects;
+  renameObject = renameObject;
+  fetchObject = fetchObject;
+  putFetchTask = putFetchTask;
 
   listObjectsType2 = listObjectsType2;
 
@@ -346,6 +364,12 @@ export {
   GranteeType,
   CannedType,
   HttpMethodType,
+  LifecycleStatusType,
+  RedirectType,
+  StatusType,
+  StorageClassInheritDirectiveType,
+  TierType,
+  VersioningStatusType,
   createDefaultRateLimiter,
 };
 

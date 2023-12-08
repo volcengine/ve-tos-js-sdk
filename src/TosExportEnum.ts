@@ -16,6 +16,7 @@ export enum StorageClassType {
   StorageClassArchiveFr = 'ARCHIVE_FR',
   StorageClassColdArchive = 'COLD_ARCHIVE',
   StorageClassIntelligentTiering = 'INTELLIGENT_TIERING',
+  StorageClassArchive = 'ARCHIVE',
 }
 
 export enum MetadataDirectiveType {
@@ -57,4 +58,40 @@ export enum HttpMethodType {
 export enum StorageClassInheritDirectiveType {
   StorageClassInheritDirectiveDestinationBucket = 'DESTINATION_BUCKET',
   StorageClassInheritDirectiveSourceObject = 'SOURCE_OBJECT',
+}
+
+export enum LifecycleStatusType {
+  Enabled = 'Enabled',
+  Disabled = 'Disabled',
+}
+
+export enum RedirectType {
+  Mirror = 'Mirror',
+  Async = 'Async',
+}
+
+export enum StatusType {
+  Enabled = 'Enabled',
+  Disabled = 'Disabled',
+}
+
+export enum TierType {
+  TierStandard = 'Standard',
+  TierExpedited = 'Expedited',
+  TierBulk = 'Bulk',
+}
+
+export enum VersioningStatusType {
+  Enabled = 'Enabled',
+  Suspended = 'Suspended',
+  NotSet = '',
+
+  /**
+   * @deprecated use `Enabled` instead
+   */
+  Enable = 'Enabled',
+  /**
+   * @deprecated use `NotSet` instead
+   */
+  Disable = '',
 }

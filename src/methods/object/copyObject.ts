@@ -126,7 +126,7 @@ export async function copyObject(
   }
 
   const [err, res] = await safeAwait(
-    this.fetchObject<CopyObjectBody>(input, 'PUT', {}, headers)
+    this._fetchObject<CopyObjectBody>(input, 'PUT', {}, headers)
   );
 
   if (err || !res || !res.data.ETag) {

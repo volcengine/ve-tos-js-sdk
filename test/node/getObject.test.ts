@@ -16,24 +16,8 @@ import { AddressInfo } from 'net';
 const key = `getObject-${objectKey10M}`;
 
 describe('getObject data transfer in node.js environment', () => {
-  beforeAll(async done => {
+  beforeAll(async (done) => {
     const client = new TOS(tosOptions);
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache();
     await client.putObjectFromFile({ key, filePath: objectPath10M });
     done();
   }, NEVER_TIMEOUT);
@@ -111,7 +95,7 @@ describe('getObject data transfer in node.js environment', () => {
       server.close();
 
       function startServer(): Promise<Server> {
-        return new Promise(res => {
+        return new Promise((res) => {
           http
             .createServer(async (req: IncomingMessage, res: ServerResponse) => {
               const perLength = 10 * 1024;
@@ -132,12 +116,12 @@ describe('getObject data transfer in node.js environment', () => {
               }
 
               for (let i = 0; i < actualCnt; ++i) {
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise((r) => setTimeout(r, 100));
                 res.write(Buffer.alloc(perLength, 'a'));
               }
               res.end();
             })
-            .listen(undefined, '0.0.0.0', function(this: Server) {
+            .listen(undefined, '0.0.0.0', function (this: Server) {
               res(this);
             });
         });

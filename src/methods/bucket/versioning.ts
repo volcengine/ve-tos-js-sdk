@@ -1,17 +1,16 @@
+import { VersioningStatusType } from '../../TosExportEnum';
 import TOSBase from '../base';
 
-export enum BucketVersioningStatus {
-  Enable = 'Enabled',
-  Suspended = 'Suspended',
-  Disable = '',
-}
+// for backward compatibility
+export { VersioningStatusType as BucketVersioningStatus };
 
 export type PutBucketVersioningInputStatus =
-  | BucketVersioningStatus.Enable
-  | BucketVersioningStatus.Suspended;
+  | VersioningStatusType.Enable
+  | VersioningStatusType.Enabled
+  | VersioningStatusType.Suspended;
 
 export interface GetBucketVersioningOutput {
-  Status: BucketVersioningStatus;
+  Status: VersioningStatusType;
 }
 
 export interface PutBucketVersioningInput {

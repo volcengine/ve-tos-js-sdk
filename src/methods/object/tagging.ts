@@ -1,4 +1,4 @@
-import { normalizeHeadersKey } from '../../utils';
+import { makeArrayProp, normalizeHeadersKey } from '../../utils';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'tagging';
@@ -28,7 +28,7 @@ export async function putObjectTagging(
     versionId,
   });
 
-  return this.fetchObject<PutObjectTaggingOutput>(
+  return this._fetchObject<PutObjectTaggingOutput>(
     input,
     'PUT',
     { [CommonQueryKey]: '', ...headers },
@@ -57,13 +57,15 @@ export async function getObjectTagging(
   const headers = normalizeHeadersKey({
     versionId,
   });
-  return this.fetchObject<GetObjectTaggingOutput>(
+  const res = await this._fetchObject<GetObjectTaggingOutput>(
     input,
 
     'GET',
     { [CommonQueryKey]: '', ...headers },
     {}
   );
+  makeArrayProp(res.data.TagSet)('Tags');
+  return res;
 }
 
 export interface DeleteObjectTaggingInput {
@@ -83,7 +85,7 @@ export async function deleteObjectTagging(
     versionId,
   });
 
-  return this.fetchObject<DeleteObjectTaggingOutput>(
+  return this._fetchObject<DeleteObjectTaggingOutput>(
     input,
     'DELETE',
     { [CommonQueryKey]: '', ...headers },

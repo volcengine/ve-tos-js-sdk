@@ -69,7 +69,7 @@ export async function headObject(
     'ssecKeyMD5',
   ]);
 
-  return this.fetchObject<HeadObjectOutput>(
+  return this._fetchObject<HeadObjectOutput>(
     input,
     'HEAD',
     query,

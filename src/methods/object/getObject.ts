@@ -56,7 +56,7 @@ export async function getObject(this: TOSBase, input: GetObjectInput | string) {
   });
 
   // TODO: maybe need to return response's headers
-  return this.fetchObject<Buffer>(input, 'GET', query, headers, undefined, {
+  return this._fetchObject<Buffer>(input, 'GET', query, headers, undefined, {
     axiosOpts: { responseType: 'arraybuffer' },
   });
 }
@@ -99,6 +99,10 @@ export interface GetObjectV2Input {
   rangeEnd?: number;
 
   process?: string;
+  // need base64url encode
+  saveBucket?: string;
+  // need base64url encode
+  saveObject?: string;
 
   headers?: {
     [key: string]: string | undefined;
@@ -198,6 +202,15 @@ async function getObjectV2(
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
+  if (normalizedInput.process) {
+    query['x-tos-process'] = normalizedInput.process;
+  }
+  if (normalizedInput.saveBucket) {
+    query['x-tos-save-bucket'] = normalizedInput.saveBucket;
+  }
+  if (normalizedInput.saveObject) {
+    query['x-tos-save-object'] = normalizedInput.saveObject;
+  }
 
   fillRequestHeaders(normalizedInput, [
     'ifMatch',
@@ -210,16 +223,19 @@ async function getObjectV2(
     'ssecKeyMD5',
 
     'range',
-    'process',
     'trafficLimit',
   ]);
-  if (normalizedInput.rangeStart != null || normalizedInput.rangeEnd != null) {
+
+  if (
+    normalizedInput.range == null &&
+    (normalizedInput.rangeStart != null || normalizedInput.rangeEnd != null)
+  ) {
     const start =
       normalizedInput.rangeStart != null ? `${normalizedInput.rangeStart}` : '';
     const end =
       normalizedInput.rangeEnd != null ? `${normalizedInput.rangeEnd}` : '';
-    const copyRange = `bytes=${start}-${end}`;
-    headers['content-range'] = headers['content-range'] ?? copyRange;
+    const range = `bytes=${start}-${end}`;
+    headers['content-range'] = headers['content-range'] ?? range;
   }
 
   const response: Partial<Headers> = normalizedInput?.response || {};
@@ -237,7 +253,7 @@ async function getObjectV2(
     return 'arraybuffer';
   })();
 
-  const res = await this.fetchObject<any>(
+  const res = await this._fetchObject<any>(
     input,
     'GET',
     query,

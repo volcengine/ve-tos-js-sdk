@@ -1,4 +1,9 @@
-import { ACLType, StorageClassType } from './TosExportEnum';
+import {
+  ACLType,
+  CannedType,
+  PermissionType,
+  StorageClassType,
+} from './TosExportEnum';
 
 export type Headers = { [key: string]: string | undefined };
 
@@ -6,11 +11,12 @@ export interface AclInterface {
   Owner: { ID: string };
   Grants: {
     Grantee: {
-      ID: string;
+      ID?: string;
+      DisplayName?: string;
       Type: string;
-      Canned: string;
+      Canned?: CannedType;
     };
-    Permission: 'READ' | 'WRITE' | 'READ_ACP' | 'WRITE_ACP' | 'FULL_CONTROL';
+    Permission: PermissionType;
   }[];
 }
 

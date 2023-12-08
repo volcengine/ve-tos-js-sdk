@@ -7,28 +7,7 @@ import {
 } from '../utils/options';
 const CommonTestCasePrefix = 'mirror';
 
-describe('nodejs connection params', () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache(100);
-    done();
-  }, NEVER_TIMEOUT);
-
+describe('nodejs bucket MirrorBack', () => {
   it(
     `${CommonTestCasePrefix} getBucketMirrorBack empty case`,
     async () => {
@@ -103,6 +82,44 @@ describe('nodejs connection params', () => {
     async () => {
       const client = new TOS({
         ...tosOptions,
+      });
+
+      await client.putBucketMirrorBack({
+        bucket: testBucketName,
+        rules: [
+          {
+            ID: '1',
+            Condition: {
+              HttpCode: 404,
+              KeyPrefix: 'object-key-prefix',
+              KeySuffix: 'object-key-suffix',
+            },
+            Redirect: {
+              RedirectType: 'Mirror',
+              FetchSourceOnRedirect: false,
+              PublicSource: {
+                SourceEndpoint: {
+                  Primary: ['http://abc.123/'],
+                },
+              },
+              PassQuery: true,
+              FollowRedirect: true,
+              MirrorHeader: {
+                PassAll: true,
+                Pass: ['aaa', 'bbb'],
+                Remove: ['xxx', 'yyy'],
+              },
+              Transform: {
+                WithKeyPrefix: 'addtional-key-prefix',
+                WithKeySuffix: 'addtional-key-suffix',
+                ReplaceKeyPrefix: {
+                  KeyPrefix: 'key-prefix',
+                  ReplaceWith: 'replace-with',
+                },
+              },
+            },
+          },
+        ],
       });
 
       const result = await client.getBucketMirrorBack({

@@ -204,7 +204,11 @@ export class TOSBase {
 
     if (process.env.TARGET_ENVIRONMENT === 'node') {
       this.httpAgent = TosAgent({ tosOpts: { ...this.opts, isHttps: false } });
-      this.httpsAgent = TosAgent({ tosOpts: { ...this.opts, isHttps: true } });
+      // fix axios issue, it uses `httpsAgent` although http proxy is enabled.
+      const isProxy = !!this.opts.proxyHost;
+      this.httpsAgent = TosAgent({
+        tosOpts: { ...this.opts, isHttps: !isProxy },
+      });
     }
 
     this.userAgent = this.getUserAgent();
@@ -406,7 +410,10 @@ export class TOSBase {
         id2: res.headers['x-tos-id-2'],
       };
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.data?.RequestId) {
+      if (
+        axios.isAxiosError(err) &&
+        err.response?.headers?.['x-tos-request-id']
+      ) {
         // it's ServerError only if `RequestId` exists
         const response: AxiosResponse<TosServerErrorData> = err.response;
         log.TOS('TosServerError response: ', response);
@@ -438,7 +445,7 @@ export class TOSBase {
     });
   }
 
-  protected async fetchObject<Data>(
+  protected async _fetchObject<Data>(
     input: { bucket?: string; key: string } | string,
     method: Method,
     query: any,

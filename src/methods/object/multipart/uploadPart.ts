@@ -146,7 +146,7 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
 
   triggerDataTransfer(DataTransferType.Started);
   const [err, res] = await safeAwait(
-    this.fetchObject<UploadPartOutput>(
+    this._fetchObject<UploadPartOutput>(
       input,
       'PUT',
       { partNumber, uploadId },

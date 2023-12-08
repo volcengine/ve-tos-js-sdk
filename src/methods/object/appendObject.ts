@@ -57,7 +57,7 @@ export async function appendObject(
     }
   }
 
-  return await this.fetchObject<AppendObjectOutput>(
+  return await this._fetchObject<AppendObjectOutput>(
     input,
     'PUT',
     { append: '', offset: input.offset },
