@@ -1,23 +1,9 @@
 import TOS from '../../src/browser-index';
 import { NEVER_TIMEOUT, sleepCache } from '../utils';
 import { testBucketName, tosOptions } from '../utils/options';
-import { clearAllTestBucket } from './utils';
 const CommonTestCasePrefix = 'RealTimeLog';
 
 describe(`bucket ${CommonTestCasePrefix} methods`, () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    await clearAllTestBucket(client);
-
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache(100);
-    done();
-  }, NEVER_TIMEOUT);
-
   it(
     `${CommonTestCasePrefix} getBucketRealTimeLog empty case`,
     async () => {
@@ -65,6 +51,16 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
+      await client.putBucketRealTimeLog({
+        bucket: testBucketName,
+        realTimeLogConfiguration: {
+          Role: 'TOSLogArchiveTLSRole',
+          AccessLogConfiguration: {
+            UseServiceTopic: true,
+          },
+        },
+      });
+
       const result = await client.getBucketRealTimeLog({
         bucket: testBucketName,
       });
@@ -86,11 +82,24 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
-      const result = await client.deleteBucketRealTimeLog({
+      await client.putBucketRealTimeLog({
+        bucket: testBucketName,
+        realTimeLogConfiguration: {
+          Role: 'TOSLogArchiveTLSRole',
+          AccessLogConfiguration: {
+            UseServiceTopic: true,
+          },
+        },
+      });
+
+      await client.deleteBucketRealTimeLog({
         bucket: testBucketName,
       });
 
-      expect(result.data).toBe('');
+      const result = await client.getBucketRealTimeLog({
+        bucket: testBucketName,
+      });
+      expect(result.data.RealTimeLogConfiguration).toBe(undefined);
     },
     NEVER_TIMEOUT
   );

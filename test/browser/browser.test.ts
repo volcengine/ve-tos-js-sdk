@@ -13,49 +13,25 @@ import {
 import { ACLType } from '../../src/TosExportEnum';
 
 describe('TOS', () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache();
-    done();
-  }, NEVER_TIMEOUT);
-
-  afterAll(async done => {
-    const client = new TOS(tosOptions);
-    // delete bucket
-    deleteBucket(client, testBucketName);
-    done();
-  }, NEVER_TIMEOUT);
-
   it(
     'check bucket name',
     async () => {
       const client = new TOS(tosOptions);
-      testCheckErr(() => client.createBucket({ bucket: 'a' }), 'length');
-      testCheckErr(
+      await testCheckErr(() => client.createBucket({ bucket: 'a' }), 'length');
+      await testCheckErr(
         () => client.createBucket({ bucket: 'a'.repeat(64) }),
         'length'
       );
-      testCheckErr(() => client.createBucket({ bucket: 'ab@cd' }), 'character');
-      testCheckErr(() => client.createBucket({ bucket: 'ab!cd' }), 'character');
-      testCheckErr(() => client.createBucket({ bucket: '-abcd' }), '-');
-      testCheckErr(() => client.createBucket({ bucket: 'abcd-' }), '-');
+      await testCheckErr(
+        () => client.createBucket({ bucket: 'ab@cd' }),
+        'character'
+      );
+      await testCheckErr(
+        () => client.createBucket({ bucket: 'ab!cd' }),
+        'character'
+      );
+      await testCheckErr(() => client.createBucket({ bucket: '-abcd' }), '-');
+      await testCheckErr(() => client.createBucket({ bucket: 'abcd-' }), '-');
     },
     NEVER_TIMEOUT
   );
@@ -65,7 +41,7 @@ describe('TOS', () => {
     async () => {
       const client = new TOS(tosOptions);
       const { data } = await client.listBuckets();
-      const found = data.Buckets.find(it => it.Name === testBucketName);
+      const found = data.Buckets.find((it) => it.Name === testBucketName);
       expect(found).not.toBeUndefined();
     },
     NEVER_TIMEOUT
@@ -87,7 +63,7 @@ describe('TOS', () => {
       });
 
       {
-        await sleepCache();
+        await sleepCache(30_000);
         const { data } = await client.getBucketAcl(testBucketName);
         expect(data.Grants[0].Grantee.Canned).toBe('AllUsers');
       }
@@ -104,7 +80,7 @@ describe('TOS', () => {
           '            thisIsALongNamedFolderWithSpace_thisIsALongNamedFolderWithSpace/';
         await client.putObject({ key: folderName });
         const { data: objects } = await client.listObjects();
-        const object = objects.Contents.find(it => it.Key === folderName);
+        const object = objects.Contents.find((it) => it.Key === folderName);
         expect(object).toBeTruthy();
         expect(object?.Size).toEqual(0);
 
@@ -113,7 +89,7 @@ describe('TOS', () => {
           const { data: objects } = await client.listObjects({
             prefix: folderName,
           });
-          const object = objects.Contents.find(it => it.Key === folderName);
+          const object = objects.Contents.find((it) => it.Key === folderName);
           expect(object).toBeTruthy();
           expect(object?.Size).toEqual(0);
         }
@@ -156,7 +132,7 @@ describe('TOS', () => {
 
       const res = await client.deleteMultiObjects({
         quiet: false,
-        objects: [...objectKeys, '__not_exist__'].map(it => ({ key: it })),
+        objects: [...objectKeys, '__not_exist__'].map((it) => ({ key: it })),
       });
 
       expect(res.data.Deleted.length).toBe(4);

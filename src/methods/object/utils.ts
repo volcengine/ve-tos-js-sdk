@@ -29,7 +29,7 @@ export function validateObjectName(input: { key: string } | string) {
   const key = typeof input === 'string' ? input : input.key;
   if (key.length < 1) {
     throw new TosClientError(
-      'invalid object name, the length must greater than 1'
+      'invalid object name, the length must be greater than 1'
     );
   }
 }

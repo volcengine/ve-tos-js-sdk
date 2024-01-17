@@ -7,29 +7,42 @@ import { NEVER_TIMEOUT, sleepCache } from '../utils';
 import {
   testAccountId,
   testBucketName,
-  testTargetBucketName,
+  testCRRTargetBucketName,
   tosOptions,
 } from '../utils/options';
-import { clearAllTestBucket } from './utils';
 const CommonTestCasePrefix = 'Inventory';
 
+async function putOne() {
+  const client = new TOS({
+    ...tosOptions,
+  });
+  return client.putBucketInventory({
+    bucket: testBucketName,
+
+    inventoryConfiguration: {
+      Id: 'test',
+      IsEnabled: false,
+      Destination: {
+        TOSBucketDestination: {
+          Format: 'CSV',
+          AccountId: testAccountId,
+          Role: 'TosArchiveTOSInventory',
+          Bucket: tosOptions.bucket,
+          Prefix: 'tos_bucket_inventory',
+        },
+      },
+      Schedule: {
+        Frequency: ScheduleFrequency.Weekly,
+      },
+      IncludedObjectVersions: 'Current',
+      OptionalFields: {
+        Field: [InventoryOptionalFields.Size],
+      },
+    },
+  });
+}
+
 describe(`bucket ${CommonTestCasePrefix} methods`, () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    await clearAllTestBucket(client);
-
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await client.createBucket({
-      bucket: testTargetBucketName,
-    });
-    await sleepCache(100);
-    done();
-  }, NEVER_TIMEOUT);
-
   it(
     `${CommonTestCasePrefix} getBucketInventory empty`,
     async () => {
@@ -58,31 +71,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
-      const result = await client.putBucketInventory({
-        bucket: testBucketName,
-
-        inventoryConfiguration: {
-          Id: 'test',
-          IsEnabled: false,
-          Destination: {
-            TOSBucketDestination: {
-              Format: 'CSV',
-              AccountId: testAccountId,
-              Role: 'TosArchiveTOSInventory',
-              Bucket: testTargetBucketName,
-              Prefix: 'tos_bucket_inventory',
-            },
-          },
-          Schedule: {
-            Frequency: ScheduleFrequency.Weekly,
-          },
-          IncludedObjectVersions: 'Current',
-          OptionalFields: {
-            Field: [InventoryOptionalFields.Size],
-          },
-        },
-      });
-
+      const result = await putOne();
       expect(result.data).toBe('');
     },
     NEVER_TIMEOUT
@@ -95,6 +84,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
+      await putOne();
       const result = await client.listBucketInventory({
         bucket: testBucketName,
       });
@@ -115,6 +105,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
         ...tosOptions,
       });
 
+      await putOne();
       const result = await client.getBucketInventory({
         bucket: testBucketName,
         id: 'test',
@@ -131,6 +122,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
       const client = new TOS({
         ...tosOptions,
       });
+      await putOne();
 
       const result = await client.deleteBucketInventory({
         bucket: testBucketName,

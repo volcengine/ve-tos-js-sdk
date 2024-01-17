@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const pkgJson = require('../package.json');
 const { checkBrowserDist } = require('./checkBrowserDist');
+const { checkUmdExports } = require('./checkUmdExports');
 
 const pwd = path.resolve(__dirname, '../');
 async function build() {
@@ -38,6 +39,28 @@ export default '${version}';
   await fs.mkdir(browserDirPath, { recursive: true });
   await fs.copy(distDirPath, browserDirPath, { overwrite: true });
   await checkBrowserDist();
+
+  await checkUmdExports();
+
+  // copy to miniprogram
+  const miniprogramDistDirPath = path.resolve(pwd, 'miniprogram_dist');
+  await fs.rm(miniprogramDistDirPath, { recursive: true, force: true });
+  await fs.mkdir(miniprogramDistDirPath, { recursive: true });
+  const umdFileName = 'tos.umd.development.js';
+  await fs.copy(
+    path.resolve(browserDirPath, umdFileName),
+    path.resolve(miniprogramDistDirPath, 'index.js'),
+    {
+      overwrite: true,
+    }
+  );
+  await fs.copy(
+    path.resolve(browserDirPath, umdFileName + '.map'),
+    path.resolve(miniprogramDistDirPath, 'index.js.map'),
+    {
+      overwrite: true,
+    }
+  );
 
   {
     console.log('exec:', 'yarn build:node');

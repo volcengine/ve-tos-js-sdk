@@ -651,9 +651,7 @@ export async function resumableCopyObject(
           this.opts.endpoint
         }/${key}`,
         VersionID: res.headers['x-tos-version-id'],
-        HashCrc64ecma: res.headers['x-tos-hash-crc64ecma']
-          ? +res.headers['x-tos-hash-crc64ecma']
-          : 0,
+        HashCrc64ecma: res.headers['x-tos-hash-crc64ecma'],
       },
     };
   };

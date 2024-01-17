@@ -21,7 +21,7 @@ export async function deleteObject(
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
   }
-  const res = await this.fetchObject<DeleteObjectOutput>(
+  const res = await this._fetchObject<DeleteObjectOutput>(
     input,
     'DELETE',
     query,

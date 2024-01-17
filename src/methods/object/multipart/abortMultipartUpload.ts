@@ -10,7 +10,7 @@ export async function abortMultipartUpload(
   this: TOSBase,
   input: AbortMultipartUploadInput
 ) {
-  return this.fetchObject<undefined>(
+  return this._fetchObject<undefined>(
     input,
     'DELETE',
     {

@@ -62,16 +62,19 @@ export async function getBucketReplication(
   input: GetBucketReplicationInput
 ) {
   const { bucket, progress, ruleId } = input;
-  const headers = normalizeHeadersKey({
-    progress,
-    ruleId,
-  });
+  const query: Record<string, string> = {
+    [CommonQueryKey]: '',
+    progress: progress || '',
+  };
+  if (ruleId != null) {
+    query['rule-id'] = `${ruleId}`;
+  }
 
   try {
     return await this.fetchBucket<GetBucketReplicationOutput>(
       bucket,
       'GET',
-      { [CommonQueryKey]: '', ...headers },
+      query,
       {}
     );
   } catch (err) {

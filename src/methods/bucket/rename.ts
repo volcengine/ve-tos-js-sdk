@@ -4,7 +4,7 @@ import TOSBase from '../base';
 const CommonQueryKey = 'rename';
 
 export interface PutBucketRenameInput {
-  bucket: string;
+  bucket?: string;
   renameEnable: boolean;
 }
 
@@ -29,7 +29,7 @@ export async function putBucketRename(
 }
 
 export interface GetBucketRenameInput {
-  bucket: string;
+  bucket?: string;
 }
 
 export interface GetBucketRenameOutput {
@@ -50,7 +50,7 @@ export async function getBucketRename(
 }
 
 export interface DeleteBucketRenameInput {
-  bucket: string;
+  bucket?: string;
 }
 
 export interface DeleteBucketRenameOutput {}

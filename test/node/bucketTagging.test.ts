@@ -1,23 +1,9 @@
 import TOS from '../../src/browser-index';
 import { NEVER_TIMEOUT, sleepCache } from '../utils';
 import { testBucketName, tosOptions } from '../utils/options';
-import { clearAllTestBucket } from './utils';
 const CommonTestCasePrefix = 'tagging';
 
 describe(`bucket ${CommonTestCasePrefix} methods`, () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    await clearAllTestBucket(client);
-
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache(100);
-    done();
-  }, NEVER_TIMEOUT);
-
   it(
     `${CommonTestCasePrefix} getBucketTagging empty error`,
     async () => {

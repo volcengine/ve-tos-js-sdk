@@ -114,7 +114,7 @@ export async function listObjectsType2(
         );
       }
 
-      if (!res.data.IsTruncated || output.data.Contents.length >= maxKeys) {
+      if (!res.data.IsTruncated || output.data.KeyCount >= maxKeys) {
         break;
       }
 

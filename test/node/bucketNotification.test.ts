@@ -5,23 +5,9 @@ import {
   testCloudFunctionId,
   tosOptions,
 } from '../utils/options';
-import { clearAllTestBucket } from './utils';
 const CommonTestCasePrefix = 'notification';
 
 describe(`bucket ${CommonTestCasePrefix} methods`, () => {
-  beforeAll(async done => {
-    const client = new TOS(tosOptions);
-    // clear all bucket
-    await clearAllTestBucket(client);
-
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
-    await sleepCache(100);
-    done();
-  }, NEVER_TIMEOUT);
-
   it(
     `${CommonTestCasePrefix} getBucketNotification empty case`,
     async () => {
@@ -82,6 +68,31 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
     async () => {
       const client = new TOS({
         ...tosOptions,
+      });
+
+      await client.putBucketNotification({
+        bucket: testBucketName,
+        cloudFunctionConfigurations: [
+          {
+            RuleId: 'TestNotification',
+            Events: ['tos:ObjectCreated:Put'],
+            Filter: {
+              TOSKey: {
+                FilterRules: [
+                  {
+                    Name: 'prefix',
+                    Value: 'test-',
+                  },
+                  {
+                    Name: 'suffix',
+                    Value: '-ci',
+                  },
+                ],
+              },
+            },
+            CloudFunction: testCloudFunctionId,
+          },
+        ],
       });
 
       const result = await client.getBucketNotification({

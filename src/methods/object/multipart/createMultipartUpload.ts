@@ -91,7 +91,7 @@ export async function createMultipartUpload(
 
   this.setObjectContentTypeHeader(input, headers);
 
-  return this.fetchObject<CreateMultipartUploadOutput>(
+  return this._fetchObject<CreateMultipartUploadOutput>(
     input,
     'POST',
     { uploads: '' },

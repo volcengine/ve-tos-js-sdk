@@ -31,7 +31,7 @@ export interface CompleteMultipartUploadOutput {
   ETag: string;
   Location: string;
   VersionID?: string;
-  HashCrc64ecma?: number;
+  HashCrc64ecma?: string;
   /** the field has a value when completeAll is true
    * when specify callback, the field will not has a value
    */
@@ -53,19 +53,20 @@ export async function completeMultipartUpload(
     let result: CompleteMultipartUploadOutput;
     const headers = response.headers;
     if (input.callback) {
+      const bucket = input.bucket || this.opts.bucket || '';
       result = {
         CallbackResult: `${JSON.stringify(response.data)}`,
         VersionID: headers['x-tos-version-id'],
         ETag: headers['etag'],
-        Bucket: `${input.bucket}`,
+        Bucket: bucket,
         Location: headers['location'],
         HashCrc64ecma: headers['x-tos-hash-crc64ecma'],
-        Key: `${input.key}`,
+        Key: input.key,
       };
     } else {
       result = {
         ...response.data,
-        VersionID: response.headers['x-tos-version-id'],
+        VersionID: headers['x-tos-version-id'],
       };
     }
     return result;
@@ -76,7 +77,7 @@ export async function completeMultipartUpload(
         `Should not specify both 'completeAll' and 'parts' params.`
       );
     }
-    return this.fetchObject<CompleteMultipartUploadOutput>(
+    return this._fetchObject<CompleteMultipartUploadOutput>(
       input,
       'POST',
       {
@@ -93,7 +94,7 @@ export async function completeMultipartUpload(
     );
   }
 
-  return this.fetchObject<CompleteMultipartUploadOutput>(
+  return this._fetchObject<CompleteMultipartUploadOutput>(
     input,
     'POST',
     {

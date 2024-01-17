@@ -17,6 +17,7 @@ import { Readable } from 'stream';
 import { getSize, getNewBodyConfig } from './utils';
 import { retryNamespace } from '../../axios';
 import { IRateLimiter } from '../../rate-limiter';
+import { StorageClassType } from '../../TosExportEnum';
 
 export interface PutObjectInput {
   bucket?: string;
@@ -25,6 +26,32 @@ export interface PutObjectInput {
    * body is empty buffer if it's falsy.
    */
   body?: SupportObjectBody;
+
+  contentLength?: number;
+  contentMD5?: string;
+  contentSHA256?: string;
+  cacheControl?: string;
+  contentDisposition?: string;
+  contentEncoding?: string;
+  contentLanguage?: string;
+  contentType?: string;
+  expires?: Date;
+
+  acl?: Acl;
+  grantFullControl?: string;
+  grantRead?: string;
+  grantReadAcp?: string;
+  grantWrite?: string;
+  grantWriteAcp?: string;
+
+  ssecAlgorithm?: string;
+  ssecKey?: string;
+  ssecKeyMD5?: string;
+  serverSideEncryption?: string;
+
+  meta?: Record<string, string>;
+  websiteRedirectLocation?: string;
+  storageClass?: StorageClassType;
 
   dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
@@ -93,9 +120,34 @@ export async function _putObject(
   input: PutObjectInputInner | string
 ): Promise<TosResponse<PutObjectOutput>> {
   input = this.normalizeObjectInput(input);
-  fillRequestHeaders(input, ['trafficLimit', 'callback', 'callbackVar']);
-
-  const headers = normalizeHeadersKey(input.headers);
+  const headers = (input.headers = normalizeHeadersKey(input.headers));
+  fillRequestHeaders(input, [
+    'contentLength',
+    'contentMD5',
+    'contentSHA256',
+    'cacheControl',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'expires',
+    'acl',
+    'grantFullControl',
+    'grantRead',
+    'grantReadAcp',
+    'grantWrite',
+    'grantWriteAcp',
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+    'serverSideEncryption',
+    'meta',
+    'websiteRedirectLocation',
+    'storageClass',
+    'trafficLimit',
+    'callback',
+    'callbackVar',
+  ]);
   this.setObjectContentTypeHeader(input, headers);
 
   const totalSize = getSize(input.body, headers);
@@ -159,7 +211,7 @@ export async function _putObject(
 
   triggerDataTransfer(DataTransferType.Started);
   const [err, res] = await safeAwait(
-    this.fetchObject<PutObjectOutput>(
+    this._fetchObject<PutObjectOutput>(
       input,
       'PUT',
       {},

@@ -3,6 +3,7 @@
 node_modules
 /dist
 /browser
+/miniprogram_dist
 /coverage
 /example/**/dist
 

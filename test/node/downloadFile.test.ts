@@ -17,23 +17,9 @@ import {
 } from './utils';
 
 describe('downloadFile', () => {
-  beforeAll(async done => {
+  beforeAll(async (done) => {
     const client = new TOS(tosOptions);
-    // clear all bucket
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (isNeedDeleteBucket(bucket.Name)) {
-        try {
-          await deleteBucket(client, bucket.Name);
-        } catch (err) {
-          console.log('a: ', err);
-        }
-      }
-    }
-    // create bucket
-    await client.createBucket({
-      bucket: testBucketName,
-    });
+
     await Promise.all([
       client.uploadFile({ file: objectPathEmpty, key: objectKeyEmpty }),
       client.uploadFile({ file: objectPath1K, key: objectKey1K }),
@@ -43,13 +29,6 @@ describe('downloadFile', () => {
     await sleepCache();
     done();
   }, NEVER_TIMEOUT);
-  // afterAll(async done => {
-  //   const client = new TOS(tosOptions);
-  //   console.log('delete bucket.....');
-  //   // delete bucket
-  //   deleteBucket(client, testBucketName);
-  //   done();
-  // }, NEVER_TIMEOUT);
 
   it(
     'download empty file',

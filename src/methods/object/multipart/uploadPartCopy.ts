@@ -1,8 +1,8 @@
 import {
   fillRequestHeaders,
-  requestHeadersMap,
   safeAwait,
   normalizeHeadersKey,
+  requestHeadersMap,
 } from '../../../utils';
 import TOSBase from '../../base';
 
@@ -11,6 +11,9 @@ export interface UploadPartCopyInput {
   key: string;
   partNumber: number;
   uploadId: string;
+  copySourceRange?: string;
+  copySourceRangeStart?: number;
+  copySourceRangeEnd?: number;
   copySourceSSECAlgorithm?: string;
   copySourceSSECKey?: string;
   copySourceSSECKeyMD5?: string;
@@ -51,6 +54,7 @@ export async function uploadPartCopy(
   const headers = normalizeHeadersKey(input.headers);
   input.headers = headers;
   fillRequestHeaders(input, [
+    'copySourceRange',
     'copySourceSSECAlgorithm',
     'copySourceSSECKey',
     'copySourceSSECKeyMD5',
@@ -59,9 +63,21 @@ export async function uploadPartCopy(
     'ssecKeyMD5',
     'trafficLimit',
   ]);
+  if (
+    input.copySourceRange == null &&
+    (input.copySourceRangeStart != null || input.copySourceRangeEnd != null)
+  ) {
+    const start =
+      input.copySourceRangeStart != null ? `${input.copySourceRangeStart}` : '';
+    const end =
+      input.copySourceRangeEnd != null ? `${input.copySourceRangeEnd}` : '';
+    const copyRange = `bytes=${start}-${end}`;
+    headers['x-tos-copy-source-range'] =
+      headers['x-tos-copy-source-range'] ?? copyRange;
+  }
 
   const [err, res] = await safeAwait(
-    this.fetchObject<UploadPartCopyOutput>(
+    this._fetchObject<UploadPartCopyOutput>(
       input,
       'PUT',
       { partNumber, uploadId },

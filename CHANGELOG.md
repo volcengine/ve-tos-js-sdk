@@ -2,6 +2,46 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.11] - 2023-12-08
+
+## Added
+
+- add `fetchObject`, `putFetchTask` and `renameObject` method
+- add `copySourceRange` option for `UploadPartCopy` method
+- export more enum types, eg: `LifecycleStatusType`, `RedirectType` and `VersioningStatusType` etc
+- `putObjectAcl` method supports `aclBody` param
+
+## Fixed
+
+- fix image process and video process
+- fix http proxy when tos endpoint is `https`
+- throw `TosServerError` if server responses error in `HEAD` request
+- fix `ruleId` param of `getBucketReplication` method
+
+## [2.6.10] - 2023-11-13
+
+## Fixed
+
+- fix usage of miniprogram environment
+
+## [2.6.9] - 2023-11-10
+
+## Fixed
+
+- fix version
+
+## [2.6.8] - 2023-11-10
+
+## Fixed
+
+- move some packages to devDep from dep
+
+## [2.6.7] - 2023-11-08
+
+## Fixed
+
+- `listObjectsType2` now will try to list objects until get maxKeys Objects correct
+
 ## [2.6.6] - 2023-10-27
 
 ### Fixed

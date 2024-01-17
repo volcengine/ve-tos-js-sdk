@@ -1,11 +1,7 @@
+import { TierType } from '../../TosExportEnum';
 import { convertNormalCamelCase2Upper } from '../../utils';
 import TOSBase from '../base';
 
-export enum TierType {
-  TierStandard = 'Standard',
-  TierExpedited = 'Expedited',
-  TierBulk = 'Bulk',
-}
 export interface RestoreObjectInput {
   bucket?: string;
   key: string;
@@ -24,7 +20,7 @@ export async function restoreObject(this: TOSBase, input: RestoreObjectInput) {
   }
   const body = convertNormalCamelCase2Upper(otherProps);
 
-  return this.fetchObject<undefined>(input, 'POST', query, {}, body);
+  return this._fetchObject<undefined>(input, 'POST', query, {}, body);
 }
 
 export default restoreObject;

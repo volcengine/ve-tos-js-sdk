@@ -62,7 +62,7 @@ export const calculateSafePartSize = (
 
 export async function listParts(this: TOSBase, input: ListPartInput) {
   const { bucket, key, uploadId, ...nextQuery } = input;
-  const ret = await this.fetchObject<ListPartOutput>(
+  const ret = await this._fetchObject<ListPartOutput>(
     input,
     'GET',
     {
