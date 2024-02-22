@@ -5,12 +5,17 @@ import {
   requestHeadersMap,
 } from '../../../utils';
 import TOSBase from '../../base';
+import { getCopySourceHeaderValue } from '../utils';
 
 export interface UploadPartCopyInput {
   bucket?: string;
   key: string;
   partNumber: number;
   uploadId: string;
+
+  srcBucket?: string;
+  srcKey?: string;
+  srcVersionID?: string;
   copySourceRange?: string;
   copySourceRangeStart?: number;
   copySourceRangeEnd?: number;
@@ -63,6 +68,14 @@ export async function uploadPartCopy(
     'ssecKeyMD5',
     'trafficLimit',
   ]);
+  if (input.srcBucket && input.srcKey) {
+    let copySource = getCopySourceHeaderValue(input.srcBucket, input.srcKey);
+    if (input.srcVersionID) {
+      copySource += `?versionId=${input.srcVersionID}`;
+    }
+    headers['x-tos-copy-source'] = headers['x-tos-copy-source'] ?? copySource;
+  }
+
   if (
     input.copySourceRange == null &&
     (input.copySourceRangeStart != null || input.copySourceRangeEnd != null)

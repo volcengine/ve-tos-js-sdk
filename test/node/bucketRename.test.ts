@@ -6,14 +6,21 @@ import {
 } from '../utils/options';
 const CommonTestCasePrefix = 'Rename';
 
-// The rename configuration conflicts with multi-version configuration
-// 需要一个重未开过多版本的 bucket 来测试
 const tosOptions = {
   ...commonTosOptions,
   bucket: testBucketRenameBucketName,
 };
 
 describe(`bucket ${CommonTestCasePrefix} methods`, () => {
+  beforeAll(async (done) => {
+    const client = new TOS({
+      ...tosOptions,
+    });
+    await client.deleteBucketRename({});
+
+    done();
+  }, NEVER_TIMEOUT);
+
   it(
     `${CommonTestCasePrefix} getBucketRename empty case`,
     async () => {

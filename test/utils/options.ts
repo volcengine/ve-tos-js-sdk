@@ -11,9 +11,10 @@ if (!process.env.ACCESS_KEY_ID || !process.env.ACCESS_KEY_SECRET) {
 const targetEnv = process.env.TARGET_ENVIRONMENT || 'node';
 export const testBucketNameBase = `ve-tos-js-sdk-${targetEnv}-test`;
 export const testBucketName = `${testBucketNameBase}-bucket`;
+export const testCRRSourceBucketName = `${testBucketNameBase}-crr-source-bucket`;
 export const testCRRTargetBucketName = `${testBucketNameBase}-crr-target-bucket`;
-// The rename configuration conflicts with multi-version configuration
-// 需要一个重未开过多版本的 bucket 来测试
+// need a bucket that doesn't enable multi-version feature, otherwise maybe throw an error:
+// The rename configuration conflicts with multi-version configuration.
 export const testBucketRenameBucketName = `${testBucketNameBase}-bucket-rename`;
 export const testPreSignedPolicyBucketName = `${testBucketNameBase}-presignedpolicyurl`;
 export const testCRRTargetRegion = process.env.CRR_TARGET_REGION || '';
@@ -45,6 +46,11 @@ export const tosOptions: TOSConstructorOptions & { bucket: string } = {
   endpoint,
   // proxyHost: '127.0.0.1',
   // proxyPort: 8888,
+};
+export const tosCRRSourceOptions = {
+  ...tosOptions,
+  region,
+  endpoint,
 };
 export const tosCRRTargetOptions = {
   ...tosOptions,

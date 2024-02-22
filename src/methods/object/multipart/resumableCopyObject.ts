@@ -21,7 +21,7 @@ import headObject from '../headObject';
 import { uploadPartCopy } from './uploadPartCopy';
 import { Headers } from '../../../interface';
 import copyObject from '../copyObject';
-import { getCopySourceHeaderValue } from '../utils';
+import { getCopySourceHeaderValue, validateCheckpoint } from '../utils';
 import cloneDeep from 'lodash/cloneDeep';
 
 export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
@@ -79,13 +79,13 @@ export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
 export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
 
 export enum ResumableCopyEventType {
-  createMultipartUploadSucceed = 1,
-  createMultipartUploadFailed = 2,
-  uploadPartCopySucceed = 3,
-  uploadPartCopyFailed = 4,
-  uploadPartCopyAborted = 5,
-  completeMultipartUploadSucceed = 6,
-  completeMultipartUploadFailed = 7,
+  CreateMultipartUploadSucceed = 1,
+  CreateMultipartUploadFailed = 2,
+  UploadPartCopySucceed = 3,
+  UploadPartCopyFailed = 4,
+  UploadPartCopyAborted = 5,
+  CompleteMultipartUploadSucceed = 6,
+  CompleteMultipartUploadFailed = 7,
 }
 
 export interface CopyPartInfo {
@@ -160,6 +160,7 @@ export async function resumableCopyObject(
 ): Promise<TosResponse<UploadFileOutput>> {
   const { cancelToken } = input;
   const isCancel = () => cancelToken && !!cancelToken.reason;
+  validateCheckpoint(input.checkpoint);
 
   const { data: objectStats } = await headObject.call(this, {
     bucket: input.srcBucket,
@@ -214,7 +215,9 @@ export async function resumableCopyObject(
           filePathIsPlaceholder: false,
           // filePath is json file
           // TODO: validate json schema
-          record: checkpointStat ? require(filePath) : undefined,
+          record: checkpointStat
+            ? JSON.parse(await fsp.readFile(filePath, 'utf-8'))
+            : undefined,
         };
       }
     }
@@ -325,7 +328,7 @@ export async function resumableCopyObject(
     input.copyEventListener(event);
   };
   enum TriggerProgressEventType {
-    createMultipartUploadSucceed = 1,
+    start = 1,
     uploadPartSucceed = 2,
     completeMultipartUploadSucceed = 3,
   }
@@ -333,16 +336,13 @@ export async function resumableCopyObject(
     if (!input.progress) {
       return;
     }
-    let ret = 0;
-    if (type === TriggerProgressEventType.createMultipartUploadSucceed) {
-      ret = 0;
-    } else if (
-      type === TriggerProgressEventType.completeMultipartUploadSucceed
-    ) {
-      ret = 1;
-    } else {
-      ret = !objectSize ? 1 : consumedBytesForProgress / objectSize;
-    }
+
+    const percent = (() => {
+      if (type === TriggerProgressEventType.start && objectSize === 0) {
+        return 0;
+      }
+      return !objectSize ? 1 : consumedBytesForProgress / objectSize;
+    })();
 
     if (
       consumedBytesForProgress === objectSize &&
@@ -350,7 +350,7 @@ export async function resumableCopyObject(
     ) {
       // 100% 仅在 complete 后处理，以便 100% 可以拉取到新对象
     } else {
-      input.progress(ret, getCheckpointContent());
+      input.progress(percent, getCheckpointContent());
     }
   };
 
@@ -390,14 +390,23 @@ export async function resumableCopyObject(
    */
   const updateAfterUploadPart = async (
     task: Task,
-    uploadPartRes: UploadPartOutput | Error
+    uploadPartRes:
+      | {
+          res: UploadPartOutput;
+          err?: null;
+        }
+      | {
+          err: Error;
+        }
   ) => {
     let existRecordTask = recordedTaskMap.get(task.partNumber);
+    const rangeStart = task.offset;
+    const rangeEnd = Math.min(task.offset + partSize - 1, objectSize - 1);
     if (!existRecordTask) {
       existRecordTask = {
         part_number: task.partNumber,
-        copy_source_range_start: task.offset,
-        copy_source_range_end: task.offset + task.partSize - 1,
+        copy_source_range_start: rangeStart,
+        copy_source_range_end: rangeEnd,
         is_completed: false,
         etag: '',
       };
@@ -405,9 +414,9 @@ export async function resumableCopyObject(
       recordedTaskMap.set(existRecordTask.part_number, existRecordTask);
     }
 
-    if (!(uploadPartRes instanceof Error)) {
+    if (!uploadPartRes.err) {
       existRecordTask.is_completed = true;
-      existRecordTask.etag = uploadPartRes.ETag;
+      existRecordTask.etag = uploadPartRes.res.ETag;
     }
 
     await writeCheckpointFile();
@@ -417,14 +426,14 @@ export async function resumableCopyObject(
       copySourceRangeStart: existRecordTask.copy_source_range_start,
     };
 
-    if (uploadPartRes instanceof Error) {
-      const err = uploadPartRes;
+    if (uploadPartRes.err) {
+      const err = uploadPartRes.err;
       let type: ResumableCopyEventType =
-        ResumableCopyEventType.uploadPartCopyFailed;
+        ResumableCopyEventType.UploadPartCopyFailed;
 
       if (err instanceof TosServerError) {
         if (ABORT_ERROR_STATUS_CODE.includes(err.statusCode)) {
-          type = ResumableCopyEventType.uploadPartCopyAborted;
+          type = ResumableCopyEventType.UploadPartCopyAborted;
         }
       }
 
@@ -436,12 +445,12 @@ export async function resumableCopyObject(
       return;
     }
 
-    copyPartInfo.etag = uploadPartRes.ETag;
+    copyPartInfo.etag = uploadPartRes.res.ETag;
     consumedBytesForProgress +=
       copyPartInfo.copySourceRangeEnd - copyPartInfo.copySourceRangeStart + 1;
 
     triggerUploadEvent({
-      type: ResumableCopyEventType.uploadPartCopySucceed,
+      type: ResumableCopyEventType.UploadPartCopySucceed,
       copyPartInfo,
     });
     triggerProgressEvent(TriggerProgressEventType.uploadPartSucceed);
@@ -482,15 +491,12 @@ export async function resumableCopyObject(
       }
 
       triggerUploadEvent({
-        type: ResumableCopyEventType.createMultipartUploadSucceed,
+        type: ResumableCopyEventType.CreateMultipartUploadSucceed,
       });
-      triggerProgressEvent(
-        TriggerProgressEventType.createMultipartUploadSucceed
-      );
     } catch (_err) {
       const err = _err as Error;
       triggerUploadEvent({
-        type: ResumableCopyEventType.createMultipartUploadFailed,
+        type: ResumableCopyEventType.CreateMultipartUploadFailed,
         err,
       });
       throw err;
@@ -544,10 +550,10 @@ export async function resumableCopyObject(
             });
 
             if (isCancel()) {
-              throw new CancelError('cancel uploadFile');
+              throw new CancelError('cancel resumableCopyObject');
             }
 
-            await updateAfterUploadPart(curTask, uploadPartRes);
+            await updateAfterUploadPart(curTask, { res: uploadPartRes });
           } catch (_err) {
             const err = _err as any;
 
@@ -555,10 +561,14 @@ export async function resumableCopyObject(
               throw err;
             }
 
+            if (isCancel()) {
+              throw new CancelError('cancel resumableCopyObject');
+            }
+
             if (!firstErr) {
               firstErr = err;
             }
-            await updateAfterUploadPart(curTask, err);
+            await updateAfterUploadPart(curTask, { err });
           }
         }
       })
@@ -584,13 +594,13 @@ export async function resumableCopyObject(
 
     if (err || !res) {
       triggerUploadEvent({
-        type: ResumableCopyEventType.completeMultipartUploadFailed,
+        type: ResumableCopyEventType.CompleteMultipartUploadFailed,
       });
       throw err;
     }
 
     triggerUploadEvent({
-      type: ResumableCopyEventType.completeMultipartUploadSucceed,
+      type: ResumableCopyEventType.CompleteMultipartUploadSucceed,
     });
     triggerProgressEvent(
       TriggerProgressEventType.completeMultipartUploadSucceed
@@ -621,7 +631,7 @@ export async function resumableCopyObject(
     );
     if (err || !res) {
       triggerUploadEvent({
-        type: ResumableCopyEventType.uploadPartCopyFailed,
+        type: ResumableCopyEventType.UploadPartCopyFailed,
       });
       throw err;
     }
@@ -630,7 +640,7 @@ export async function resumableCopyObject(
       TriggerProgressEventType.completeMultipartUploadSucceed
     );
     triggerUploadEvent({
-      type: ResumableCopyEventType.uploadPartCopySucceed,
+      type: ResumableCopyEventType.UploadPartCopySucceed,
       copyPartInfo: {
         partNumber: 0,
         copySourceRangeStart: 0,
@@ -638,7 +648,7 @@ export async function resumableCopyObject(
       },
     });
     triggerUploadEvent({
-      type: ResumableCopyEventType.completeMultipartUploadSucceed,
+      type: ResumableCopyEventType.CompleteMultipartUploadSucceed,
     });
 
     return {
@@ -656,6 +666,7 @@ export async function resumableCopyObject(
     };
   };
 
+  triggerProgressEvent(TriggerProgressEventType.start);
   return objectSize === 0 ? handleEmptyObj() : handleTasks();
 }
 

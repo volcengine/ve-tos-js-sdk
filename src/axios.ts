@@ -45,7 +45,24 @@ const BROWSER_NEED_DELETE_HEADERS = ['content-length', 'user-agent', 'host'];
 
 export const makeAxiosInst = (maxRetryCount: number) => {
   const axiosInst = axios.create();
+  // set `axiosInst` default values to avoid being affected by the global default values of axios
+  axiosInst.defaults.auth = undefined;
+  axiosInst.defaults.responseType = 'json';
+  axiosInst.defaults.params = undefined;
+  axiosInst.defaults.headers = {};
+  axiosInst.defaults.withCredentials = false;
+  axiosInst.defaults.maxContentLength = -1;
+  axiosInst.defaults.maxBodyLength = -1;
   axiosInst.defaults.maxRedirects = 0;
+  axiosInst.defaults.validateStatus = function (status) {
+    return status >= 200 && status < 300; // default
+  };
+  axiosInst.defaults.decompress = false;
+  axiosInst.defaults.transitional = {
+    silentJSONParsing: true,
+    forcedJSONParsing: true,
+    clarifyTimeoutError: false,
+  };
 
   // delete browser headers
   if (process.env.TARGET_ENVIRONMENT === 'browser') {

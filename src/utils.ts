@@ -203,19 +203,17 @@ export function isCancelError(err: any) {
   return err instanceof CancelError;
 }
 
-export async function readAllDataToBuffer(
-  readableStream: NodeJS.ReadableStream
-): Promise<Buffer> {
-  let chunks = '';
-
-  for await (const chunk of readableStream) {
-    chunks += chunk;
-  }
-
-  return Buffer.from(chunks);
-}
-
 export const DEFAULT_PART_SIZE = 20 * 1024 * 1024; // 20 MB
+
+export const getGMTDateStr = (v: Date) => {
+  return v.toUTCString();
+};
+const gmtDateOrStr = (v: Date | string) => {
+  if (typeof v === 'string') {
+    return v;
+  }
+  return v.toUTCString();
+};
 
 export const requestHeadersMap: Record<
   string,
@@ -230,13 +228,13 @@ export const requestHeadersMap: Record<
   contentEncoding: 'content-encoding',
   contentLanguage: 'content-language',
   contentType: 'content-type',
-  expires: ['expires', (v: Date) => v.toUTCString()],
-  range: 'content-range',
+  expires: ['expires', getGMTDateStr],
+  range: 'range',
 
   ifMatch: 'if-match',
-  ifModifiedSince: 'if-modified-since',
+  ifModifiedSince: ['if-modified-since', gmtDateOrStr],
   ifNoneMatch: 'if-none-match',
-  ifUnmodifiedSince: 'if-unmodified-since',
+  ifUnmodifiedSince: ['if-unmodified-since', gmtDateOrStr],
 
   acl: 'x-tos-acl',
   grantFullControl: 'x-tos-grant-full-control',
@@ -252,7 +250,10 @@ export const requestHeadersMap: Record<
 
   copySourceRange: 'x-tos-copy-source-range',
   copySourceIfMatch: 'x-tos-copy-source-if-match',
-  copySourceIfModifiedSince: 'x-tos-copy-source-if-modified-since',
+  copySourceIfModifiedSince: [
+    'x-tos-copy-source-if-modified-since',
+    gmtDateOrStr,
+  ],
   copySourceIfNoneMatch: 'x-tos-copy-source-if-none-match',
   copySourceIfUnmodifiedSince: 'x-tos-copy-source-if-unmodified-since',
   copySourceSSECAlgorithm:
@@ -276,6 +277,23 @@ export const requestHeadersMap: Record<
   callbackVar: 'x-tos-callback-var',
 };
 // type RequestHeadersMapKeys = keyof typeof requestHeadersMap;
+
+export const requestQueryMap: Record<
+  string,
+  string | [string, (v: any) => string] | ((v: any) => Record<string, string>)
+> = {
+  versionId: 'versionId',
+  process: 'x-tos-process',
+  saveBucket: 'x-tos-save-bucket',
+  saveObject: 'x-tos-save-object',
+
+  responseCacheControl: 'response-cache-control',
+  responseContentDisposition: 'response-content-disposition',
+  responseContentEncoding: 'response-content-encoding',
+  responseContentLanguage: 'response-content-language',
+  responseContentType: 'response-content-type',
+  responseExpires: ['response-expires', (v: Date) => v.toUTCString()],
+};
 
 export function fillRequestHeaders<T extends { headers?: Headers }>(
   v: T,
@@ -327,6 +345,51 @@ export function fillRequestHeaders<T extends { headers?: Headers }>(
   });
 }
 
+export function fillRequestQuery<T>(
+  v: T,
+  query: Record<string, unknown>,
+  keys: (keyof T & string)[]
+) {
+  if (!keys.length) {
+    return;
+  }
+
+  function setOneKey(k: string, v: string) {
+    if (query[k] == null) {
+      query[k] = v;
+    }
+  }
+
+  keys.forEach((k) => {
+    const confV = requestQueryMap[k];
+    if (!confV) {
+      // maybe warning
+      throw new TosClientError(`\`${k}\` isn't in keys of \`requestQueryMap\``);
+    }
+
+    const oriValue = v[k];
+    if (oriValue == null) {
+      return;
+    }
+
+    const oriValueStr = `${oriValue}`;
+    if (typeof confV === 'string') {
+      return setOneKey(confV, oriValueStr);
+    }
+
+    if (Array.isArray(confV)) {
+      const newKey = confV[0];
+      const newValue = confV[1](oriValue);
+      return setOneKey(newKey, newValue);
+    }
+
+    const obj = confV(oriValue);
+    Object.entries(obj).forEach(([k, v]) => {
+      setOneKey(k, v);
+    });
+  });
+}
+
 export const paramsSerializer = (params: Record<string, string>) => {
   return qs.stringify(params);
 };
@@ -354,3 +417,20 @@ export function handleEmptyServerError<T>(
   }
   throw err;
 }
+
+export const streamToBuf = async (
+  stream: NodeJS.ReadableStream
+): Promise<Buffer> => {
+  let buf = Buffer.from([]);
+  return new Promise((resolve, reject) => {
+    stream.on('data', (data) => {
+      buf = Buffer.concat([buf, data]);
+    });
+    stream.on('end', () => {
+      resolve(buf);
+    });
+    stream.on('error', (err) => {
+      reject(err);
+    });
+  });
+};

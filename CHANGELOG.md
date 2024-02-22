@@ -2,16 +2,32 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.12] - 2024-02-22
+
+### Added
+
+- deprecate passing a object to `checkpoint` parameter in node.js environment
+- export `DataTransferType`, `DownloadEventType`, `ResumableCopyEventType` and `UploadEventType` enum types
+- `getObject` method supports `dataTransferStatusChange` and `progress` params
+- `dataTransferStatusChange` param of `downloadFile` method aligns network flow rate instead of updating after part download
+- `uploadPartCopy` method supports `srcBucket`, `srcKey` and `srcVersionID` params
+
+### Fixed
+
+- set `axiosInst` default values to avoid being affected by the global default values of axios
+- fix `appendObject` method
+- fix `getObjectV2` method to support range download
+
 ## [2.6.11] - 2023-12-08
 
-## Added
+### Added
 
 - add `fetchObject`, `putFetchTask` and `renameObject` method
 - add `copySourceRange` option for `UploadPartCopy` method
 - export more enum types, eg: `LifecycleStatusType`, `RedirectType` and `VersioningStatusType` etc
 - `putObjectAcl` method supports `aclBody` param
 
-## Fixed
+### Fixed
 
 - fix image process and video process
 - fix http proxy when tos endpoint is `https`
@@ -20,25 +36,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [2.6.10] - 2023-11-13
 
-## Fixed
+### Fixed
 
 - fix usage of miniprogram environment
 
 ## [2.6.9] - 2023-11-10
 
-## Fixed
+### Fixed
 
 - fix version
 
 ## [2.6.8] - 2023-11-10
 
-## Fixed
+### Fixed
 
 - move some packages to devDep from dep
 
 ## [2.6.7] - 2023-11-08
 
-## Fixed
+### Fixed
 
 - `listObjectsType2` now will try to list objects until get maxKeys Objects correct
 

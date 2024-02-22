@@ -1,11 +1,7 @@
 import axios from 'axios';
-import TOS, { isCancel } from '../../src/browser-index';
-import { deleteBucket, sleepCache, NEVER_TIMEOUT, streamToBuf } from '../utils';
-import {
-  testBucketName,
-  isNeedDeleteBucket,
-  tosOptions,
-} from '../utils/options';
+import TOS, { CancelToken, isCancel } from '../../src/browser-index';
+import { NEVER_TIMEOUT, sleepCache } from '../utils';
+import { tosOptions } from '../utils/options';
 import * as fsPromises from '../../src/nodejs/fs-promises';
 import path from 'path';
 import {
@@ -24,6 +20,7 @@ import {
   objectPathEmpty,
 } from './utils';
 import { DataTransferType } from '../../src/interface';
+import { streamToBuf } from '../../src/utils';
 
 describe('uploadFile in node.js environment', () => {
   it(
@@ -66,13 +63,13 @@ describe('uploadFile in node.js environment', () => {
       });
       expect(uploadEventChangeFn.mock.calls.length).toBe(3);
       expect(uploadEventChangeFn.mock.calls[0][0].type).toBe(
-        UploadEventType.createMultipartUploadSucceed
+        UploadEventType.CreateMultipartUploadSucceed
       );
       const checkpointFilePath =
         uploadEventChangeFn.mock.calls[0][0].checkpointFile;
       expect(checkpointFilePath).not.toBeUndefined();
       expect(uploadEventChangeFn.mock.calls[0][0].type).toBe(
-        UploadEventType.createMultipartUploadSucceed
+        UploadEventType.CreateMultipartUploadSucceed
       );
 
       expect(progressFn.mock.calls.length).toBe(2);
@@ -128,7 +125,7 @@ describe('uploadFile in node.js environment', () => {
       let currentPartCount = 0;
       const source = axios.CancelToken.source();
       const uploadEventChange = (e: UploadEvent) => {
-        if (e.type === UploadEventType.uploadPartSucceed) {
+        if (e.type === UploadEventType.UploadPartSucceed) {
           ++currentPartCount;
 
           if (currentPartCount === pausePartCount) {
@@ -170,12 +167,12 @@ describe('uploadFile in node.js environment', () => {
 
       expect(
         uploadEventChangeFn.mock.calls.filter(
-          (it) => it[0].type === UploadEventType.uploadPartSucceed
+          (it) => it[0].type === UploadEventType.UploadPartSucceed
         ).length
       ).toBe(allPartCount - uploadedPartCount);
       expect(
         uploadEventChangeFn.mock.calls.filter(
-          (it) => it[0].type === UploadEventType.completeMultipartUploadSucceed
+          (it) => it[0].type === UploadEventType.CompleteMultipartUploadSucceed
         ).length
       ).toBe(1);
 
@@ -203,7 +200,7 @@ describe('uploadFile in node.js environment', () => {
       let currentPartCount = 0;
       const source = axios.CancelToken.source();
       const uploadEventChange = (e: UploadEvent) => {
-        if (e.type === UploadEventType.uploadPartSucceed) {
+        if (e.type === UploadEventType.UploadPartSucceed) {
           ++currentPartCount;
 
           if (currentPartCount === pausePartCount) {
@@ -247,12 +244,12 @@ describe('uploadFile in node.js environment', () => {
 
       expect(
         uploadEventChangeFn.mock.calls.filter(
-          (it) => it[0].type === UploadEventType.uploadPartSucceed
+          (it) => it[0].type === UploadEventType.UploadPartSucceed
         ).length
       ).toBe(allPartCount - uploadedPartCount);
       expect(
         uploadEventChangeFn.mock.calls.filter(
-          (it) => it[0].type === UploadEventType.completeMultipartUploadSucceed
+          (it) => it[0].type === UploadEventType.CompleteMultipartUploadSucceed
         ).length
       ).toBe(1);
 
@@ -419,6 +416,51 @@ describe('uploadFile in node.js environment', () => {
 
       const { data } = await client.headObject(key);
       expect(+data['content-length'] === 100 * 1024 * 1024).toBeTruthy();
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'uploadFile 100M cancal',
+    async () => {
+      const client = new TOS(tosOptions);
+      const progressFn = jest.fn();
+      const dataTransferFn = jest.fn();
+      const uploadEventChangeFn = jest.fn();
+
+      const cancelTokenSource = CancelToken.source();
+      setTimeout(() => {
+        cancelTokenSource.cancel();
+      }, 2_000);
+
+      try {
+        await client.uploadFile({
+          key: objectKey100M,
+          file: objectPath100M,
+          taskNum: 3,
+          dataTransferStatusChange: dataTransferFn,
+          progress: progressFn,
+          uploadEventChange: uploadEventChangeFn,
+          cancelToken: cancelTokenSource.token,
+        });
+        expect('').toBe('not enter this branch');
+      } catch (err) {
+        expect(isCancel(err)).toBeTruthy();
+        const dataTransferStatusChangeCallsLen =
+          dataTransferFn.mock.calls.length;
+        const progressCallsLen = progressFn.mock.calls.length;
+        const downloadEventChangeCallsLen =
+          uploadEventChangeFn.mock.calls.length;
+        // expect: don't receive new callbacks after cancel error
+        await sleepCache(10_000);
+        expect(dataTransferFn.mock.calls.length).toBe(
+          dataTransferStatusChangeCallsLen
+        );
+        expect(progressFn.mock.calls.length).toBe(progressCallsLen);
+        expect(uploadEventChangeFn.mock.calls.length).toBe(
+          downloadEventChangeCallsLen
+        );
+      }
     },
     NEVER_TIMEOUT
   );

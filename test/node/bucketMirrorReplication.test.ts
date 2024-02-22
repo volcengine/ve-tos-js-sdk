@@ -3,7 +3,7 @@ import TOS, { StorageClassType } from '../../src/browser-index';
 import { NEVER_TIMEOUT } from '../utils';
 import {
   tosOptions,
-  testBucketName,
+  testCRRSourceBucketName,
   testCRRTargetBucketName,
   testCRRTargetRegion,
 } from '../utils/options';
@@ -19,7 +19,7 @@ describe(`nodejs bucket ${CommonTestCasePrefix}`, () => {
 
       try {
         const result = await client.getBucketReplication({
-          bucket: testBucketName,
+          bucket: testCRRSourceBucketName,
         });
         expect(result.data.Rules.length).toBe(0);
       } catch (error) {
@@ -28,7 +28,7 @@ describe(`nodejs bucket ${CommonTestCasePrefix}`, () => {
 
       {
         const result = await client.putBucketReplication({
-          bucket: testBucketName,
+          bucket: testCRRSourceBucketName,
           role: 'ServiceRoleforReplicationAccessTOS',
           rules: [
             {
@@ -52,7 +52,7 @@ describe(`nodejs bucket ${CommonTestCasePrefix}`, () => {
 
       {
         const result = await client.getBucketReplication({
-          bucket: testBucketName,
+          bucket: testCRRSourceBucketName,
           ruleId: '1',
         });
 
@@ -62,7 +62,7 @@ describe(`nodejs bucket ${CommonTestCasePrefix}`, () => {
 
       {
         const result = await client.getBucketReplication({
-          bucket: testBucketName,
+          bucket: testCRRSourceBucketName,
         });
 
         expect(result.data.Rules.length).toBe(1);
@@ -71,7 +71,7 @@ describe(`nodejs bucket ${CommonTestCasePrefix}`, () => {
 
       {
         const result = await client.getBucketReplication({
-          bucket: testBucketName,
+          bucket: testCRRSourceBucketName,
           ruleId: 'xxxx',
         });
 
@@ -80,7 +80,7 @@ describe(`nodejs bucket ${CommonTestCasePrefix}`, () => {
 
       {
         const result = await client.deleteBucketReplication({
-          bucket: testBucketName,
+          bucket: testCRRSourceBucketName,
         });
 
         expect(result.data).toBe('');
@@ -88,7 +88,7 @@ describe(`nodejs bucket ${CommonTestCasePrefix}`, () => {
 
       {
         const result = await client.getBucketReplication({
-          bucket: testBucketName,
+          bucket: testCRRSourceBucketName,
         });
         expect(result.data.Rules.length).toBe(0);
       }

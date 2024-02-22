@@ -1,5 +1,5 @@
 import axios from 'axios';
-import TOS from '../../';
+import TOS, { DataTransferType } from '../../';
 
 const bucket = 'cg-beijing';
 const client = new TOS({
@@ -36,7 +36,7 @@ uploadObjectDom.addEventListener('click', async () => {
   // });
 });
 
-(function() {
+(function () {
   const inputDom = document.querySelector('#put-getPresignedUrl-file-input');
   const textDom = document.querySelector('#put-getPresignedUrl-url');
   const uploadDom = document.querySelector(
@@ -63,7 +63,7 @@ uploadObjectDom.addEventListener('click', async () => {
   });
 })();
 
-(function() {
+(function () {
   const inputDom = document.querySelector(
     '#put-getPresignedUrl-custom-domain-file-input'
   );
@@ -96,7 +96,7 @@ uploadObjectDom.addEventListener('click', async () => {
   });
 })();
 
-(function() {
+(function () {
   let lastUploadKey = '';
   const inputDom = document.querySelector('#upload-progress-input');
   const textDom = document.querySelector('#upload-progress-text');
@@ -111,7 +111,7 @@ uploadObjectDom.addEventListener('click', async () => {
   putObjectBtn.addEventListener('click', async () => {
     textDom.innerHTML = '';
     let content = '';
-    const addContent = line => {
+    const addContent = (line) => {
       content += line + '\n';
       textDom.innerHTML = content;
     };
@@ -122,12 +122,12 @@ uploadObjectDom.addEventListener('click', async () => {
     client.putObject({
       key,
       body: file,
-      dataTransferStatusChange: status => {
+      dataTransferStatusChange: (status) => {
         addContent(
           `type: ${status.type}, rwOnceBytes: ${status.rwOnceBytes}, consumedBytes: ${status.consumedBytes}, totalBytes: ${status.totalBytes}`
         );
       },
-      progress: p => {
+      progress: (p) => {
         addContent(`progress: ${p}`);
       },
     });
@@ -136,7 +136,7 @@ uploadObjectDom.addEventListener('click', async () => {
   uploadFileBtn.addEventListener('click', async () => {
     textDom.innerHTML = '';
     let content = '';
-    const addContent = line => {
+    const addContent = (line) => {
       content += line + '\n';
       textDom.innerHTML = content;
     };
@@ -147,12 +147,12 @@ uploadObjectDom.addEventListener('click', async () => {
     client.uploadFile({
       key,
       file,
-      dataTransferStatusChange: status => {
+      dataTransferStatusChange: (status) => {
         addContent(
           `type: ${status.type}, rwOnceBytes: ${status.rwOnceBytes}, consumedBytes: ${status.consumedBytes}, totalBytes: ${status.totalBytes}`
         );
       },
-      progress: p => {
+      progress: (p) => {
         addContent(`progress: ${p}`);
       },
     });
@@ -161,7 +161,7 @@ uploadObjectDom.addEventListener('click', async () => {
   resumableCopyBtn.addEventListener('click', () => {
     textDom.innerHTML = '';
     let content = '';
-    const addContent = line => {
+    const addContent = (line) => {
       content += line + '\n';
       textDom.innerHTML = content;
     };
@@ -170,16 +170,16 @@ uploadObjectDom.addEventListener('click', async () => {
       srcBucket: bucket,
       srcKey: lastUploadKey,
       key: `copy_${lastUploadKey}`,
-      progress: p => {
+      progress: (p) => {
         addContent(`progress: ${p}`);
       },
     });
   });
 })();
 
-(function() {
+(function () {
   const getObjectBtn = document.querySelector('#getObject-btn');
-  const key = '20220417190147394.jpeg';
+  const key = 'a (1).txt';
   const [start, end] = [0, 5];
 
   getObjectBtn.addEventListener('click', async () => {
@@ -188,10 +188,36 @@ uploadObjectDom.addEventListener('click', async () => {
         key,
         dataType: 'blob',
         headers: {
-          Range: `bytes=${start}-${end}`,
+          // Range: `bytes=${start}-${end}`,
+        },
+        dataTransferStatusChange: (event) => {
+          if (event.type === DataTransferType.Started) {
+            console.log('Data Transfer Started');
+          } else if (event.type === DataTransferType.Rw) {
+            const percent = (
+              (event.consumedBytes / event.totalBytes) *
+              100
+            ).toFixed(2);
+            console.log(
+              `Once Read:${event.rwOnceBytes},ConsumerBytes/TotalBytes: ${event.consumedBytes}/${event.totalBytes},${percent}%`
+            );
+          } else if (event.type === DataTransferType.Succeed) {
+            const percent = (
+              (event.consumedBytes / event.totalBytes) *
+              100
+            ).toFixed(2);
+            console.log(
+              `Data Transfer Succeed, ConsumerBytes/TotalBytes:${event.consumedBytes}/${event.totalBytes},${percent}%`
+            );
+          } else if (event.type === DataTransferType.Failed) {
+            console.log('Data Transfer Failed');
+          }
+        },
+        progress: (v) => {
+          console.log('getObjectV2 progress:', v);
         },
       })
-      .then(r => {
+      .then((r) => {
         const blob = r.data.content;
         // 创建标签。
         const link = document.createElement('a');
@@ -207,7 +233,7 @@ uploadObjectDom.addEventListener('click', async () => {
   });
 })();
 
-(function() {
+(function () {
   const btnEle = document.querySelector('#preSignedPolicyURL-btn');
   btnEle.addEventListener('click', () => {
     const prefix = `（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;

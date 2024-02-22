@@ -1,17 +1,19 @@
 import TOS from '../../src/browser-index';
 import { PutBucketPolicyInput } from '../../src/methods/bucket/policy';
-import { deleteBucket, sleepCache, NEVER_TIMEOUT } from '../utils';
-import {
-  testBucketName,
-  isNeedDeleteBucket,
-  tosOptions,
-} from '../utils/options';
+import { sleepCache, NEVER_TIMEOUT } from '../utils';
+import { testBucketName, tosOptions } from '../utils/options';
 
 describe('bucketPolicy in node.js environment', () => {
   it(
     'test policy',
     async () => {
       const client = new TOS(tosOptions);
+      {
+        // reset
+        await client.deleteBucketPolicy(testBucketName);
+        await sleepCache();
+      }
+
       {
         const { data } = await client.getBucketPolicy(testBucketName);
         expect(data.Statement.length).toEqual(0);

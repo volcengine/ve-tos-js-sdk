@@ -1,16 +1,8 @@
 import TOS from '../../src';
 import { Bucket } from '../../src/methods/bucket/base';
-import {
-  isNeedDeleteBucket,
-  testBucketName,
-  testBucketRenameBucketName,
-  testCRRTargetBucketName,
-  testPreSignedPolicyBucketName,
-  tosCRRTargetOptions,
-  tosOptions,
-} from './options';
+import { tosOptions } from './options';
 
-export const deleteBucket = async (bucketItem: Bucket) => {
+export const clearBucket = async (bucketItem: Bucket) => {
   const bucket = bucketItem.Name;
   const client = new TOS({
     ...tosOptions,
@@ -43,6 +35,16 @@ export const deleteBucket = async (bucketItem: Bucket) => {
       versionId: object.VersionId,
     });
   }
+};
+
+export const deleteBucket = async (bucketItem: Bucket) => {
+  const bucket = bucketItem.Name;
+  const client = new TOS({
+    ...tosOptions,
+    region: bucketItem.Location,
+    endpoint: bucketItem.ExtranetEndpoint,
+  });
+  await clearBucket(bucketItem);
   await client.deleteBucket(bucket);
 };
 
@@ -77,56 +79,4 @@ export async function testCheckErr(
   }
   // debugger;
   throw Error('testCheckErr never go here'); // never go here
-}
-
-export const streamToBuf = async (
-  stream: NodeJS.ReadableStream
-): Promise<Buffer> => {
-  let buf = Buffer.from([]);
-  return new Promise((resolve, reject) => {
-    stream.on('data', (data) => {
-      buf = Buffer.concat([buf, data]);
-    });
-    stream.on('end', () => {
-      resolve(buf);
-    });
-    stream.on('error', (err) => {
-      reject(err);
-    });
-  });
-};
-
-// 所有的桶创建都放在这里，因为桶创建后需要等待一段时间。
-export async function createAllTestBuckets() {
-  const client = new TOS(tosOptions);
-  // clear all bucket
-  const { data: buckets } = await client.listBuckets();
-  for (const bucket of buckets.Buckets) {
-    if (isNeedDeleteBucket(bucket.Name)) {
-      try {
-        await deleteBucket(bucket);
-      } catch (err) {
-        console.log('a: ', err);
-      }
-    }
-  }
-
-  // create bucket
-  await client.createBucket({
-    bucket: testBucketName,
-  });
-  await client.createBucket({
-    bucket: testBucketRenameBucketName,
-  });
-  await client.createBucket({
-    bucket: testPreSignedPolicyBucketName,
-  });
-
-  const crrTargetClient = new TOS(tosCRRTargetOptions);
-  await crrTargetClient.createBucket({
-    bucket: testCRRTargetBucketName,
-  });
-
-  // 创桶之后立即操作，很多操作都会偶发失败
-  await sleepCache(30_000);
 }

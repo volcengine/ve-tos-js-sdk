@@ -38,7 +38,9 @@ import {
 import appendObject from './methods/object/appendObject';
 import setObjectMeta from './methods/object/setObjectMeta';
 import { uploadPartCopy } from './methods/object/multipart/uploadPartCopy';
-import uploadFile from './methods/object/multipart/uploadFile';
+import uploadFile, {
+  UploadEventType,
+} from './methods/object/multipart/uploadFile';
 import { calculatePostSignature } from './methods/object/calculatePostSignature';
 import {
   ACLType,
@@ -57,7 +59,10 @@ import {
   VersioningStatusType,
 } from './TosExportEnum';
 import { CancelError } from './CancelError';
-import { resumableCopyObject } from './methods/object/multipart/resumableCopyObject';
+import {
+  ResumableCopyEventType,
+  resumableCopyObject,
+} from './methods/object/multipart/resumableCopyObject';
 import {
   deleteBucketPolicy,
   getBucketPolicy,
@@ -68,7 +73,7 @@ import {
   putBucketVersioning,
 } from './methods/bucket/versioning';
 import { preSignedPolicyURL } from './methods/object/preSignedPolicyURL';
-import downloadFile from './methods/object/downloadFile';
+import downloadFile, { DownloadEventType } from './methods/object/downloadFile';
 import { getBucketLocation } from './methods/bucket/getBucketLocation';
 import {
   deleteBucketCORS,
@@ -161,6 +166,7 @@ import {
 } from './methods/bucket/rename';
 import restoreObject from './methods/object/restoreObject';
 import { createDefaultRateLimiter } from './rate-limiter';
+import { DataTransferType } from './interface';
 
 const CancelToken = axios.CancelToken;
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
@@ -187,6 +193,10 @@ class TosClient extends TOSBase {
   static TierType = TierType;
   static VersioningStatusType = VersioningStatusType;
   static createDefaultRateLimiter = createDefaultRateLimiter;
+  static DataTransferType = DataTransferType;
+  static UploadEventType = UploadEventType;
+  static DownloadEventType = DownloadEventType;
+  static ResumableCopyEventType = ResumableCopyEventType;
 
   // bucket base
   createBucket = createBucket;
@@ -371,6 +381,10 @@ export {
   TierType,
   VersioningStatusType,
   createDefaultRateLimiter,
+  DataTransferType,
+  UploadEventType,
+  DownloadEventType,
+  ResumableCopyEventType,
 };
 
 // TODO: hack for umd

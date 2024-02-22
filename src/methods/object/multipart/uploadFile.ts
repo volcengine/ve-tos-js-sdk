@@ -29,6 +29,7 @@ import { EmptyReadStream } from '../../../nodejs/EmptyReadStream';
 import { CancelError } from '../../../CancelError';
 import { hashMd5 } from '../../../universal/crypto';
 import { IRateLimiter } from '../../../rate-limiter';
+import { validateCheckpoint } from '../utils';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -100,13 +101,13 @@ export interface UploadFileInput extends CreateMultipartUploadInput {
 export interface UploadFileOutput extends CompleteMultipartUploadOutput {}
 
 export enum UploadEventType {
-  createMultipartUploadSucceed = 1,
-  createMultipartUploadFailed = 2,
-  uploadPartSucceed = 3,
-  uploadPartFailed = 4,
-  uploadPartAborted = 5,
-  completeMultipartUploadSucceed = 6,
-  completeMultipartUploadFailed = 7,
+  CreateMultipartUploadSucceed = 1,
+  CreateMultipartUploadFailed = 2,
+  UploadPartSucceed = 3,
+  UploadPartFailed = 4,
+  UploadPartAborted = 5,
+  CompleteMultipartUploadSucceed = 6,
+  CompleteMultipartUploadFailed = 7,
 }
 
 export interface UploadPartInfo {
@@ -187,8 +188,8 @@ export async function uploadFile(
   input: UploadFileInput
 ): Promise<TosResponse<UploadFileOutput>> {
   const { cancelToken, enableContentMD5 = false } = input;
-
   const isCancel = () => cancelToken && !!cancelToken.reason;
+  validateCheckpoint(input.checkpoint);
 
   const fileStats: Stats | null = await (async () => {
     if (
@@ -369,7 +370,7 @@ export async function uploadFile(
     input.uploadEventChange(event);
   };
   enum TriggerProgressEventType {
-    createMultipartUploadSucceed = 1,
+    start = 1,
     uploadPartSucceed = 2,
     completeMultipartUploadSucceed = 3,
   }
@@ -377,16 +378,13 @@ export async function uploadFile(
     if (!input.progress) {
       return;
     }
-    let ret = 0;
-    if (type === TriggerProgressEventType.createMultipartUploadSucceed) {
-      ret = 0;
-    } else if (
-      type === TriggerProgressEventType.completeMultipartUploadSucceed
-    ) {
-      ret = 1;
-    } else {
-      ret = !fileSize ? 1 : consumedBytesForProgress / fileSize;
-    }
+
+    const percent = (() => {
+      if (type === TriggerProgressEventType.start && fileSize === 0) {
+        return 0;
+      }
+      return !fileSize ? 1 : consumedBytesForProgress / fileSize;
+    })();
 
     if (
       consumedBytesForProgress === fileSize &&
@@ -394,7 +392,7 @@ export async function uploadFile(
     ) {
       // 100% 仅在 complete 后处理，以便 100% 可以拉取到新对象
     } else {
-      input.progress(ret, getCheckpointContent());
+      input.progress(percent, getCheckpointContent());
     }
   };
   let consumedBytes = initConsumedBytes;
@@ -451,7 +449,14 @@ export async function uploadFile(
    */
   const updateAfterUploadPart = async (
     task: Task,
-    uploadPartRes: UploadPartOutput | Error
+    uploadPartRes:
+      | {
+          res: UploadPartOutput;
+          err?: null;
+        }
+      | {
+          err: Error;
+        }
   ) => {
     let existRecordTask = recordedTaskMap.get(task.partNumber);
     if (!existRecordTask) {
@@ -466,9 +471,9 @@ export async function uploadFile(
       recordedTaskMap.set(existRecordTask.part_number, existRecordTask);
     }
 
-    if (!(uploadPartRes instanceof Error)) {
+    if (!uploadPartRes.err) {
       existRecordTask.is_completed = true;
-      existRecordTask.etag = uploadPartRes.ETag;
+      existRecordTask.etag = uploadPartRes.res.ETag;
     }
 
     await writeCheckpointFile();
@@ -478,13 +483,13 @@ export async function uploadFile(
       offset: existRecordTask.offset,
     };
 
-    if (uploadPartRes instanceof Error) {
-      const err = uploadPartRes;
-      let type: UploadEventType = UploadEventType.uploadPartFailed;
+    if (uploadPartRes.err) {
+      const err = uploadPartRes.err;
+      let type: UploadEventType = UploadEventType.UploadPartFailed;
 
       if (err instanceof TosServerError) {
         if (ABORT_ERROR_STATUS_CODE.includes(err.statusCode)) {
-          type = UploadEventType.uploadPartAborted;
+          type = UploadEventType.UploadPartAborted;
         }
       }
 
@@ -496,11 +501,11 @@ export async function uploadFile(
       return;
     }
 
-    uploadPartInfo.etag = uploadPartRes.ETag;
+    uploadPartInfo.etag = uploadPartRes.res.ETag;
     consumedBytesForProgress += uploadPartInfo.partSize;
 
     triggerUploadEvent({
-      type: UploadEventType.uploadPartSucceed,
+      type: UploadEventType.UploadPartSucceed,
       uploadPartInfo,
     });
     triggerProgressEvent(TriggerProgressEventType.uploadPartSucceed);
@@ -538,15 +543,12 @@ export async function uploadFile(
       }
 
       triggerUploadEvent({
-        type: UploadEventType.createMultipartUploadSucceed,
+        type: UploadEventType.CreateMultipartUploadSucceed,
       });
-      triggerProgressEvent(
-        TriggerProgressEventType.createMultipartUploadSucceed
-      );
     } catch (_err) {
       const err = _err as Error;
       triggerUploadEvent({
-        type: UploadEventType.createMultipartUploadFailed,
+        type: UploadEventType.CreateMultipartUploadFailed,
         err,
       });
       throw err;
@@ -555,6 +557,7 @@ export async function uploadFile(
     tasks = allTasks;
   }
 
+  triggerProgressEvent(TriggerProgressEventType.start);
   const handleTasks = async () => {
     let firstErr: Error | null = null;
     let index = 0;
@@ -590,6 +593,9 @@ export async function uploadFile(
                 if (status.type !== DataTransferType.Rw) {
                   return;
                 }
+                if (isCancel()) {
+                  return;
+                }
                 consumedBytesThisTask += status.rwOnceBytes;
                 triggerDataTransfer(status.type, status.rwOnceBytes);
               },
@@ -601,7 +607,7 @@ export async function uploadFile(
               throw new CancelError('cancel uploadFile');
             }
 
-            await updateAfterUploadPart(curTask, uploadPartRes);
+            await updateAfterUploadPart(curTask, { res: uploadPartRes });
           } catch (_err) {
             const err = _err as any;
             consumedBytes -= consumedBytesThisTask;
@@ -611,10 +617,14 @@ export async function uploadFile(
               throw err;
             }
 
+            if (isCancel()) {
+              throw new CancelError('cancel uploadFile');
+            }
+
             if (!firstErr) {
               firstErr = err;
             }
-            await updateAfterUploadPart(curTask, err);
+            await updateAfterUploadPart(curTask, { err });
           }
         }
       })
@@ -640,13 +650,13 @@ export async function uploadFile(
 
     if (err || !res) {
       triggerUploadEvent({
-        type: UploadEventType.completeMultipartUploadFailed,
+        type: UploadEventType.CompleteMultipartUploadFailed,
       });
       throw err;
     }
 
     triggerUploadEvent({
-      type: UploadEventType.completeMultipartUploadSucceed,
+      type: UploadEventType.CompleteMultipartUploadSucceed,
     });
     triggerProgressEvent(
       TriggerProgressEventType.completeMultipartUploadSucceed

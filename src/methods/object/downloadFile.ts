@@ -1,9 +1,5 @@
 import TOSBase, { TosResponse } from '../base';
-import {
-  DEFAULT_PART_SIZE,
-  isCancelError,
-  readAllDataToBuffer,
-} from '../../utils';
+import { DEFAULT_PART_SIZE, isCancelError, streamToBuf } from '../../utils';
 import * as fsp from '../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../interface';
 import headObject, { HeadObjectInput, HeadObjectOutput } from './headObject';
@@ -16,6 +12,7 @@ import TosServerError from '../../TosServerError';
 import { CancelError } from '../../CancelError';
 import { IRateLimiter } from '../../rate-limiter';
 import { CRC } from '../../universal/crc';
+import { validateCheckpoint } from './utils';
 
 export interface DownloadFileCheckpointRecord {
   bucket: string;
@@ -74,11 +71,6 @@ export interface DownloadFileInput extends HeadObjectInput {
   dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
   /**
-   * the feature of pause and continue uploading
-   */
-  downloadEventChange?: (event: DownloadEvent) => void;
-
-  /**
    * the simple progress feature
    * percent is [0, 1]
    */
@@ -86,6 +78,11 @@ export interface DownloadFileInput extends HeadObjectInput {
     percent: number,
     checkpoint: DownloadFileCheckpointRecord
   ) => void;
+
+  /**
+   * the feature of pause and continue downloading
+   */
+  downloadEventChange?: (event: DownloadEvent) => void;
 
   /**
    * cancel this upload progress
@@ -157,9 +154,9 @@ export async function downloadFile(
       '`downloadFile` is not supported in browser environment'
     );
   }
-
   const { cancelToken, versionId } = input;
   const isCancel = () => cancelToken && !!cancelToken.reason;
+  validateCheckpoint(input.checkpoint);
 
   const headObjectRes = await headObject.call(this, {
     bucket: input.bucket,
@@ -215,7 +212,9 @@ export async function downloadFile(
           filePathIsPlaceholder: false,
           // filePath is json file
           // TODO: validate json schema
-          record: checkpointStat ? require(filePath) : undefined,
+          record: checkpointStat
+            ? JSON.parse(await fsp.readFile(filePath, 'utf-8'))
+            : undefined,
         };
       }
     }
@@ -381,6 +380,7 @@ export async function downloadFile(
 
     let consumedBytesForProgress = initConsumedBytes;
     enum TriggerProgressEventType {
+      start = 0,
       downloadPartSucceed = 1,
       renameTempFileSucceed = 2,
     }
@@ -388,12 +388,13 @@ export async function downloadFile(
       if (!input.progress) {
         return;
       }
-      let ret = 0;
-      if (type === TriggerProgressEventType.renameTempFileSucceed) {
-        ret = 1;
-      } else {
-        ret = !objectSize ? 1 : consumedBytesForProgress / objectSize;
-      }
+
+      const percent = (() => {
+        if (type === TriggerProgressEventType.start && objectSize === 0) {
+          return 0;
+        }
+        return !objectSize ? 1 : consumedBytesForProgress / objectSize;
+      })();
 
       if (
         consumedBytesForProgress === objectSize &&
@@ -401,7 +402,7 @@ export async function downloadFile(
       ) {
         // 100% 仅在 complete 后处理，以便 100% 可以拉取到新对象
       } else {
-        input.progress(ret, getCheckpointContent());
+        input.progress(percent, getCheckpointContent());
       }
     };
     let consumedBytes = initConsumedBytes;
@@ -458,11 +459,18 @@ export async function downloadFile(
      */
     const updateAfterDownloadPart = async (
       task: Task,
-      downloadPartRes: GetObjectV2Output | Error
+      downloadPartRes:
+        | {
+            res: GetObjectV2Output;
+            err?: null;
+          }
+        | {
+            err: Error;
+          }
     ) => {
       let existRecordTask = recordedTaskMap.get(task.partNumber);
       const rangeStart = task.offset;
-      const rangeEnd = Math.min(task.offset + partSize, objectSize - 1);
+      const rangeEnd = Math.min(task.offset + partSize - 1, objectSize - 1);
       if (!existRecordTask) {
         existRecordTask = {
           part_number: task.partNumber,
@@ -475,7 +483,7 @@ export async function downloadFile(
         recordedTaskMap.set(existRecordTask.part_number, existRecordTask);
       }
 
-      if (!(downloadPartRes instanceof Error)) {
+      if (!downloadPartRes.err) {
         existRecordTask.is_completed = true;
       }
 
@@ -486,8 +494,8 @@ export async function downloadFile(
         rangeEnd,
       };
 
-      if (downloadPartRes instanceof Error) {
-        const err = downloadPartRes;
+      if (downloadPartRes.err) {
+        const err = downloadPartRes.err;
         let type: DownloadEventType = DownloadEventType.DownloadPartFailed;
 
         if (err instanceof TosServerError) {
@@ -568,13 +576,12 @@ export async function downloadFile(
             }
 
             const curTask = tasks[currentIndex];
+            let consumedBytesThisTask = 0;
             try {
               const res = await getObjectV2.call(this, {
                 bucket,
                 key,
                 versionId,
-                // support rateLimiter so changed to stream
-                // dataType: 'buffer',
                 headers: {
                   'if-match': etag,
                   range: `bytes=${curTask.offset}-${Math.min(
@@ -584,9 +591,21 @@ export async function downloadFile(
                 },
                 trafficLimit: input.trafficLimit,
                 rateLimiter: input.rateLimiter,
+                dataTransferStatusChange(status) {
+                  if (status.type !== DataTransferType.Rw) {
+                    return;
+                  }
+                  if (isCancel()) {
+                    return;
+                  }
+                  consumedBytesThisTask += status.rwOnceBytes;
+                  triggerDataTransfer(DataTransferType.Rw, status.rwOnceBytes);
+                },
               });
-              // 上面的 call 调用，ts 丢失了类型推断
-              const buffer = await readAllDataToBuffer(res.data.content);
+              const buffer = await streamToBuf(res.data.content);
+              if (isCancel()) {
+                throw new CancelError('cancel downloadFile');
+              }
               // 开启 crc 的时候再计算
               if (this.opts.enableCRC) {
                 crcInstance.update(buffer);
@@ -598,22 +617,28 @@ export async function downloadFile(
                 buffer.byteLength,
                 curTask.offset
               );
-              triggerDataTransfer(DataTransferType.Rw, buffer.byteLength);
               if (isCancel()) {
-                throw new CancelError('cancel uploadFile');
+                throw new CancelError('cancel downloadFile');
               }
 
-              await updateAfterDownloadPart(curTask, res.data);
+              await updateAfterDownloadPart(curTask, { res: res.data });
             } catch (_err) {
               const err = _err as any;
+              consumedBytes -= consumedBytesThisTask;
+              consumedBytesThisTask = 0;
+
               if (isCancelError(err)) {
                 throw err;
+              }
+
+              if (isCancel()) {
+                throw new CancelError('cancel downloadFile');
               }
 
               if (!firstErr) {
                 firstErr = err;
               }
-              await updateAfterDownloadPart(curTask, err);
+              await updateAfterDownloadPart(curTask, { err });
             }
           }
         })
@@ -637,6 +662,7 @@ export async function downloadFile(
 
     const handleEmptyObj = async () => {};
 
+    triggerProgressEvent(TriggerProgressEventType.start);
     objectSize === 0 ? await handleEmptyObj() : await handleTasks();
 
     try {

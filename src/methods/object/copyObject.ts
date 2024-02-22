@@ -23,7 +23,7 @@ export interface CopyObjectInput {
   expires?: Date;
 
   copySourceIfMatch?: string;
-  copySourceIfModifiedSince?: string;
+  copySourceIfModifiedSince?: string | Date;
   copySourceIfNoneMatch?: string;
   copySourceIfUnmodifiedSince?: string;
   copySourceSSECAlgorithm?: string;

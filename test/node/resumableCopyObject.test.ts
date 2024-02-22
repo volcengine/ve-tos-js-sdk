@@ -1,12 +1,10 @@
 import axios from 'axios';
-import TOS, { isCancel } from '../../src/browser-index';
-import {
-  deleteBucket,
-  sleepCache,
-  NEVER_TIMEOUT,
-  streamToBuf,
-  testCheckErr,
-} from '../utils';
+import TOS, {
+  CancelToken,
+  ResumableCopyEventType,
+  isCancel,
+} from '../../src/browser-index';
+import { sleepCache, NEVER_TIMEOUT, testCheckErr } from '../utils';
 import {
   testBucketName,
   isNeedDeleteBucket,
@@ -26,11 +24,11 @@ import {
   objectPathEmpty,
 } from './utils';
 import {
-  ResumableCopyEventType,
   ResumableCopyEvent,
   ResumableCopyCheckpointRecord,
 } from '../../src/methods/object/multipart/resumableCopyObject';
 import { StorageClassType } from '../../src';
+import { streamToBuf } from '../../src/utils';
 
 const objectKey10MSpecialName = `10M 🍡对象（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
 const objectKey0MSpecialName = `0M 🍡对象（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
@@ -180,13 +178,13 @@ describe('resumableCopyObject in node.js environment', () => {
 
       expect(copyEventListenerFn.mock.calls.length).toBe(3);
       expect(copyEventListenerFn.mock.calls[0][0].type).toBe(
-        ResumableCopyEventType.createMultipartUploadSucceed
+        ResumableCopyEventType.CreateMultipartUploadSucceed
       );
       const checkpointFilePath =
         copyEventListenerFn.mock.calls[0][0].checkpointFile;
       expect(checkpointFilePath).not.toBeUndefined();
       expect(copyEventListenerFn.mock.calls[0][0].type).toBe(
-        ResumableCopyEventType.createMultipartUploadSucceed
+        ResumableCopyEventType.CreateMultipartUploadSucceed
       );
 
       expect(progressFn.mock.calls.length).toBe(2);
@@ -245,7 +243,7 @@ describe('resumableCopyObject in node.js environment', () => {
       let currentPartCount = 0;
       const source = axios.CancelToken.source();
       const copyEventListener = (e: ResumableCopyEvent) => {
-        if (e.type === ResumableCopyEventType.uploadPartCopySucceed) {
+        if (e.type === ResumableCopyEventType.UploadPartCopySucceed) {
           ++currentPartCount;
 
           if (currentPartCount === pausePartCount) {
@@ -286,7 +284,7 @@ describe('resumableCopyObject in node.js environment', () => {
       });
 
       const partSucceedCount = copyEventListenerFn.mock.calls.filter(
-        (it) => it[0].type === ResumableCopyEventType.uploadPartCopySucceed
+        (it) => it[0].type === ResumableCopyEventType.UploadPartCopySucceed
       ).length;
       // TODO(chengang.07): partSucceedCount 可能是 5，频率挺高
       // 实际上期望是 6
@@ -297,7 +295,7 @@ describe('resumableCopyObject in node.js environment', () => {
       expect(
         copyEventListenerFn.mock.calls.filter(
           (it) =>
-            it[0].type === ResumableCopyEventType.completeMultipartUploadSucceed
+            it[0].type === ResumableCopyEventType.CompleteMultipartUploadSucceed
         ).length
       ).toBe(1);
 
@@ -326,7 +324,7 @@ describe('resumableCopyObject in node.js environment', () => {
       let currentPartCount = 0;
       const source = axios.CancelToken.source();
       const copyEventListener = (e: ResumableCopyEvent) => {
-        if (e.type === ResumableCopyEventType.uploadPartCopySucceed) {
+        if (e.type === ResumableCopyEventType.UploadPartCopySucceed) {
           ++currentPartCount;
 
           if (currentPartCount === pausePartCount) {
@@ -370,13 +368,13 @@ describe('resumableCopyObject in node.js environment', () => {
 
       expect(
         copyEventListenerFn.mock.calls.filter(
-          (it) => it[0].type === ResumableCopyEventType.uploadPartCopySucceed
+          (it) => it[0].type === ResumableCopyEventType.UploadPartCopySucceed
         ).length
       ).toBe(allPartCount - uploadedPartCount);
       expect(
         copyEventListenerFn.mock.calls.filter(
           (it) =>
-            it[0].type === ResumableCopyEventType.completeMultipartUploadSucceed
+            it[0].type === ResumableCopyEventType.CompleteMultipartUploadSucceed
         ).length
       ).toBe(1);
 
@@ -479,6 +477,123 @@ describe('resumableCopyObject in node.js environment', () => {
 
       const { data: data3 } = await client.headObject(key0);
       expect(+data3['content-length'] === 0).toBeTruthy();
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'resumableCopyObject 100M progress-partSize=6972593B',
+    async () => {
+      const partSize = 6972593;
+      const totalBytes = 100 * 1024 * 1024;
+      const client = new TOS(tosOptions);
+      const progressFn = jest.fn();
+      await client.resumableCopyObject({
+        key: `resumableCopyObject 100M progress-partSize=${partSize}B`,
+        srcBucket: testBucketName,
+        srcKey: objectKey100M,
+        taskNum: 3,
+        progress: progressFn,
+        partSize: partSize,
+      });
+
+      const progressFnCallsLen = progressFn.mock.calls.length;
+      expect(progressFn.mock.calls[0][0]).toEqual(0);
+      expect(progressFn.mock.calls.filter((it) => it[0] === 1).length).toEqual(
+        1
+      );
+      const lastCall = progressFn.mock.calls.slice(-1)[0];
+      expect(lastCall[0]).toEqual(1);
+      for (let i = 1; i < progressFnCallsLen; ++i) {
+        const curPercent = progressFn.mock.calls[i][0].toFixed(6);
+        const expectPercent1 = ((partSize * i) / totalBytes).toFixed(6);
+        const expectPercent2 = (
+          (partSize * (i - 1) + (totalBytes % partSize)) /
+          totalBytes
+        ).toFixed(6);
+        const isOk =
+          curPercent === expectPercent1 || curPercent === expectPercent2;
+        expect(isOk).toBeTruthy();
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'resumableCopyObject 100M with download event-partSize=6972593B',
+    async () => {
+      const partSize = 6972593;
+      const totalBytes = 100 * 1024 * 1024;
+      const client = new TOS(tosOptions);
+      const eventFn = jest.fn();
+      await client.resumableCopyObject({
+        key: `resumableCopyObject 100M with download event-partSize=${partSize}B`,
+        srcBucket: testBucketName,
+        srcKey: objectKey100M,
+        taskNum: 3,
+        partSize: partSize,
+        copyEventListener: eventFn,
+      });
+      const downloadEventFnCallsLen = eventFn.mock.calls.length;
+      expect(eventFn.mock.calls[0][0].type).toBe(
+        ResumableCopyEventType.CreateMultipartUploadSucceed
+      );
+      let totalEventBytes = 0;
+      for (let i = 1; i < downloadEventFnCallsLen - 1; ++i) {
+        const event: ResumableCopyEvent = eventFn.mock.calls[i][0];
+        expect(event.type).toBe(ResumableCopyEventType.UploadPartCopySucceed);
+        const partInfo = event.copyPartInfo!;
+        totalEventBytes +=
+          partInfo.copySourceRangeEnd - partInfo.copySourceRangeStart + 1;
+      }
+      expect(totalEventBytes).toBe(totalBytes);
+      expect(eventFn.mock.calls[downloadEventFnCallsLen - 1][0].type).toBe(
+        ResumableCopyEventType.CompleteMultipartUploadSucceed
+      );
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'resumableCopyObject 100M cancal',
+    async () => {
+      const partSize = 6972593;
+      const client = new TOS(tosOptions);
+      const progressFn = jest.fn();
+      const eventChangeFn = jest.fn();
+
+      const cancelTokenSource = CancelToken.source();
+      // cancal after 5s
+      setTimeout(() => {
+        cancelTokenSource.cancel();
+      }, 2_000);
+      try {
+        await client.resumableCopyObject({
+          key: `resumableCopyObject 100M cancal`,
+          srcBucket: testBucketName,
+          srcKey: objectKey100M,
+          taskNum: 3,
+          progress: progressFn,
+          copyEventListener: eventChangeFn,
+          partSize,
+          cancelToken: cancelTokenSource.token,
+        });
+        expect('').toBe('not enter this branch');
+      } catch (err) {
+        if (!isCancel(err)) {
+          console.log('not cancel err: ');
+          throw err;
+        }
+        expect(isCancel(err)).toBeTruthy();
+        const progressCallsLen = progressFn.mock.calls.length;
+        const downloadEventChangeCallsLen = eventChangeFn.mock.calls.length;
+        // expect: don't receive new callbacks after cancel error
+        await sleepCache(10_000);
+        expect(progressFn.mock.calls.length).toBe(progressCallsLen);
+        expect(eventChangeFn.mock.calls.length).toBe(
+          downloadEventChangeCallsLen
+        );
+      }
     },
     NEVER_TIMEOUT
   );

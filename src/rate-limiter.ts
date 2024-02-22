@@ -73,8 +73,7 @@ function createRateLimiterTransform(rateLimiter: IRateLimiter) {
   return new Transform({
     async transform(chunk, _encoding, callback) {
       try {
-        const chunkSize = chunk.length; // 获取数据块的大小
-
+        const chunkSize = chunk.length;
         let finished = false;
         while (!finished) {
           const { ok, timeToWait } = await rateLimiter.Acquire(chunkSize);
@@ -99,6 +98,7 @@ export function createRateLimiterStream(
   rateLimiter: IRateLimiter
 ) {
   const pipeRateLimit = createRateLimiterTransform(rateLimiter);
+  stream.on('error', (err) => pipeRateLimit.destroy(err));
   return stream.pipe(pipeRateLimit);
 }
 

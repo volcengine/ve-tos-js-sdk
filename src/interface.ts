@@ -32,7 +32,8 @@ export interface DataTransferStatus {
   consumedBytes: number;
 
   /**
-   * totalBytes maybe 0
+   * totalBytes maybe 0 or -1.
+   * `-1` means unkown totalBytes, for example when starting to download an object
    */
   totalBytes: number;
 

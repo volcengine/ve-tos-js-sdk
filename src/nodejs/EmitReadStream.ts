@@ -1,9 +1,43 @@
-import { Readable } from 'stream';
-import { isReadable } from '../utils';
+import { Readable, Transform, TransformCallback } from 'stream';
+import { isBuffer, isReadable } from '../utils';
+import { read } from 'fs';
+
+function createReadCbTransformer(readCb: (n: number) => void) {
+  return new Transform({
+    async transform(chunk, _encoding, callback) {
+      const chunkSize = chunk.length;
+      readCb(chunkSize);
+      this.push(chunk);
+      callback();
+    },
+  });
+}
+
+function createEmitReadStream(
+  stream: NodeJS.ReadableStream,
+  readCb: (n: number) => void
+) {
+  const readCbTransformer = createReadCbTransformer(readCb);
+  stream.on('error', (err) => readCbTransformer.destroy(err));
+  return stream.pipe(readCbTransformer);
+
+  /**
+   * Don't use the below code.
+   *
+   * 1. The readable stream will be flowing mode after adding a 'data' event listener to it.
+   * 2. The stream will be paused after calling `pause()` method.
+   * 3. The stream will not change to flowing mode when adding a 'data' event listener to it.
+   */
+  // stream.on('data', (d) => {
+  //   readCb(d.length);
+  // });
+  // stream.pause();
+}
 
 export class EmitReadStream extends Readable {
   lastPos = 0;
   isEnd = false;
+  newStream: NodeJS.ReadableStream | null = null;
 
   constructor(
     public underlying: NodeJS.ReadableStream | Buffer,
@@ -12,10 +46,7 @@ export class EmitReadStream extends Readable {
   ) {
     super();
     if (isReadable(underlying)) {
-      underlying.on('data', (d) => {
-        readCb(d.length);
-      });
-      underlying.pause();
+      this.newStream = createEmitReadStream(underlying, readCb);
 
       // TODO: yarn test will timeout
       // underlying.on('end', () => {
@@ -69,8 +100,8 @@ export class EmitReadStream extends Readable {
   }
 
   stream(): NodeJS.ReadableStream {
-    if (isReadable(this.underlying)) {
-      return this.underlying;
+    if (isReadable(this.newStream)) {
+      return this.newStream;
     }
     return this;
   }

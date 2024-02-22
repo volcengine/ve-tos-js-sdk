@@ -1,4 +1,4 @@
-import TOS from '../../src/browser-index';
+import TOS, { StorageClassType } from '../../src/browser-index';
 import { createDefaultRateLimiter } from '../../src/rate-limiter';
 import { NEVER_TIMEOUT, deleteBucket } from '../utils';
 import fs from 'fs';
@@ -8,8 +8,6 @@ import {
   tosOptions,
 } from '../utils/options';
 import { objectKey10M, objectPath10M } from './utils';
-
-const key = `getObject-${objectKey10M}`;
 
 const commonCapacity = 1024 * 1024;
 const commonRate = 1024 * 1024;
@@ -43,6 +41,7 @@ describe('rateLimiter  data transfer in node.js environment', () => {
     'putObject with limiter',
     async () => {
       const client = new TOS(tosOptions);
+      const key = `putObject-with-limiter-${objectKey10M}`;
 
       const now = Date.now();
       await client.putObjectFromFile({
@@ -74,12 +73,15 @@ describe('rateLimiter  data transfer in node.js environment', () => {
     'appendObject with limiter',
     async () => {
       const client = new TOS(tosOptions);
+      const key = `appendObject-with-limiter-${objectKey10M}`;
 
       const now = Date.now();
-      await client.appendObject({
+      const { data: appendResultData } = await client.appendObject({
         key,
         body: fs.createReadStream(objectPath10M),
-        offset: 10485760,
+        offset: 0,
+        storageClass: StorageClassType.StorageClassStandard,
+        contentLength: 10 * 1024 * 1024,
         rateLimiter: createDefaultRateLimiter(commonCapacity, commonRate),
       });
       const duration = Date.now() - now;
@@ -88,8 +90,10 @@ describe('rateLimiter  data transfer in node.js environment', () => {
       const nowWithoutLimiter = Date.now();
       await client.appendObject({
         key,
-        offset: 10485760,
+        offset: appendResultData.nextAppendOffset,
         body: fs.createReadStream(objectPath10M),
+        storageClass: StorageClassType.StorageClassStandard,
+        contentLength: 10 * 1024 * 1024,
       });
 
       const durationWithoutLimiter = Date.now() - nowWithoutLimiter;
@@ -103,13 +107,12 @@ describe('rateLimiter  data transfer in node.js environment', () => {
     'uploadFile with limiter',
     async () => {
       const client = new TOS(tosOptions);
+      const key = `uploadFile-with-limiter-${objectKey10M}`;
 
       const now = Date.now();
       await client.uploadFile({
         key,
-
         file: objectPath10M,
-
         rateLimiter: createDefaultRateLimiter(commonCapacity, commonRate),
       });
       const duration = Date.now() - now;
@@ -141,6 +144,11 @@ describe('rateLimiter  data transfer in node.js environment', () => {
     'getObject with limiter',
     async () => {
       const client = new TOS(tosOptions);
+      const key = `getObject-with-limiter-${objectKey10M}`;
+      await client.putObjectFromFile({
+        key,
+        filePath: objectPath10M,
+      });
 
       const now = Date.now();
       const res = await client.getObjectV2({
@@ -173,6 +181,11 @@ describe('rateLimiter  data transfer in node.js environment', () => {
     'downloadFile with limiter',
     async () => {
       const client = new TOS(tosOptions);
+      const key = `downloadFile-with-limiter-${objectKey10M}`;
+      await client.putObjectFromFile({
+        key,
+        filePath: objectPath10M,
+      });
 
       const now = Date.now();
       await client.downloadFile({

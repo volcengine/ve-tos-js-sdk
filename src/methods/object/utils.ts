@@ -202,3 +202,12 @@ export function isValidRateLimiter(rateLimiter?: IRateLimiter) {
   }
   return true;
 }
+
+export function validateCheckpoint(cp: undefined | string | Object) {
+  if (process.env.TARGET_ENVIRONMENT === 'node' && typeof cp === 'object') {
+    console.warn(
+      `The \`checkpoint\` parameter should be passed as a string in node.js environment, representing a file or directory.` +
+        `Passing a checkpoint object to it will be removed in the future.`
+    );
+  }
+}

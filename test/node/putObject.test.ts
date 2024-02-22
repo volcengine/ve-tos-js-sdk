@@ -93,10 +93,8 @@ describe('putObject data transfer in node.js environment', () => {
 
       const lastData =
         dataTransferFn.mock.calls[dataTransferFn.mock.calls.length - 2][0];
-      expect(
-        lastData.type === DataTransferType.Rw &&
-          lastData.consumedBytes === lastData.totalBytes
-      ).toBe(true);
+      expect(lastData.type).toBe(DataTransferType.Rw);
+      expect(lastData.consumedBytes).toBe(lastData.totalBytes);
 
       expect(
         dataTransferFn.mock.calls[dataTransferFn.mock.calls.length - 1][0]
