@@ -23,7 +23,7 @@ module.exports = {
     {
       // overwrite replace options to prevent warning message
       const replacePluginIdx = config.plugins.findIndex(
-        it => it.name === 'replace'
+        (it) => it.name === 'replace'
       );
       config.plugins[replacePluginIdx] = replace({
         'process.env.NODE_ENV': JSON.stringify(opts.env),
@@ -37,7 +37,7 @@ module.exports = {
       //   https://github.com/formium/tsdx/blob/462af2d002987f985695b98400e0344b8f2754b7/src/createRollupConfig.ts#L187-L197
       const MIN_NODE_VERSION = '10';
       const babelPluginIdx = config.plugins.findIndex(
-        it => it.name === 'babel'
+        (it) => it.name === 'babel'
       );
       config.plugins[babelPluginIdx] = babelPluginTsdx({
         exclude: 'node_modules/**',
@@ -72,7 +72,7 @@ module.exports = {
 
       {
         const resolverPluginIdx = config.plugins.findIndex(
-          it => it.name === 'node-resolve'
+          (it) => it.name === 'node-resolve'
         );
         config.plugins[resolverPluginIdx] = nodeResolve.default({
           browser: true,
@@ -85,6 +85,9 @@ module.exports = {
         const nodejsPath = path.resolve(__dirname, './src/nodejs');
         config.external = (...args) => {
           const realPath = path.resolve(args[1], args[0]);
+          if (['fs', 'path'].includes(args[0])) {
+            return true;
+          }
           if (realPath.includes(nodejsPath)) {
             return true;
           }

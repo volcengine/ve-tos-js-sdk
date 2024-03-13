@@ -1,11 +1,15 @@
 import { getNewBodyConfig, getSize } from '../utils';
 import TOSBase from '../../base';
 import TosClientError from '../../../TosClientError';
-import fs, { Stats } from 'fs';
+import { Stats } from 'fs';
 import * as fsp from '../../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
-import { Readable } from 'stream';
-import { fillRequestHeaders, safeAwait } from '../../../utils';
+import {
+  checkCRC64WithHeaders,
+  fillRequestHeaders,
+  isReadable,
+  safeAwait,
+} from '../../../utils';
 import { retryNamespace } from '../../../axios';
 import { hashMd5 } from '../../../universal/crypto';
 import { IRateLimiter } from '../../../rate-limiter';
@@ -45,7 +49,7 @@ export interface UploadPartInput {
 }
 
 export interface UploadPartInputInner extends UploadPartInput {
-  makeRetryStream?: () => Readable;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
   beforeRetry?: () => void;
   /**
    * default: false
@@ -54,7 +58,13 @@ export interface UploadPartInputInner extends UploadPartInput {
 }
 
 export interface UploadPartOutput {
+  partNumber: number;
   ETag: string;
+  ssecAlgorithm?: string;
+  ssecKeyMD5?: string;
+  hashCrc64ecma: string;
+  serverSideEncryption?: string;
+  serverSideEncryptionKeyId?: string;
 }
 
 export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
@@ -68,18 +78,19 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
 
   if (enableContentMD5 && headers['content-md5'] == null) {
     // current only support in nodejs
-    if (
-      process.env.TARGET_ENVIRONMENT === 'node' &&
-      body instanceof Readable &&
-      input.makeRetryStream
-    ) {
+    if (isReadable(body) && input.makeRetryStream) {
       const newStream = input.makeRetryStream();
-      let allContent = Buffer.from([]);
-      for await (const chunk of newStream) {
-        allContent = Buffer.concat([allContent, chunk]);
+      if (newStream) {
+        let allContent = Buffer.from([]);
+        for await (const chunk of newStream) {
+          allContent = Buffer.concat([
+            allContent,
+            typeof chunk === 'string' ? Buffer.from(chunk) : chunk,
+          ]);
+        }
+        const md5 = hashMd5(allContent, 'base64');
+        headers['content-md5'] = md5;
       }
-      const md5 = hashMd5(allContent, 'base64');
-      headers['content-md5'] = md5;
     } else {
       console.warn(`current not support enableMD5Checksum`);
     }
@@ -136,7 +147,6 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
   };
   const bodyConfig = await getNewBodyConfig({
     body: input.body,
-    totalSize,
     dataTransferCallback: (n) => triggerDataTransfer(DataTransferType.Rw, n),
     beforeRetry: input.beforeRetry,
     makeRetryStream: input.makeRetryStream,
@@ -145,16 +155,26 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
   });
 
   triggerDataTransfer(DataTransferType.Started);
-  const [err, res] = await safeAwait(
-    this._fetchObject<UploadPartOutput>(
+  const task = async () => {
+    const res = await this._fetchObject<UploadPartOutput>(
       input,
       'PUT',
       { partNumber, uploadId },
       headers,
       bodyConfig.body,
       {
-        crc: bodyConfig.crc,
-        handleResponse: (res) => ({ ETag: res.headers.etag }),
+        handleResponse: (res) => ({
+          partNumber,
+          ETag: res.headers.etag,
+          serverSideEncryption: res.headers['x-tos-server-side-encryption'],
+          serverSideEncryptionKeyId:
+            res.headers['x-tos-server-side-encryption-kms-key-id'],
+          ssecAlgorithm:
+            res.headers['x-tos-server-side-encryption-customer-algorithm'],
+          ssecKeyMD5:
+            res.headers['x-tos-server-side-encryption-customer-key-MD5'],
+          hashCrc64ecma: res.headers['x-tos-hash-crc64ecma'],
+        }),
         axiosOpts: {
           [retryNamespace]: {
             beforeRetry: () => {
@@ -171,8 +191,13 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
           },
         },
       }
-    )
-  );
+    );
+    if (this.opts.enableCRC && bodyConfig.crc) {
+      checkCRC64WithHeaders(bodyConfig.crc, res.headers);
+    }
+    return res;
+  };
+  const [err, res] = await safeAwait(task());
 
   // FAQ: no etag
   if (process.env.TARGET_ENVIRONMENT === 'browser') {
@@ -222,7 +247,7 @@ export async function uploadPartFromFile(
   const start = input.offset ?? 0;
   const end = Math.min(stats.size, start + (input.partSize ?? stats.size));
   const makeRetryStream = () => {
-    const stream = fs.createReadStream(input.filePath, {
+    const stream = fsp.createReadStream(input.filePath, {
       start,
       end: end - 1,
     });

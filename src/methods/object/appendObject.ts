@@ -1,5 +1,6 @@
 import TOSBase from '../base';
 import {
+  checkCRC64WithHeaders,
   fillRequestHeaders,
   normalizeHeadersKey,
   safeAwait,
@@ -10,6 +11,7 @@ import { getNewBodyConfig, getSize } from './utils';
 import { StorageClassType } from '../../TosExportEnum';
 import { retryNamespace } from '../../axios';
 import TosClientError from '../../TosClientError';
+import { combineCrc64 } from '../../universal/crc';
 
 export interface AppendObjectInput {
   bucket?: string;
@@ -17,6 +19,9 @@ export interface AppendObjectInput {
   offset: number;
   // body is empty buffer if it's falsy
   body?: File | Blob | Buffer | NodeJS.ReadableStream;
+
+  // must provide preHashCrc64ecma if enableCRC is true and offset is non-zero
+  preHashCrc64ecma?: string;
 
   /**
    * unit: bit/s
@@ -83,7 +88,7 @@ export async function appendObject(
   this: TOSBase,
   input: AppendObjectInput | string
 ) {
-  input = this.normalizeObjectInput(input);
+  const normalizedInput = (input = this.normalizeObjectInput(input));
   const headers = (input.headers = normalizeHeadersKey(input.headers));
   fillRequestHeaders(input, [
     'contentLength',
@@ -113,6 +118,12 @@ export async function appendObject(
     );
   }
   headers['content-length'] = headers['content-length'] || `${totalSize}`;
+
+  if (this.opts.enableCRC && input.offset !== 0 && !input.preHashCrc64ecma) {
+    throw new TosClientError(
+      'must provide preHashCrc64ecma if enableCRC is true and offset is non-zero'
+    );
+  }
 
   let consumedBytes = 0;
   const { dataTransferStatusChange, progress } = input;
@@ -157,7 +168,6 @@ export async function appendObject(
 
   const bodyConfig = await getNewBodyConfig({
     body: input.body,
-    totalSize,
     dataTransferCallback: (n) => triggerDataTransfer(DataTransferType.Rw, n),
     makeRetryStream: undefined,
     enableCRC: this.opts.enableCRC,
@@ -165,11 +175,11 @@ export async function appendObject(
   });
 
   triggerDataTransfer(DataTransferType.Started);
-  const [err, res] = await safeAwait(
-    this._fetchObject<AppendObjectOutput>(
+  const task = async () => {
+    const res = await this._fetchObject<AppendObjectOutput>(
       input,
       'POST',
-      { append: '', offset: input.offset },
+      { append: '', offset: normalizedInput.offset },
       headers,
       bodyConfig.body || '',
       {
@@ -178,7 +188,6 @@ export async function appendObject(
           nextAppendOffset: +res.headers['x-tos-next-append-offset'],
           hashCrc64ecma: res.headers['x-tos-hash-crc64ecma'],
         }),
-        crc: bodyConfig.crc,
         axiosOpts: {
           [retryNamespace]: {
             beforeRetry: () => {
@@ -195,8 +204,18 @@ export async function appendObject(
           },
         },
       }
-    )
-  );
+    );
+    if (this.opts.enableCRC && bodyConfig.crc) {
+      const appendObjectCrc = combineCrc64(
+        normalizedInput.preHashCrc64ecma || '0',
+        bodyConfig.crc.getCrc64(),
+        totalSize
+      );
+      checkCRC64WithHeaders(appendObjectCrc, res.headers);
+    }
+    return res;
+  };
+  const [err, res] = await safeAwait(task());
 
   if (err || !res) {
     triggerDataTransfer(DataTransferType.Failed);

@@ -52,6 +52,15 @@ describe('TOS', () => {
     async () => {
       const client = new TOS(tosOptions);
       {
+        // set to default
+        await client.putBucketAcl({
+          bucket: testBucketName,
+          acl: ACLType.ACLPrivate,
+        });
+        await sleepCache(30_000);
+      }
+
+      {
         const { data } = await client.getBucketAcl(testBucketName);
         // private
         expect(data.Grants[0].Grantee.Canned).toBeUndefined();
@@ -67,6 +76,12 @@ describe('TOS', () => {
         const { data } = await client.getBucketAcl(testBucketName);
         expect(data.Grants[0].Grantee.Canned).toBe('AllUsers');
       }
+
+      // set to default
+      await client.putBucketAcl({
+        bucket: testBucketName,
+        acl: ACLType.ACLPrivate,
+      });
     },
     NEVER_TIMEOUT
   );

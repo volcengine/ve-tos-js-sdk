@@ -1,5 +1,5 @@
 import TOSBase, { TosResponse } from '../base';
-import { DEFAULT_PART_SIZE, isCancelError, streamToBuf } from '../../utils';
+import { DEFAULT_PART_SIZE, isCancelError } from '../../utils';
 import * as fsp from '../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../interface';
 import headObject, { HeadObjectInput, HeadObjectOutput } from './headObject';
@@ -11,8 +11,10 @@ import { getObjectV2, GetObjectV2Output } from './getObject';
 import TosServerError from '../../TosServerError';
 import { CancelError } from '../../CancelError';
 import { IRateLimiter } from '../../rate-limiter';
-import { CRC } from '../../universal/crc';
 import { validateCheckpoint } from './utils';
+import { createCrcReadStream } from '../../nodejs/CrcReadStream';
+import { CRC } from '../../universal/crc';
+import { combineCrc64 } from '../../universal/crc';
 
 export interface DownloadFileCheckpointRecord {
   bucket: string;
@@ -331,8 +333,6 @@ export async function downloadFile(
     }
   }
 
-  let tempFileFd = -1;
-
   const nextEnsureCloseFd = async () => {
     const getCheckpointContent = () => {
       const checkpointContent: DownloadFileCheckpointRecord = {
@@ -461,7 +461,7 @@ export async function downloadFile(
       task: Task,
       downloadPartRes:
         | {
-            res: GetObjectV2Output;
+            res: GetObjectV2Output & { rangeHashCrc64ecma: string };
             err?: null;
           }
         | {
@@ -485,6 +485,7 @@ export async function downloadFile(
 
       if (!downloadPartRes.err) {
         existRecordTask.is_completed = true;
+        existRecordTask.hash_crc64ecma = downloadPartRes.res.rangeHashCrc64ecma;
       }
 
       await writeCheckpointFile();
@@ -523,8 +524,6 @@ export async function downloadFile(
     };
 
     if (checkpointRichInfo.record) {
-      tempFileFd = await fsp.open(input.filePath, 'r+');
-
       bucket = checkpointRichInfo.record.bucket;
 
       // checkpoint info exists, so need to calculate remain tasks
@@ -536,7 +535,10 @@ export async function downloadFile(
       tasks = allTasks.filter((it) => !uploadedPartSet.has(it.partNumber));
     } else {
       try {
-        tempFileFd = await fsp.open(tempFilePath, 'w+');
+        // create temp file
+        await fsp.writeFile(tempFilePath, '', {
+          flag: 'w+',
+        });
       } catch (_err) {
         const err = _err as any;
         triggerDownloadEvent({
@@ -563,8 +565,6 @@ export async function downloadFile(
     const handleTasks = async () => {
       let firstErr: Error | null = null;
       let index = 0;
-
-      const crcInstance = new CRC();
 
       // TODO: how to test parallel does work, measure time is not right
       await Promise.all(
@@ -602,26 +602,51 @@ export async function downloadFile(
                   triggerDataTransfer(DataTransferType.Rw, status.rwOnceBytes);
                 },
               });
-              const buffer = await streamToBuf(res.data.content);
-              if (isCancel()) {
-                throw new CancelError('cancel downloadFile');
+
+              // need to handle stream's error event before throw a error
+              // if (isCancel()) {
+              //   throw new CancelError('cancel downloadFile');
+              // }
+
+              let dataStream = res.data.content;
+              const crcInst = new CRC();
+              if (
+                process.env.TARGET_ENVIRONMENT === 'node' &&
+                this.opts.enableCRC
+              ) {
+                dataStream = createCrcReadStream(dataStream, crcInst);
               }
-              // 开启 crc 的时候再计算
-              if (this.opts.enableCRC) {
-                crcInstance.update(buffer);
-              }
-              await fsp.write(
-                tempFileFd,
-                buffer,
-                0,
-                buffer.byteLength,
-                curTask.offset
-              );
+              await new Promise((resolve, reject) => {
+                const writeStream = fsp.createWriteStream(tempFilePath, {
+                  start: curTask.offset,
+                  flags: 'r+',
+                });
+
+                writeStream.on('finish', () => {
+                  resolve(undefined);
+                });
+                dataStream.on('error', (err) => {
+                  reject(err);
+                });
+
+                dataStream.pipe(writeStream);
+                function handleOnceCancel() {
+                  if (isCancel()) {
+                    reject(new CancelError('cancel downloadFile'));
+                    dataStream.unpipe(writeStream);
+                    dataStream.off('data', handleOnceCancel);
+                  }
+                }
+                dataStream.on('data', handleOnceCancel);
+              });
+
               if (isCancel()) {
                 throw new CancelError('cancel downloadFile');
               }
 
-              await updateAfterDownloadPart(curTask, { res: res.data });
+              await updateAfterDownloadPart(curTask, {
+                res: { ...res.data, rangeHashCrc64ecma: crcInst.getCrc64() },
+              });
             } catch (_err) {
               const err = _err as any;
               consumedBytes -= consumedBytesThisTask;
@@ -644,19 +669,18 @@ export async function downloadFile(
         })
       );
 
-      // 计算最终的 crc 并比对
-      const serverCRC64 = headObjectRes.data['x-tos-hash-crc64ecma'];
-
-      if (this.opts.enableCRC && serverCRC64) {
-        crcInstance.final();
-        if (!crcInstance.equalsTo(serverCRC64)) {
-          throw new TosClientError(
-            `expect crc64 ${serverCRC64}, actual crc64 ${crcInstance.toString()}`
-          );
-        }
-      }
       if (firstErr) {
         throw firstErr;
+      }
+
+      const serverCRC64 = headObjectRes.data['x-tos-hash-crc64ecma'];
+      if (this.opts.enableCRC && serverCRC64) {
+        const actualCrc64 = combineCRCInParts(getCheckpointContent());
+        if (actualCrc64 !== serverCRC64) {
+          throw new TosClientError(
+            `expect crc64 ${serverCRC64}, actual crc64 ${actualCrc64}`
+          );
+        }
       }
     };
 
@@ -690,9 +714,7 @@ export async function downloadFile(
   try {
     return await nextEnsureCloseFd();
   } finally {
-    if (tempFileFd >= 0) {
-      await fsp.close(tempFileFd);
-    }
+    // there is no global fd, don't need to close fd
   }
 }
 
@@ -729,4 +751,16 @@ function getDefaultCheckpointFilePath(
   const originPath = `${bucket}_${key}.${versionId}.json`;
   const normalizePath = originPath.replace(/[\\/]/g, '');
   return normalizePath;
+}
+
+function combineCRCInParts(cp: DownloadFileCheckpointRecord) {
+  let res = '0';
+  for (const part of cp.parts_info || []) {
+    res = combineCrc64(
+      res,
+      part.hash_crc64ecma,
+      part.range_end - part.range_start + 1
+    );
+  }
+  return res;
 }

@@ -7,10 +7,10 @@ import {
   testBucketName,
   tosOptions,
 } from '../utils/options';
-import { objectKey10M, objectPath10M } from './utils';
+import { downloadFileDir, objectKey10M, objectPath10M } from './utils';
 
 const commonCapacity = 1024 * 1024;
-const commonRate = 1024 * 1024;
+const commonRate = 0.2 * 1024 * 1024;
 const commonLimiterTime = 5 * 1000;
 
 async function readAllData(
@@ -190,7 +190,7 @@ describe('rateLimiter  data transfer in node.js environment', () => {
       const now = Date.now();
       await client.downloadFile({
         key,
-        filePath: './test/node/tmp/downloadFile/',
+        filePath: downloadFileDir,
         rateLimiter: createDefaultRateLimiter(commonCapacity, commonRate),
       });
       const duration = Date.now() - now;
@@ -199,7 +199,7 @@ describe('rateLimiter  data transfer in node.js environment', () => {
       const nowWithoutLimiter = Date.now();
       await client.downloadFile({
         key,
-        filePath: './test/node/tmp/downloadFile/',
+        filePath: downloadFileDir,
       });
 
       const durationWithoutLimiter = Date.now() - nowWithoutLimiter;

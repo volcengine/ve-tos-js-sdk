@@ -1,19 +1,16 @@
+import TosClientError from '../TosClientError';
+
+// not enabled in browser environment, because:
+// 1. crcjs maybe make browser long task
+// 2. the size of webassembly version's crc is a bit large, it's 1.2MB when uncompressed.
 export class CRC {
   reset() {}
 
-  async updateBlob() {}
-
-  async finalBlob() {}
-
-  update(_value: string | Buffer | ArrayBuffer | undefined) {}
-
-  final() {}
-
-  toString() {
-    return '';
+  async updateBlob(): Promise<string> {
+    throw new TosClientError('Not implemented.(CRC may cause browser lag.)');
   }
 
-  equalsTo(_crc64: string) {
-    return true;
+  update(_value: Buffer): string {
+    throw new TosClientError('Not implemented.(CRC may cause browser lag.)');
   }
 }

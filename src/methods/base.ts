@@ -165,7 +165,6 @@ type GetSignatureQueryInput =
 
 interface FetchOpts<T> {
   needMd5?: boolean;
-  crc?: CRCCls;
   handleResponse?: (response: AxiosResponse<T>) => T;
   subdomainBucket?: string;
   axiosOpts?: AxiosRequestConfig;
@@ -396,10 +395,6 @@ export class TOSBase {
         ...reqOpts,
         ...(opts?.axiosOpts || {}),
       });
-      if (opts?.crc) {
-        await opts.crc.finalBlob();
-        this.checkCRC64(opts.crc, res.headers);
-      }
 
       const data = handleResponse(res);
       return {
@@ -560,29 +555,6 @@ export class TOSBase {
   };
 
   protected getNormalDataFromError = getNormalDataFromError;
-
-  protected checkCRC64(crc: CRCCls, headers: Headers) {
-    if (!this.opts.enableCRC) {
-      return;
-    }
-
-    const serverCRC64 = headers['x-tos-hash-crc64ecma'];
-    if (serverCRC64 == null) {
-      if (process.env.TARGET_ENVIRONMENT === 'browser') {
-        console.warn(
-          "No x-tos-hash-crc64ecma in response's headers, please see https://www.volcengine.com/docs/6349/127737 to add `x-tos-hash-crc64ecma` to Expose-Headers field."
-        );
-      } else {
-      }
-      return;
-    }
-
-    if (!crc.equalsTo(serverCRC64)) {
-      throw new TosClientError(
-        `expect crc64 ${serverCRC64}, actual crc64 ${crc.toString()}`
-      );
-    }
-  }
 }
 
 export default TOSBase;

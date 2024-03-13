@@ -20,7 +20,6 @@ import {
   objectPathEmpty,
 } from './utils';
 import { DownloadEvent } from '../../src/methods/object/downloadFile';
-import * as fsp2 from '../../src/nodejs/fs-promises';
 
 describe('downloadFile', () => {
   beforeAll(async (done) => {

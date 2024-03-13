@@ -1,4 +1,4 @@
-import fs from 'fs';
+import { createWriteStream } from '../../nodejs/fs-promises';
 import TosClientError from '../../TosClientError';
 import { DataTransferStatus, DataTransferType, Headers } from '../../interface';
 import {
@@ -12,7 +12,7 @@ import {
 import TOSBase, { TosResponse } from '../base';
 import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
 import { isValidRateLimiter } from './utils';
-import { EmitReadStream } from '../../nodejs/EmitReadStream';
+import { createReadNReadStream } from '../../nodejs/EmitReadStream';
 
 export interface GetObjectInput {
   bucket?: string;
@@ -357,9 +357,9 @@ async function getObjectV2(
         );
       }
 
-      newData = new EmitReadStream(newData, totalSize, (n) =>
+      newData = createReadNReadStream(newData, (n) =>
         triggerDataTransfer(DataTransferType.Rw, n)
-      ).stream();
+      );
       newData.on('end', () => triggerDataTransfer(DataTransferType.Succeed));
 
       if (dataType === 'buffer') {
@@ -410,7 +410,7 @@ export async function getObjectToFile(
     const getObjectRes = await getObjectV2.call(this, input);
     const stream = getObjectRes.data.content;
 
-    const fsWriteStream = fs.createWriteStream(input.filePath);
+    const fsWriteStream = createWriteStream(input.filePath);
     stream.pipe(fsWriteStream);
     fsWriteStream.on('error', (err) => reject(err));
     fsWriteStream.on('finish', () => {

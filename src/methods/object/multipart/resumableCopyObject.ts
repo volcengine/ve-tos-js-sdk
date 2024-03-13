@@ -18,7 +18,7 @@ import path from 'path';
 import { safeAwait } from '../../../utils';
 import { CancelError } from '../../../CancelError';
 import headObject from '../headObject';
-import { uploadPartCopy } from './uploadPartCopy';
+import { uploadPartCopy, UploadPartCopyOutput } from './uploadPartCopy';
 import { Headers } from '../../../interface';
 import copyObject from '../copyObject';
 import { getCopySourceHeaderValue, validateCheckpoint } from '../utils';
@@ -392,7 +392,7 @@ export async function resumableCopyObject(
     task: Task,
     uploadPartRes:
       | {
-          res: UploadPartOutput;
+          res: UploadPartCopyOutput;
           err?: null;
         }
       | {

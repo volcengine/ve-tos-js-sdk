@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.6.12",
+  "version": "2.6.14",
   "license": "MIT",
   "files": [
     "browser",
@@ -21,8 +21,8 @@
     "build:browser": "tsdx build --format cjs,esm,umd --name TOS",
     "build:proxy": "tsc --esModuleInterop --declaration --outDir ./out ./src/proxy.ts",
     "test": "yarn build && yarn test:node && cp ./coverage/coverage-final.json ./coverage/coverage-node-final.json && yarn test:browser && cp ./coverage/coverage-final.json ./coverage/coverage-browser-final.json && node ./scripts/mapCoverage.js",
-    "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --config=test/node/jest.config.js --testEnvironment=node --bail --forceExit --no-cache -t ",
-    "test:browser": "NODE_ENV=development TARGET_ENVIRONMENT=browser tsdx test test/browser/** --coverage --config=test/browser/jest.config.js --testEnvironment=node --bail --forceExit --no-cache -t ",
+    "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --config=test/node/jest.config.js --testEnvironment=node --no-cache -t ",
+    "test:browser": "NODE_ENV=development TARGET_ENVIRONMENT=browser tsdx test test/browser/** --coverage --config=test/browser/jest.config.js --testEnvironment=node --no-cache -t ",
     "docs": "npx typedoc src/*",
     "deploy:docs": "./scripts/deployDocs.sh",
     "lint": "tsdx lint",
@@ -89,6 +89,7 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
+    "tos-crc64-js": "0.0.1",
     "axios": "^0.21.1",
     "axios-adapter-uniapp": "^0.1.4",
     "crypto-js": "^4.2.0",

@@ -115,6 +115,7 @@ describe('fetch object in node.js environment', () => {
         body: Buffer.from(content),
       });
       const url = client.getPreSignedUrl(oldKey);
+      await sleepCache(60_000);
 
       await testCheckErr(
         async () => {

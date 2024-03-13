@@ -6859,6 +6859,11 @@ to-regex@^3.0.1, to-regex@^3.0.2:
     regex-not "^1.0.2"
     safe-regex "^1.1.0"
 
+tos-crc64-js@0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/tos-crc64-js/-/tos-crc64-js-0.0.1.tgz#51a5f17ef128bf784ba3e43f361a84090ff1a21c"
+  integrity sha512-l2Ndi9BaDH3gmAJ5VIS/1WeqFcucK41WCbw5dije24k2XtUCclYfvhntWIVHe+0S85QcED4vjqm3AO1izlQ30g==
+
 tough-cookie@^2.3.3, tough-cookie@~2.5.0:
   version "2.5.0"
   resolved "https://registry.npmjs.org/tough-cookie/-/tough-cookie-2.5.0.tgz"

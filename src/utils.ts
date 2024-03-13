@@ -10,6 +10,7 @@ import { Headers } from './interface';
 import { TOSConstructorOptions, TosResponse } from './methods/base';
 import qs from 'qs';
 import TosServerError from './TosServerError';
+import { CRCCls } from './universal/crc';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: unknown) => (key: string) => {
@@ -434,3 +435,23 @@ export const streamToBuf = async (
     });
   });
 };
+
+export function checkCRC64WithHeaders(crc: CRCCls | string, headers: Headers) {
+  const serverCRC64 = headers['x-tos-hash-crc64ecma'];
+  if (serverCRC64 == null) {
+    if (process.env.TARGET_ENVIRONMENT === 'browser') {
+      console.warn(
+        "No x-tos-hash-crc64ecma in response's headers, please see https://www.volcengine.com/docs/6349/127737 to add `x-tos-hash-crc64ecma` to Expose-Headers field."
+      );
+    } else {
+    }
+    return;
+  }
+
+  const crcStr = typeof crc === 'string' ? crc : crc.getCrc64();
+  if (crcStr !== serverCRC64) {
+    throw new TosClientError(
+      `expect crc64 ${serverCRC64}, actual crc64 ${crcStr}`
+    );
+  }
+}

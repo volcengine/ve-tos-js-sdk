@@ -98,7 +98,9 @@ export function createRateLimiterStream(
   rateLimiter: IRateLimiter
 ) {
   const pipeRateLimit = createRateLimiterTransform(rateLimiter);
-  stream.on('error', (err) => pipeRateLimit.destroy(err));
+  stream.on('error', (err) => {
+    pipeRateLimit.destroy(err);
+  });
   return stream.pipe(pipeRateLimit);
 }
 

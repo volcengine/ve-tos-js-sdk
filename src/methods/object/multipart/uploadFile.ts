@@ -14,7 +14,6 @@ import {
 } from './completeMultipartUpload';
 import { CancelToken } from 'axios';
 import * as fsp from '../../../nodejs/fs-promises';
-import fs from 'fs';
 import path from 'path';
 import TosClientError from '../../../TosClientError';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
@@ -30,6 +29,7 @@ import { CancelError } from '../../../CancelError';
 import { hashMd5 } from '../../../universal/crypto';
 import { IRateLimiter } from '../../../rate-limiter';
 import { validateCheckpoint } from '../utils';
+import { combineCrc64 } from '../../../universal/crc';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -160,8 +160,7 @@ interface CheckpointRecordPart {
   part_size: number;
   offset: number;
   etag: string;
-  // not support
-  // hash_crc64ecma: number;
+  hash_crc64ecma: string;
   is_completed: boolean;
 }
 
@@ -466,6 +465,7 @@ export async function uploadFile(
         part_size: task.partSize,
         is_completed: false,
         etag: '',
+        hash_crc64ecma: '',
       };
       recordedTasks.push(existRecordTask);
       recordedTaskMap.set(existRecordTask.part_number, existRecordTask);
@@ -474,6 +474,7 @@ export async function uploadFile(
     if (!uploadPartRes.err) {
       existRecordTask.is_completed = true;
       existRecordTask.etag = uploadPartRes.res.ETag;
+      existRecordTask.hash_crc64ecma = uploadPartRes.res.hashCrc64ecma;
     }
 
     await writeCheckpointFile();
@@ -663,6 +664,14 @@ export async function uploadFile(
     );
     await rmCheckpointFile();
 
+    if (
+      this.opts.enableCRC &&
+      res.data.HashCrc64ecma &&
+      combineCRCInParts(getCheckpointContent()) !== res.data.HashCrc64ecma
+    ) {
+      throw new TosClientError('crc of entire file mismatch.');
+    }
+
     return res;
   };
 
@@ -728,7 +737,7 @@ function getMakeRetryStream(file: UploadFileInput['file'], task: Task) {
       if (!partSize) {
         return new EmptyReadStream();
       }
-      return fs.createReadStream(file, {
+      return fsp.createReadStream(file, {
         start,
         end: end - 1,
       });
@@ -742,4 +751,17 @@ function getDefaultCheckpointFilePath(bucket: string, key: string) {
   const originPath = `${key}.${hashMd5(`${bucket}.${key}`, 'hex')}.upload`;
   const normalizePath = originPath.replace(/[\\/]/g, '');
   return normalizePath;
+}
+
+function combineCRCInParts(cp: CheckpointRecord) {
+  const size = cp.file_info?.file_size || 0;
+  let res = '0';
+  for (const part of cp.parts_info || []) {
+    res = combineCrc64(
+      res,
+      part.hash_crc64ecma,
+      Math.min(part.part_size, size - part.offset)
+    );
+  }
+  return res;
 }

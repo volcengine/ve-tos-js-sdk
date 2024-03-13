@@ -187,6 +187,7 @@ describe('nodejs connection params', () => {
         headers: {
           [headerKey]: sendHeader,
         },
+        dataType: 'buffer',
       });
       expect(headers[headerKey]).toBe(requestReceiveHeader);
 
@@ -352,6 +353,7 @@ describe('nodejs connection params', () => {
       {
         const { headers } = await client.getObjectV2({
           key: testObjectName,
+          dataType: 'buffer',
           headers: {
             Range: 'bytes=0-9',
           },

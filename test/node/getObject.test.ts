@@ -31,6 +31,7 @@ describe('getObject data transfer in node.js environment', () => {
         headers: {
           Range: 'bytes=0-100',
         },
+        dataType: 'buffer',
       });
 
       expect(+res.headers['content-length']!).toBe(101);
@@ -68,7 +69,12 @@ describe('getObject data transfer in node.js environment', () => {
       const server = await startServer();
       const address = server.address() as AddressInfo;
       const endpoint = `${address.address}:${address.port}`;
-      const client = new TOS({ ...tosOptions, endpoint, secure: false });
+      const client = new TOS({
+        ...tosOptions,
+        endpoint,
+        secure: false,
+        requestTimeout: 2_000,
+      });
 
       // check stream
       const [err, res] = await safeAwait(
@@ -190,6 +196,7 @@ describe('getObject data transfer in node.js environment', () => {
         response: {
           'content-language': contentLanguage,
         },
+        dataType: 'buffer',
       });
       expect(headers['content-language']).toBe(contentLanguage);
 
@@ -197,6 +204,7 @@ describe('getObject data transfer in node.js environment', () => {
       const { headers: header2 } = await client.getObjectV2({
         key,
         responseContentLanguage: contentLanguage2,
+        dataType: 'buffer',
       });
       expect(header2['content-language']).toBe(contentLanguage2);
 
@@ -206,6 +214,7 @@ describe('getObject data transfer in node.js environment', () => {
         responseContentLanguage: contentLanguage2,
         response: {
           'content-language': contentLanguage3,
+          dataType: 'buffer',
         },
       });
       expect(header3['content-language']).toBe(contentLanguage3);

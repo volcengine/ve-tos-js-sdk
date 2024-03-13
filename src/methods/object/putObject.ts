@@ -1,5 +1,6 @@
 import TOSBase, { TosResponse } from '../base';
 import {
+  checkCRC64WithHeaders,
   fillRequestHeaders,
   normalizeHeadersKey,
   safeAwait,
@@ -12,8 +13,7 @@ import {
 } from '../../interface';
 import TosClientError from '../../TosClientError';
 import * as fsp from '../../nodejs/fs-promises';
-import fs, { Stats } from 'fs';
-import { Readable } from 'stream';
+import { Stats } from 'fs';
 import { getSize, getNewBodyConfig } from './utils';
 import { retryNamespace } from '../../axios';
 import { IRateLimiter } from '../../rate-limiter';
@@ -99,7 +99,7 @@ export interface PutObjectInput {
 }
 
 interface PutObjectInputInner extends PutObjectInput {
-  makeRetryStream?: () => Readable;
+  makeRetryStream?: () => NodeJS.ReadableStream | undefined;
 }
 
 export interface PutObjectOutput {
@@ -202,7 +202,6 @@ export async function _putObject(
 
   const bodyConfig = await getNewBodyConfig({
     body: input.body,
-    totalSize,
     dataTransferCallback: (n) => triggerDataTransfer(DataTransferType.Rw, n),
     makeRetryStream: input.makeRetryStream,
     enableCRC: this.opts.enableCRC,
@@ -210,8 +209,9 @@ export async function _putObject(
   });
 
   triggerDataTransfer(DataTransferType.Started);
-  const [err, res] = await safeAwait(
-    this._fetchObject<PutObjectOutput>(
+
+  const task = async () => {
+    const res = await this._fetchObject<PutObjectOutput>(
       input,
       'PUT',
       {},
@@ -225,7 +225,6 @@ export async function _putObject(
           }
           return result;
         },
-        crc: bodyConfig.crc,
         axiosOpts: {
           [retryNamespace]: {
             beforeRetry: () => {
@@ -242,8 +241,13 @@ export async function _putObject(
           },
         },
       }
-    )
-  );
+    );
+    if (this.opts.enableCRC && bodyConfig.crc) {
+      checkCRC64WithHeaders(bodyConfig.crc, res.headers);
+    }
+    return res;
+  };
+  const [err, res] = await safeAwait(task());
 
   if (err || !res) {
     triggerDataTransfer(DataTransferType.Failed);
@@ -274,7 +278,7 @@ export async function putObjectFromFile(
     normalizedHeaders['content-length'] = `${stats.size}`;
   }
   const makeRetryStream = () => {
-    const stream = fs.createReadStream(input.filePath);
+    const stream = fsp.createReadStream(input.filePath);
     return stream;
   };
 

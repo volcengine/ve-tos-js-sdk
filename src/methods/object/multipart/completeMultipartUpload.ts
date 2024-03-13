@@ -50,24 +50,21 @@ export async function completeMultipartUpload(
     headers: { [x: string]: any };
     data: CompleteMultipartUploadOutput;
   }) => {
-    let result: CompleteMultipartUploadOutput;
+    const bucket = input.bucket || this.opts.bucket || '';
     const headers = response.headers;
-    if (input.callback) {
-      const bucket = input.bucket || this.opts.bucket || '';
-      result = {
-        CallbackResult: `${JSON.stringify(response.data)}`,
+    const result: CompleteMultipartUploadOutput = {
+      ...{
         VersionID: headers['x-tos-version-id'],
         ETag: headers['etag'],
         Bucket: bucket,
         Location: headers['location'],
         HashCrc64ecma: headers['x-tos-hash-crc64ecma'],
         Key: input.key,
-      };
-    } else {
-      result = {
-        ...response.data,
-        VersionID: headers['x-tos-version-id'],
-      };
+      },
+      ...response.data,
+    };
+    if (input.callback) {
+      result.CallbackResult = `${JSON.stringify(response.data)}`;
     }
     return result;
   };

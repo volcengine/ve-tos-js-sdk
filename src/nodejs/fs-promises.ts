@@ -2,9 +2,12 @@
  * since fs/promises exist after nodejs@14, so we make own fs/promises
  */
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import { promisify } from 'util';
 
-export const open = promisify(fs.open);
+export const createWriteStream = fs.createWriteStream;
+export const createReadStream = fs.createReadStream;
+export const open = fsPromises.open;
 export const close = promisify(fs.close);
 export const rename = promisify(fs.rename);
 export const stat = promisify(fs.stat);

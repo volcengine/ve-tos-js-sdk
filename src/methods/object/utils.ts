@@ -1,10 +1,12 @@
 import TosClientError from '../../TosClientError';
 import mimeTypes from '../../mime-types';
 import { Headers, SupportObjectBody } from '../../interface';
-import { EmitReadStream } from '../../nodejs/EmitReadStream';
+import { createReadNReadStream } from '../../nodejs/EmitReadStream';
 import { isBuffer, isBlob, isReadable } from '../../utils';
 import { CRC, CRCCls } from '../../universal/crc';
 import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
+import { Buffer2Stream } from '../../nodejs/buffer2Stream';
+import { createCrcReadStream } from '../../nodejs/CrcReadStream';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -52,7 +54,6 @@ export function getSize(body: unknown, headers?: Headers) {
 
 interface GetNewBodyConfigIn<T> {
   body: T;
-  totalSize: number | null | undefined;
   dataTransferCallback: (n: number) => void;
   beforeRetry?: () => void;
   makeRetryStream?: () => NodeJS.ReadableStream | undefined;
@@ -68,7 +69,6 @@ interface GetNewBodyConfigOut<T> {
 
 interface GetEmitReadBodyConfigIn<T> {
   body: T;
-  totalSize: number | null | undefined;
   dataTransferCallback: (n: number) => void;
   makeRetryStream?: () => NodeJS.ReadableStream | undefined;
   rateLimiter?: IRateLimiter;
@@ -80,7 +80,6 @@ interface GetEmitReadBodyConfigOut<T> {
 
 export function getEmitReadBodyConfig<T extends SupportObjectBody>({
   body,
-  totalSize,
   dataTransferCallback,
   makeRetryStream,
   rateLimiter,
@@ -96,46 +95,32 @@ export function getEmitReadBodyConfig<T extends SupportObjectBody>({
     return getDefaultRet();
   }
 
-  const totalSizeValid = totalSize != null;
-  if (isBuffer(body) && totalSizeValid) {
-    const bodyBuffer = body;
-    const makeRetryStream = () =>
-      new EmitReadStream(bodyBuffer, totalSize, dataTransferCallback).stream();
-    return {
-      body: makeRetryStream(),
-      makeRetryStream,
-    };
+  if (isBuffer(newBody)) {
+    const bodyBuf = newBody;
+    makeRetryStream = () => new Buffer2Stream(bodyBuf);
+    newBody = new Buffer2Stream(bodyBuf);
   }
 
-  if (isReadable(body)) {
-    if (totalSizeValid) {
-      newBody = new EmitReadStream(
-        body,
-        totalSize,
-        dataTransferCallback
-      ).stream();
-      // add rateLimiter
-      if (rateLimiter && isValidRateLimiter(rateLimiter)) {
-        newBody = createRateLimiterStream(newBody, rateLimiter);
-      }
+  if (isReadable(newBody)) {
+    if (rateLimiter && isValidRateLimiter(rateLimiter)) {
+      newBody = createRateLimiterStream(newBody, rateLimiter);
     }
+    newBody = createReadNReadStream(newBody, dataTransferCallback);
 
     if (makeRetryStream) {
+      const oriMakeRetryStream = makeRetryStream;
       return {
         body: newBody,
         makeRetryStream: () => {
-          let stream = makeRetryStream();
-          if (stream && totalSizeValid) {
-            stream = new EmitReadStream(
-              stream,
-              totalSize,
-              dataTransferCallback
-            ).stream();
+          let stream = oriMakeRetryStream();
+          if (!stream) {
+            return stream;
           }
-          // TODO: retryStream need rateLimiter?
-          if (rateLimiter && isValidRateLimiter(rateLimiter) && stream) {
+
+          if (rateLimiter && isValidRateLimiter(rateLimiter)) {
             stream = createRateLimiterStream(stream, rateLimiter);
           }
+          stream = createReadNReadStream(stream, dataTransferCallback);
           return stream;
         },
       };
@@ -151,7 +136,7 @@ export async function getCRCBodyConfig<T extends SupportObjectBody>({
   makeRetryStream,
   enableCRC,
 }: GetNewBodyConfigIn<T>): Promise<GetNewBodyConfigOut<T>> {
-  if (!enableCRC || process.env.TARGET_ENVIRONMENT === 'browser') {
+  if (process.env.TARGET_ENVIRONMENT === 'browser' || !enableCRC) {
     return {
       body,
       beforeRetry,
@@ -159,21 +144,24 @@ export async function getCRCBodyConfig<T extends SupportObjectBody>({
     };
   }
 
+  let newBody: T | NodeJS.ReadableStream = body;
   const crc = new CRC();
-
   if (isReadable(body)) {
-    body.on('data', (d: Buffer) => {
-      crc.update(d);
-    });
-    body.pause();
-  } else if (isBlob(body)) {
-    await crc.updateBlob(body);
-  } else {
-    crc.update(body);
+    newBody = createCrcReadStream(body, crc);
+    if (makeRetryStream) {
+      const oriMakeRetryStream = makeRetryStream;
+      makeRetryStream = () => {
+        const stream = oriMakeRetryStream();
+        if (!stream) {
+          return stream;
+        }
+        return createCrcReadStream(stream, crc);
+      };
+    }
   }
 
   return {
-    body,
+    body: newBody,
     beforeRetry: () => {
       crc.reset();
       beforeRetry?.();

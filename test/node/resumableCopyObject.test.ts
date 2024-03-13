@@ -340,7 +340,7 @@ describe('resumableCopyObject in node.js environment', () => {
         key,
         checkpoint: cpFilepath,
         copyEventListener,
-        partSize: (100 * 1024 * 1024) / allPartCount,
+        partSize: Math.ceil((100 * 1024 * 1024) / allPartCount),
         cancelToken: source.token,
         taskNum: 3,
       });
@@ -563,10 +563,6 @@ describe('resumableCopyObject in node.js environment', () => {
       const eventChangeFn = jest.fn();
 
       const cancelTokenSource = CancelToken.source();
-      // cancal after 5s
-      setTimeout(() => {
-        cancelTokenSource.cancel();
-      }, 2_000);
       try {
         await client.resumableCopyObject({
           key: `resumableCopyObject 100M cancal`,
@@ -574,7 +570,13 @@ describe('resumableCopyObject in node.js environment', () => {
           srcKey: objectKey100M,
           taskNum: 3,
           progress: progressFn,
-          copyEventListener: eventChangeFn,
+          copyEventListener: (...args) => {
+            eventChangeFn(...args);
+            const e = args[0];
+            if (e.copyPartInfo?.partNumber === 4) {
+              cancelTokenSource.cancel();
+            }
+          },
           partSize,
           cancelToken: cancelTokenSource.token,
         });
