@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "license": "MIT",
   "files": [
     "browser",

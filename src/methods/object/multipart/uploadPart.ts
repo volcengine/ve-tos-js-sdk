@@ -78,7 +78,11 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
 
   if (enableContentMD5 && headers['content-md5'] == null) {
     // current only support in nodejs
-    if (isReadable(body) && input.makeRetryStream) {
+    if (
+      process.env.TARGET_ENVIRONMENT === 'node' &&
+      isReadable(body) &&
+      input.makeRetryStream
+    ) {
       const newStream = input.makeRetryStream();
       if (newStream) {
         let allContent = Buffer.from([]);
