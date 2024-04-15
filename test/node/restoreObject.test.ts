@@ -13,7 +13,8 @@ describe(`nodejs object restore`, () => {
     async () => {
       const client = new TOS(tosOptions);
       const key = 'archive-storage-class-restore';
-      await client.putObject({
+
+      const putRes = await client.putObject({
         key,
         storageClass: StorageClassType.StorageClassArchive,
       });
@@ -21,13 +22,24 @@ describe(`nodejs object restore`, () => {
       // 1. 202
       // 2. 409
       // 3. 200
-      {
-        const res = await client.restoreObject({
-          key,
-          days: 1,
-        });
-        expect(res.statusCode).toBe(202);
-      }
+
+      const res = await client.restoreObject({
+        key,
+        days: 1,
+      });
+      expect(res.statusCode).toBe(202);
+      // test headObject restore Info
+      let headRes = await client.headObject({
+        key,
+      });
+      console.log('headObject', headRes.data);
+      expect(headRes.data.RestoreInfo?.RestoreStatus.OngoingRequest).toBe(true);
+      expect(headRes.data.RestoreInfo?.RestoreParam?.ExpiryDays).toBe(1);
+      expect(headRes.data.RestoreInfo?.RestoreParam?.Tier).toBe(
+        TierType.TierStandard
+      );
+      // test getObject restore Info
+      // when restoring  getObject will throw ServerError
 
       for (;;) {
         try {
@@ -47,6 +59,28 @@ describe(`nodejs object restore`, () => {
           throw err;
         }
       }
+
+      headRes = await client.headObject({
+        key,
+      });
+      const getRes = await client.getObjectV2({
+        key,
+      });
+      // console.log('headObject-after-restore', headRes.data);
+      expect(headRes.data.RestoreInfo?.RestoreStatus.OngoingRequest).toBe(
+        false
+      );
+      expect(headRes.data.RestoreInfo?.RestoreStatus.ExpiryDate).toBeTruthy();
+      expect(headRes.data.RestoreInfo?.RestoreParam?.ExpiryDays).toBe(
+        undefined
+      );
+      expect(headRes.data.RestoreInfo?.RestoreParam?.Tier).toBe(undefined);
+
+      // console.log('getObjectV2-after-restore', getRes.data.RestoreInfo);
+      expect(getRes.data.RestoreInfo?.RestoreStatus.OngoingRequest).toBe(false);
+      expect(getRes.data.RestoreInfo?.RestoreStatus.ExpiryDate).toBeTruthy();
+      expect(getRes.data.RestoreInfo?.RestoreParam?.ExpiryDays).toBe(undefined);
+      expect(getRes.data.RestoreInfo?.RestoreParam?.Tier).toBe(undefined);
     },
     NEVER_TIMEOUT
   );

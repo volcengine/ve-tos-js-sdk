@@ -1,4 +1,4 @@
-import { handleEmptyServerError } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase, { TosResponse } from '../base';
 
 interface TagSet {
@@ -61,8 +61,12 @@ export async function getBucketTagging(
     return res;
   } catch (error) {
     return handleEmptyServerError<GetBucketTaggingOutput>(error, {
-      TagSet: {
-        Tags: [],
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketTagging',
+      defaultResponse: {
+        TagSet: {
+          Tags: [],
+        },
       },
     });
   }

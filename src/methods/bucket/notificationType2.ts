@@ -2,9 +2,9 @@ import { convertNormalCamelCase2Upper } from '../../utils';
 import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase from '../base';
 
-const CommonQueryKey = 'notification';
+const CommonQueryKey = 'notification_v2';
 
-export interface Filter {
+export interface NotificationFilter {
   TOSKey?: {
     FilterRules: {
       Name: string;
@@ -12,38 +12,35 @@ export interface Filter {
     }[];
   };
 }
-interface CloudFunctionConfiguration {
-  Events: string[];
-  Filter?: Filter;
-  RuleId?: string;
-  CloudFunction: string;
-}
 
-export interface RocketMQConf {
+export interface DestinationRocketMQ {
+  Role: string;
   InstanceId: string;
   Topic: string;
   AccessKeyId: string;
 }
-export interface RocketMQConfiguration {
+
+export interface NotificationDestination {
+  RocketMQ?: DestinationRocketMQ[];
+  VeFaaS?: { FunctionId: string }[];
+}
+
+export interface NotificationRule {
   RuleId: string;
-  Role: string;
-  Events: string[]; // 支持的值在不断增加，不定义成枚举
-  Filter?: Filter;
-  RocketMQ: RocketMQConf;
+  Events: string[];
+  Filter?: NotificationFilter;
+  Destination: NotificationDestination;
 }
 
 export interface PutBucketNotificationInput {
   bucket: string;
-  cloudFunctionConfigurations?: CloudFunctionConfiguration[];
-  rocketMQConfigurations?: RocketMQConfiguration[];
+  Rules: NotificationRule[];
+  Version?: string;
 }
 
 export interface PutBucketNotificationOutput {}
 
-/**
- * @deprecated use PutBucketNotificationType2 instead
- */
-export async function putBucketNotification(
+export async function putBucketNotificationType2(
   this: TOSBase,
   input: PutBucketNotificationInput
 ) {
@@ -66,14 +63,11 @@ export interface GetBucketNotificationInput {
 }
 
 export interface GetBucketNotificationOutput {
-  CloudFunctionConfigurations: CloudFunctionConfiguration[];
-  RocketMQConfigurations: RocketMQConfiguration[];
+  Rules: NotificationRule[];
+  Version?: string;
 }
 
-/**
- * @deprecated use GetBucketNotificationType2 instead
- */
-export async function getBucketNotification(
+export async function getBucketNotificationType2(
   this: TOSBase,
   input: GetBucketNotificationInput
 ) {
@@ -88,10 +82,9 @@ export async function getBucketNotification(
   } catch (error) {
     return handleEmptyServerError<GetBucketNotificationOutput>(error, {
       enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
-      methodKey: 'getBucketNotification',
+      methodKey: 'getBucketNotificationType2',
       defaultResponse: {
-        CloudFunctionConfigurations: [],
-        RocketMQConfigurations: [],
+        Rules: [],
       },
     });
   }

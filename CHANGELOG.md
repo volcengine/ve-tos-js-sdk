@@ -2,6 +2,27 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.1] - 2024-04-15
+
+### Fixed
+
+- fix wrong MirrorBackRule interface
+- deprecated `(get|put)BucketNotification` methods to modify bucket notification
+- add `(get|put)BucketNotificationType2` methods to modify bucket notification
+
+### Added
+
+- Bucket policy supports exclusion logic
+- `putBucketLifecycle|getBucketLifecycle` add `AllowSameActionOverlap` field
+- Added attributes of `LifecycleRule`
+- export `MirrorBackRule`
+- `ReplicationRule` add `AccessControlTranslation` field
+- `headObject|getObjectV2` support `RestoreInfo`,`ReplicationStatus` response field
+- `createBucket` support `projectName` field
+- `headBucket` support `ProjectName` response field
+- `putBucketLifecycle|getBucketLifecycle` support `Filter` and `NoncurrentDate` field
+- added `deleteBucketEncryption` | `getBucketEncryption` |`putBucketEncryption` methods
+
 ## [2.6.15] - 2024-03-26
 
 ### Fixed
@@ -129,6 +150,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - add `(get|put|delete)BucketRename` methods to rename bucket
 - add `restoreObject` method to restore object
 - `uploadPartCopy` support `SSEC`
+- `describeJob` add `TOSRestoreObject` field
+- `headObject` add `HeadObjectOutputReplicationStatusType`
+- `listJobs` remove default value for `jobStatuses`
+- Inventory add `ReplicationStatus`
 
 ## [2.5.6] - 2023-07-24
 
@@ -146,6 +171,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - downgrade `type-fest` version
 
 ## [2.5.4] - 2023-07-03
+
+### Added
+
+- `putBucketCORS`,`getBucketCORS` support `ResponseVary` field
+- change `getBucketCORS` empty error to normal data
 
 ### Fixed
 

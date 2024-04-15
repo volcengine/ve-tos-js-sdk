@@ -104,6 +104,7 @@ describe('fetch object in node.js environment', () => {
       const oldKey = `fetchObject-oldKey`;
       const existKey = `fetchObject-exist-${Math.random()}`;
       const content = Math.random().toFixed(100);
+      const content2 = Math.random().toFixed(100);
       const md5 = Buffer.from(hashMd5(content)).toString('base64');
       const client = new TOS(tosOptions);
       await client.putObject({
@@ -112,7 +113,7 @@ describe('fetch object in node.js environment', () => {
       });
       await client.putObject({
         key: existKey,
-        body: Buffer.from(content),
+        body: Buffer.from(content2),
       });
       const url = client.getPreSignedUrl(oldKey);
       await sleepCache(60_000);
@@ -123,6 +124,7 @@ describe('fetch object in node.js environment', () => {
             url,
             key: existKey,
             contentMD5: md5,
+            ignoreSameKey: true,
           });
         },
         (err) => err.toString().toLowerCase().includes('already exist')
@@ -132,7 +134,6 @@ describe('fetch object in node.js environment', () => {
         url,
         key: existKey,
         contentMD5: md5,
-        ignoreSameKey: true,
       });
     },
     NEVER_TIMEOUT

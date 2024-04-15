@@ -1,12 +1,14 @@
 import { HttpMethodType } from '../../TosExportEnum';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase from '../base';
 
-interface CORSRule {
+export interface CORSRule {
   AllowedOrigins: string[];
   AllowedMethods: HttpMethodType[];
   AllowedHeaders: string[];
   ExposeHeaders: string[];
   MaxAgeSeconds: number;
+  ResponseVary?: boolean;
 }
 
 export interface GetBucketCORSInput {
@@ -18,9 +20,22 @@ export interface GetBucketCORSOutput {
 }
 
 export async function getBucketCORS(this: TOSBase, input: GetBucketCORSInput) {
-  const { bucket } = input;
+  try {
+    const { bucket } = input;
 
-  return this.fetchBucket<GetBucketCORSOutput>(bucket, 'GET', { cors: '' }, {});
+    return await this.fetchBucket<GetBucketCORSOutput>(
+      bucket,
+      'GET',
+      { cors: '' },
+      {}
+    );
+  } catch (error) {
+    return handleEmptyServerError<GetBucketCORSOutput>(error, {
+      defaultResponse: { CORSRules: [] },
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketCORS',
+    });
+  }
 }
 
 export interface PutBucketCORSInput {
@@ -32,7 +47,9 @@ export interface PutBucketCORSOutput {}
 
 export async function putBucketCORS(this: TOSBase, input: PutBucketCORSInput) {
   const { bucket, CORSRules } = input;
-
+  if (this.opts.enableOptimizeMethodBehavior && !CORSRules.length) {
+    return deleteBucketCORS.call(this, { bucket });
+  }
   return this.fetchBucket<PutBucketCORSOutput>(
     bucket,
     'PUT',

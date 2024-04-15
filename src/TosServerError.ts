@@ -6,6 +6,7 @@ export interface TosServerErrorData {
   HostId: string;
   Message: string;
   RequestId: string;
+  EC?: string;
 }
 
 export class TosServerError extends Error {

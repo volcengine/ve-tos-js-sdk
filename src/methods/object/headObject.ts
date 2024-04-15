@@ -1,6 +1,9 @@
 import { StorageClass } from '../../interface';
 import { fillRequestHeaders, normalizeHeadersKey } from '../../utils';
 import TOSBase from '../base';
+import { ReplicationStatusType } from '../../TosExportEnum';
+import { RestoreInfo, TosHeader } from './sharedTypes';
+import { getRestoreInfoFromHeaders } from './utils';
 
 export interface HeadObjectInput {
   bucket?: string;
@@ -29,7 +32,7 @@ export interface HeadObjectInput {
 }
 
 export interface HeadObjectOutput {
-  [key: string]: string | undefined;
+  [key: string]: string | undefined | object;
   'content-length': string;
   'last-modified': string;
   'content-md5': string;
@@ -43,6 +46,9 @@ export interface HeadObjectOutput {
   'x-tos-hash-crc64ecma'?: string;
   'x-tos-storage-class': StorageClass;
   'x-tos-server-side-encryption'?: string;
+  'x-tos-replication-status'?: ReplicationStatusType;
+  RestoreInfo?: RestoreInfo;
+  ReplicationStatus?: ReplicationStatusType;
 }
 
 export async function headObject(
@@ -63,7 +69,6 @@ export async function headObject(
     'ifModifiedSince',
     'ifNoneMatch',
     'ifUnmodifiedSince',
-
     'ssecAlgorithm',
     'ssecKey',
     'ssecKeyMD5',
@@ -77,7 +82,16 @@ export async function headObject(
     undefined,
     {
       handleResponse: (res) => {
-        return res.headers;
+        const result = {
+          ...res.headers,
+          ReplicationStatus: res.headers[TosHeader.HeaderReplicationStatus],
+        };
+        const info = getRestoreInfoFromHeaders(res.headers);
+
+        if (info) {
+          result.RestoreInfo = info;
+        }
+        return result;
       },
     }
   );

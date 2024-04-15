@@ -4,6 +4,8 @@ import {
   KebabCasedPropertiesDeep,
   PascalCasedPropertiesDeep,
 } from 'type-fest';
+import get from 'lodash/get';
+import set from 'lodash/set';
 import { CancelError } from './CancelError';
 import TosClientError from './TosClientError';
 import { Headers } from './interface';
@@ -18,10 +20,9 @@ export const makeArrayProp = (obj: unknown) => (key: string) => {
     return;
   }
 
-  const objAny = obj as any;
-  const v = objAny[key];
-  if (!Array.isArray(v)) {
-    objAny[key] = v == null ? [] : [v];
+  const value = get(obj, key);
+  if (!Array.isArray(value)) {
+    set(obj, key, value == null ? [] : [value]);
   }
 };
 
@@ -220,6 +221,7 @@ export const requestHeadersMap: Record<
   string,
   string | [string, (v: any) => string] | ((v: any) => Record<string, string>)
 > = {
+  projectName: 'x-tos-project-name',
   encodingType: 'encoding-type',
   cacheControl: 'cache-control',
   contentDisposition: 'content-disposition',
@@ -276,6 +278,7 @@ export const requestHeadersMap: Record<
   trafficLimit: 'x-tos-traffic-limit',
   callback: 'x-tos-callback',
   callbackVar: 'x-tos-callback-var',
+  allowSameActionOverlap: ['x-tos-allow-same-action-overlap', (v) => String(v)],
 };
 // type RequestHeadersMapKeys = keyof typeof requestHeadersMap;
 
@@ -407,18 +410,6 @@ export function getNormalDataFromError<T>(
     id2: err.id2,
   };
 }
-export function handleEmptyServerError<T>(
-  err: Error | TosServerError | unknown,
-  defaultResponse: T
-) {
-  if (err instanceof TosServerError) {
-    if (err.statusCode === 404) {
-      return getNormalDataFromError(defaultResponse, err);
-    }
-  }
-  throw err;
-}
-
 export const streamToBuf = async (
   stream: NodeJS.ReadableStream
 ): Promise<Buffer> => {

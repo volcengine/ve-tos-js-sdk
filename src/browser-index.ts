@@ -57,6 +57,7 @@ import {
   StorageClassInheritDirectiveType,
   TierType,
   VersioningStatusType,
+  ReplicationStatusType,
 } from './TosExportEnum';
 import { CancelError } from './CancelError';
 import {
@@ -151,6 +152,8 @@ import {
 import {
   getBucketImageStyle,
   getBucketImageStyleList,
+  getBucketImageStyleListByName,
+  getImageStyleBriefInfo,
   deleteBucketImageStyle,
   putBucketImageStyle,
   putBucketImageStyleSeparator,
@@ -165,7 +168,17 @@ import {
   deleteBucketRename,
 } from './methods/bucket/rename';
 import restoreObject from './methods/object/restoreObject';
+import {
+  deleteStorageLens,
+  getStorageLens,
+  listStorageLens,
+  putStorageLens,
+} from './methods/storageLens';
 import { createDefaultRateLimiter } from './rate-limiter';
+import {
+  putBucketNotificationType2,
+  getBucketNotificationType2,
+} from './methods/bucket/notificationType2';
 import { DataTransferType } from './interface';
 
 const CancelToken = axios.CancelToken;
@@ -197,6 +210,7 @@ class TosClient extends TOSBase {
   static UploadEventType = UploadEventType;
   static DownloadEventType = DownloadEventType;
   static ResumableCopyEventType = ResumableCopyEventType;
+  static ReplicationStatusType = ReplicationStatusType;
 
   // bucket base
   createBucket = createBucket;
@@ -281,6 +295,8 @@ class TosClient extends TOSBase {
   // bucket imgStyle
   getBucketImageStyle = getBucketImageStyle;
   getBucketImageStyleList = getBucketImageStyleList;
+  getBucketImageStyleListByName = getBucketImageStyleListByName;
+  getImageStyleBriefInfo = getImageStyleBriefInfo;
   deleteBucketImageStyle = deleteBucketImageStyle;
   putBucketImageStyle = putBucketImageStyle;
   putBucketImageStyleSeparator = putBucketImageStyleSeparator;
@@ -354,6 +370,16 @@ class TosClient extends TOSBase {
   preSignedPolicyURL = preSignedPolicyURL;
   // object intelligenttiering
   getBucketIntelligenttiering = getBucketIntelligenttiering;
+
+  // storageLens
+  listStorageLens = listStorageLens;
+  deleteStorageLens = deleteStorageLens;
+  getStorageLens = getStorageLens;
+  putStorageLens = putStorageLens;
+
+  // bucket notificationV2
+  putBucketNotificationType2 = putBucketNotificationType2;
+  getBucketNotificationType2 = getBucketNotificationType2;
 }
 
 export default TosClient;
@@ -385,6 +411,7 @@ export {
   UploadEventType,
   DownloadEventType,
   ResumableCopyEventType,
+  ReplicationStatusType,
 };
 
 // TODO: hack for umd

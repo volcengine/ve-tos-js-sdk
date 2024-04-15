@@ -12,6 +12,56 @@ export interface BucketImgStyle {
   imageStyles: { ImageStyles: ImageStyle[] };
 }
 
+export interface ImageBriefInfo {
+  Name: string;
+  BucketLevelContent: string;
+  PrefixCount: number;
+}
+
+export interface BucketImageBriefInfo {
+  BucketName: string;
+  ImageStyleBriefInfo: ImageBriefInfo[];
+}
+
+export interface GetImageStyleBriefInfoInput {
+  bucket: string;
+}
+
+/**
+ * @private unstable method
+ */
+export async function getImageStyleBriefInfo(
+  this: TOSBase,
+  req: GetImageStyleBriefInfoInput
+): Promise<TosResponse<BucketImageBriefInfo>> {
+  const { bucket } = req;
+  try {
+    const res = await this.fetchBucket<BucketImageBriefInfo>(
+      bucket,
+      'GET',
+      {
+        imageStyleBriefInfo: '',
+      },
+      {}
+    );
+    return res;
+  } catch (err) {
+    if (err instanceof TosServerError) {
+      if (err.statusCode === 404) {
+        return this.getNormalDataFromError(
+          {
+            BucketName: bucket,
+            ImageStyleBriefInfo: [],
+          },
+          err
+        );
+      }
+    }
+
+    throw err;
+  }
+}
+
 /**
  * @private unstable method
  */
@@ -25,6 +75,46 @@ export async function getBucketImageStyleList(
       'GET',
       {
         imageStyle: '',
+      },
+      {}
+    );
+    return res;
+  } catch (err) {
+    if (err instanceof TosServerError) {
+      if (err.statusCode === 404) {
+        return this.getNormalDataFromError(
+          {
+            ImageStyles: [],
+          },
+          err
+        );
+      }
+    }
+
+    throw err;
+  }
+}
+
+export interface GetBucketImageStyleListByNameInput {
+  bucket: string;
+  styleName: string;
+}
+
+/**
+ * @private unstable method
+ */
+export async function getBucketImageStyleListByName(
+  this: TOSBase,
+  req: GetBucketImageStyleListByNameInput
+): Promise<TosResponse<BucketImgStyle['imageStyles']>> {
+  try {
+    const { bucket, styleName } = req;
+    const res = await this.fetchBucket<BucketImgStyle['imageStyles']>(
+      bucket,
+      'GET',
+      {
+        imageStyleContent: '',
+        styleName,
       },
       {}
     );
@@ -75,15 +165,21 @@ export async function getBucketImageStyle(
   }
 }
 
+export interface PutBucketImageStyleInput {
+  bucket: string;
+  styleName: string;
+  content: string;
+  styleObjectPrefix?: string;
+}
+
 /**
  * @private unstable method
  */
 export async function putBucketImageStyle(
   this: TOSBase,
-  bucket: string,
-  styleName: string,
-  content: string
+  req: PutBucketImageStyleInput
 ): Promise<TosResponse<any>> {
+  const { bucket, styleName, content, styleObjectPrefix } = req;
   try {
     const res = await this.fetchBucket<any>(
       bucket,
@@ -91,6 +187,7 @@ export async function putBucketImageStyle(
       {
         imageStyle: '',
         styleName,
+        styleObjectPrefix,
       },
       {},
       { Content: content }
@@ -107,14 +204,20 @@ export async function putBucketImageStyle(
   }
 }
 
+export interface DeleteBucketImageStyleInput {
+  bucket: string;
+  styleName: string;
+  styleObjectPrefix?: string;
+}
+
 /**
  * @private unstable method
  */
 export async function deleteBucketImageStyle(
   this: TOSBase,
-  bucket: string,
-  styleName: string
+  req: DeleteBucketImageStyleInput
 ): Promise<TosResponse<any>> {
+  const { styleName, styleObjectPrefix, bucket } = req;
   try {
     const res = await this.fetchBucket<any>(
       bucket,
@@ -122,6 +225,7 @@ export async function deleteBucketImageStyle(
       {
         imageStyle: '',
         styleName,
+        styleObjectPrefix,
       },
       {}
     );
@@ -144,6 +248,10 @@ export interface BucketImgProtect {
   Prefix?: string;
   Suffix?: string;
 }
+
+/**
+ * @private unstable method
+ */
 export async function putBucketImageProtect(
   this: TOSBase,
   bucket: string,
@@ -198,14 +306,24 @@ export async function getBucketImageProtect(
 }
 export type BucketImgProtectStyleSeparator = '-' | '_' | '!' | '\\';
 
+export type BucketImgStyleSeparatorAffixes = Partial<
+  Record<BucketImgProtectStyleSeparator, string>
+>;
+
+export interface PutBucketImageStyleSeparatorInput {
+  bucket: string;
+  Separator: BucketImgProtectStyleSeparator[];
+  SeparatorSuffix?: BucketImgStyleSeparatorAffixes;
+}
+
 /**
  * @private unstable method
  */
 export async function putBucketImageStyleSeparator(
   this: TOSBase,
-  bucket: string,
-  Separator: BucketImgProtectStyleSeparator[]
+  req: PutBucketImageStyleSeparatorInput
 ): Promise<TosResponse<any>> {
+  const { bucket, Separator, SeparatorSuffix } = req;
   try {
     const res = await this.fetchBucket<any>(
       bucket,
@@ -214,7 +332,7 @@ export async function putBucketImageStyleSeparator(
         imageStyleSeparator: '',
       },
       {},
-      { Separator }
+      { Separator, SeparatorSuffix }
     );
     return res;
   } catch (err) {

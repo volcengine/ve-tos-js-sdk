@@ -58,3 +58,8 @@ export type SupportObjectBody =
   | Buffer
   | NodeJS.ReadableStream
   | undefined;
+
+export type StringKeys<T> = Extract<
+{ [K in keyof T]: T[K] extends string | undefined ? K : never }[keyof T],
+string
+>;

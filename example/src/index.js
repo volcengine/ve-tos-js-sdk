@@ -18,7 +18,9 @@ const client = new TOS({
 const listBucketsDom = document.querySelector('#list-buckets');
 const jsonDom = document.querySelector('#json');
 listBucketsDom.addEventListener('click', async () => {
-  const res = await client.listBuckets();
+  const res = await client.listBuckets({
+    projectName:'default'
+  });
   jsonDom.innerHTML = JSON.stringify(res, null, 2);
 });
 

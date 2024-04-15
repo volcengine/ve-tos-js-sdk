@@ -1,5 +1,5 @@
 import TOSBase from '../base';
-import { Acl, StorageClass } from '../../interface';
+import { Acl, Headers, StorageClass } from '../../interface';
 import {
   fillRequestHeaders,
   makeArrayProp,
@@ -7,6 +7,7 @@ import {
 } from '../../utils';
 import TosClientError from '../../TosClientError';
 import { AzRedundancyType, StorageClassType } from '../../TosExportEnum';
+import { TosHeader } from '../object/sharedTypes';
 
 export interface Bucket {
   // '2021-07-20T09:22:05.000Z'
@@ -32,7 +33,7 @@ export interface PutBucketInput {
   grantWriteAcp?: string;
   storageClass?: StorageClassType;
   azRedundancy?: AzRedundancyType;
-
+  projectName?: string;
   headers?: {
     [key: string]: string | undefined;
     ['x-tos-acl']?: Acl;
@@ -44,9 +45,13 @@ export interface PutBucketInput {
     ['x-tos-storage-class']?: StorageClass;
   };
 }
-
-export async function listBuckets(this: TOSBase) {
-  const res = await this.fetch<ListBucketOutput>('GET', '/', {}, {});
+export interface ListBucketInput {
+  projectName?: string;
+}
+export async function listBuckets(this: TOSBase, input: ListBucketInput = {}) {
+  const headers = {};
+  fillRequestHeaders({ ...input, headers }, ['projectName']);
+  const res = await this.fetch<ListBucketOutput>('GET', '/', {}, headers);
   const arrayProp = makeArrayProp(res.data);
   arrayProp('Buckets');
 
@@ -84,6 +89,7 @@ export async function createBucket(this: TOSBase, input: PutBucketInput) {
     'grantWriteAcp',
     'storageClass',
     'azRedundancy',
+    'projectName',
   ]);
 
   const res = await this.fetchBucket(input.bucket, 'PUT', {}, headers);
@@ -97,12 +103,16 @@ export async function deleteBucket(this: TOSBase, bucket?: string) {
 export interface HeadBucketOutput {
   ['x-tos-bucket-region']: string;
   ['x-tos-storage-class']: StorageClass;
+  ProjectName?: string;
 }
 
 export async function headBucket(this: TOSBase, bucket?: string) {
   return this.fetchBucket<HeadBucketOutput>(bucket, 'HEAD', {}, {}, undefined, {
     handleResponse: (res) => {
-      return res.headers;
+      return {
+        ...res.headers,
+        ProjectName: res.headers[TosHeader.HeaderProjectName],
+      };
     },
   });
 }

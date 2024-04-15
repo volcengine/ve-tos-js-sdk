@@ -73,6 +73,8 @@ export const SIG_QUERY = {
   v4_signature: 'X-Tos-Signature',
   v4_content_sha: 'X-Tos-Content-Sha256',
   v4_policy: 'X-Tos-Policy',
+
+
 };
 
 export function isDefaultPort(port?: number) {

@@ -1,7 +1,5 @@
-import {
-  convertNormalCamelCase2Upper,
-  handleEmptyServerError,
-} from '../../utils';
+import { convertNormalCamelCase2Upper } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'website';
@@ -88,7 +86,11 @@ export async function getBucketWebsite(
     );
   } catch (error) {
     return handleEmptyServerError<GetBucketWebsiteOutput>(error, {
-      RoutingRules: [],
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketWebsite',
+      defaultResponse: {
+        RoutingRules: [],
+      },
     });
   }
 }

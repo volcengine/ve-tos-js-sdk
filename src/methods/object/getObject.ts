@@ -11,8 +11,10 @@ import {
 } from '../../utils';
 import TOSBase, { TosResponse } from '../base';
 import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
-import { isValidRateLimiter } from './utils';
+import { getRestoreInfoFromHeaders, isValidRateLimiter } from './utils';
 import { createReadNReadStream } from '../../nodejs/EmitReadStream';
+import { RestoreInfo, TosHeader } from './sharedTypes';
+import { ReplicationStatusType } from '../../TosExportEnum';
 
 export interface GetObjectInput {
   bucket?: string;
@@ -152,6 +154,8 @@ export interface GetObjectV2Output {
 
   // object created before tos server supports crc, hashCrc64ecma will be empty string
   hashCrc64ecma: string;
+  RestoreInfo?: RestoreInfo;
+  ReplicationStatus?: ReplicationStatusType;
 }
 
 interface GetObjectV2OutputStream extends Omit<GetObjectV2Output, 'content'> {
@@ -386,8 +390,16 @@ async function getObjectV2(
       etag: resHeaders['etag'] || '',
       lastModified: resHeaders['last-modified'] || '',
       hashCrc64ecma: resHeaders['x-tos-hash-crc64ecma'] || '',
+      ReplicationStatus: resHeaders[TosHeader.HeaderReplicationStatus] as
+        | ReplicationStatusType
+        | undefined,
     },
   };
+
+  const info = getRestoreInfoFromHeaders(resHeaders);
+  if (info) {
+    actualRes.data.RestoreInfo = info;
+  }
   return actualRes;
 }
 

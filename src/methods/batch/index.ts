@@ -1,6 +1,6 @@
 import TOSBase from '../base';
 import { convertNormalCamelCase2Upper, paramsSerializer } from '../../utils';
-import { StorageClassType } from '../../TosExportEnum';
+import { StorageClassType, TierType } from '../../TosExportEnum';
 export type JobStatusType =
   | 'New'
   | 'Preparing'
@@ -134,6 +134,13 @@ export interface TOSPutObjectTagging {
   };
 }
 
+export interface TOSRestoreObject {
+  TOSRestoreObject: {
+    Days: number;
+    Tier: TierType;
+  };
+}
+
 export interface TOSDeleteObjectTagging {
   TOSDeleteObjectTagging: {};
 }
@@ -151,6 +158,7 @@ export type PutJobInput = {
     | TOSPutObjectCopy
     | TOSPutObjectAcl
     | TOSPutObjectTagging
+    | TOSRestoreObject
     | TOSDeleteObjectTagging;
 };
 
@@ -179,6 +187,7 @@ export interface DescribeJobRes {
       | TOSPutObjectCopy
       | TOSPutObjectAcl
       | TOSPutObjectTagging
+      | TOSRestoreObject
       | TOSDeleteObjectTagging;
   };
 }
@@ -190,6 +199,7 @@ export interface JobList {
     | 'TOSPutObjectCopy'
     | 'TOSPutObjectAcl'
     | 'TOSPutObjectTagging'
+    | 'TOSRestoreObject'
     | 'TOSDeleteObjectTagging';
   Priority: number;
   ProgressSummary: ProgressSummary;
@@ -204,6 +214,13 @@ export interface JobListRes {
   NextToken: string;
 }
 
+/**
+ *
+ * @private unstable method
+ * @description 创建批量任务
+ * @param params
+ * @returns
+ */
 export async function createJob(this: TOSBase, params: PutJobInput) {
   const { accountId, ...reset } = params;
   const data = convertNormalCamelCase2Upper(reset);
@@ -228,19 +245,13 @@ export async function createJob(this: TOSBase, params: PutJobInput) {
  * @returns
  */
 export async function listJobs(this: TOSBase, params: ListBatchInput) {
-  const {
-    accountId,
-    jobStatuses = '',
-    maxResults = 1000,
-    nextToken = '',
-  } = params;
+  const { accountId, maxResults = 1000, ...others } = params;
   const res = await this.fetch<JobListRes>(
     'GET',
     '/jobs',
     {
-      jobStatuses,
       maxResults,
-      nextToken,
+      ...others,
     },
     {
       'x-tos-account-id': accountId,

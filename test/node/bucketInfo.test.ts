@@ -26,9 +26,25 @@ describe('nodejs bucket basic api', () => {
     'bucket information',
     async () => {
       const client = new TOS(tosOptions);
-      const { data } = await client.headBucket();
+      const bucketName = 'test-bucket-info-project' + Date.now();
+
+      try {
+        await client.createBucket({
+          bucket: bucketName,
+          projectName: 'not-exist-project',
+        });
+      } catch (error: any) {
+        expect(error.code).toBe('NoSuchIAMProject');
+      }
+      await client.createBucket({
+        bucket: bucketName,
+      });
+      const { data } = await client.headBucket(bucketName);
       expect(data['x-tos-bucket-region']).toBe(tosOptions.region);
       expect(data['x-tos-storage-class']).toBeTruthy();
+      expect(data.ProjectName).toBe('default');
+
+      await client.deleteBucket(bucketName);
     },
     NEVER_TIMEOUT
   );

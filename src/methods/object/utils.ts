@@ -7,6 +7,12 @@ import { CRC, CRCCls } from '../../universal/crc';
 import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
 import { Buffer2Stream } from '../../nodejs/buffer2Stream';
 import { createCrcReadStream } from '../../nodejs/CrcReadStream';
+import {
+  RestoreInfo,
+  RestoreOngoingRequestTrueStr,
+  TosHeader,
+} from './sharedTypes';
+import { TierType } from '../../TosExportEnum';
 
 export const getObjectInputKey = (input: string | { key: string }): string => {
   return typeof input === 'string' ? input : input.key;
@@ -199,3 +205,36 @@ export function validateCheckpoint(cp: undefined | string | Object) {
     );
   }
 }
+
+export const getRestoreInfoFromHeaders = (headers: Headers) => {
+  if (!headers) return;
+  const headerStoreValue = headers?.[TosHeader.HeaderRestore];
+
+  if (headerStoreValue) {
+    /**
+     * value example:
+     * X-Tos-Restore: ongoing-request="false", expiry-date="Fri, 19 Apr 2024 00:00:00 GMT"
+     */
+    const ExpiryDate =
+      (headerStoreValue ?? '').split('",')[1]?.split?.('=')?.[1] ?? '';
+    const OngoingRequest =
+      headerStoreValue?.trim() === RestoreOngoingRequestTrueStr ? true : false;
+    const restoreInfo: RestoreInfo = {
+      RestoreStatus: {
+        OngoingRequest,
+        ExpiryDate,
+      },
+    };
+    if (OngoingRequest) {
+      restoreInfo.RestoreParam = {
+        ExpiryDays: headers[TosHeader.HeaderRestoreExpiryDays]
+          ? Number(headers[TosHeader.HeaderRestoreExpiryDays])
+          : 0,
+        RequestDate: headers[TosHeader.HeaderRestoreRequestDate] ?? '',
+        Tier: headers[TosHeader.HeaderRestoreTier] as TierType,
+      };
+    }
+    return restoreInfo;
+  }
+  return;
+};

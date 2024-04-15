@@ -1,4 +1,4 @@
-import { handleEmptyServerError } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase, { TosResponse } from '../base';
 
 export interface BucketIntelligenttieringOutput {
@@ -22,6 +22,10 @@ export async function getBucketIntelligenttiering(
     );
     return res;
   } catch (error) {
-    return handleEmptyServerError<BucketIntelligenttieringOutput>(error, {});
+    return handleEmptyServerError<BucketIntelligenttieringOutput>(error, {
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketIntelligenttiering',
+      defaultResponse: {},
+    });
   }
 }

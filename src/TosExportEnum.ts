@@ -60,6 +60,13 @@ export enum StorageClassInheritDirectiveType {
   StorageClassInheritDirectiveSourceObject = 'SOURCE_OBJECT',
 }
 
+export enum ReplicationStatusType {
+  Complete = 'COMPLETE',
+  Pending = 'PENDING',
+  Failed = 'FAILED',
+  Replica = 'REPLICA',
+}
+
 export enum LifecycleStatusType {
   Enabled = 'Enabled',
   Disabled = 'Disabled',

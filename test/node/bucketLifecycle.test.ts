@@ -1,4 +1,5 @@
 import TOS, { StorageClassType } from '../../src/browser-index';
+import { safeAwait } from '../../src/utils';
 import { deleteBucket, sleepCache, NEVER_TIMEOUT } from '../utils';
 import {
   tosOptions,
@@ -85,6 +86,78 @@ describe('nodejs lifecycle', () => {
       });
 
       expect(result.data.Rules.length).toBe(2);
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'test allowSameActionOverlap',
+    async () => {
+      const client = new TOS({
+        ...tosOptions,
+      });
+
+      const [err] = await safeAwait(
+        client.putBucketLifecycle({
+          bucket: testBucketName,
+          rules: [
+            {
+              ID: 'a',
+              Prefix: 'a',
+              Status: 'Enabled',
+              Transitions: [
+                { StorageClass: StorageClassType.StorageClassIa, Days: 30 },
+              ],
+            },
+            {
+              ID: 'a/b',
+              Status: 'Enabled',
+              Prefix: 'a/b',
+              Transitions: [
+                { Days: 30, StorageClass: StorageClassType.StorageClassIa },
+              ],
+            },
+          ],
+        })
+      );
+      expect(err.toString().includes('same prefix'));
+
+      await client.putBucketLifecycle({
+        bucket: testBucketName,
+        allowSameActionOverlap: true,
+        rules: [
+          {
+            ID: 'a',
+            Prefix: 'a',
+            Status: 'Enabled',
+            Transitions: [
+              { StorageClass: StorageClassType.StorageClassIa, Days: 30 },
+            ],
+          },
+          {
+            ID: 'a/b',
+            Status: 'Enabled',
+            Prefix: 'a/b',
+            Transitions: [
+              { Days: 30, StorageClass: StorageClassType.StorageClassIa },
+            ],
+          },
+          {
+            ID: 'a/b/c',
+            Status: 'Enabled',
+            Prefix: 'a/b/c',
+            Transitions: [
+              { Days: 30, StorageClass: StorageClassType.StorageClassIa },
+            ],
+          },
+        ],
+      });
+
+      const result = await client.getBucketLifecycle({
+        bucket: testBucketName,
+      });
+
+      expect(result.data.Rules.length).toBe(3);
     },
     NEVER_TIMEOUT
   );

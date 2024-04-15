@@ -1,23 +1,28 @@
-import { handleEmptyServerError } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'mirror';
 
-interface MirrorBackRule {
+export interface MirrorBackRule {
   ID: string;
   Condition: {
     HttpCode: number;
     KeyPrefix?: string;
     KeySuffix?: string;
+    /** private unstable */
+    AllowHost?: string[];
   };
   Redirect: {
     RedirectType?: 'Mirror' | 'Async';
     FetchSourceOnRedirect?: boolean;
+    /** @private unstable */
+    FetchSourceOnRedirectWithQuery?: boolean;
     PublicSource: {
       SourceEndpoint: {
         Primary: string[];
-        FixedEndpoint?: boolean;
+        Follower?: string[];
       };
+      FixedEndpoint?: boolean;
     };
     PassQuery?: boolean;
     FollowRedirect?: boolean;
@@ -25,7 +30,10 @@ interface MirrorBackRule {
       PassAll?: boolean;
       Pass?: string[];
       Remove?: string[];
+      /** private unstable */
+      Set?: { Key: string; Value: string }[];
     };
+
     Transform?: {
       WithKeyPrefix?: string;
       WithKeySuffix?: string;
@@ -49,6 +57,9 @@ export async function putBucketMirrorBack(
   input: PutBucketMirrorBackInput
 ) {
   const { bucket, rules } = input;
+  if (this.opts.enableOptimizeMethodBehavior && !rules.length) {
+    return deleteBucketMirrorBack.call(this, { bucket });
+  }
 
   return this.fetchBucket<PutBucketMirrorBackOutput>(
     bucket,
@@ -84,7 +95,11 @@ export async function getBucketMirrorBack(
     );
   } catch (error) {
     return handleEmptyServerError<GetBucketMirrorBackOutput>(error, {
-      Rules: [],
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketMirrorBack',
+      defaultResponse: {
+        Rules: [],
+      },
     });
   }
 }

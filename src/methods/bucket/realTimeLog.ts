@@ -1,7 +1,5 @@
-import {
-  convertNormalCamelCase2Upper,
-  handleEmptyServerError,
-} from '../../utils';
+import { convertNormalCamelCase2Upper } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'realtimeLog';
@@ -64,7 +62,11 @@ export async function getBucketRealTimeLog(
       {}
     );
   } catch (error) {
-    return handleEmptyServerError<GetBucketRealTimeLogOutput>(error, {});
+    return handleEmptyServerError<GetBucketRealTimeLogOutput>(error, {
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketRealTimeLog',
+      defaultResponse: {},
+    });
   }
 }
 

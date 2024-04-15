@@ -11,9 +11,7 @@ export interface EncryptionDataRule {
     KMSMasterKeyID?: string;
   };
 }
-/**
- * @private unstable method
- */
+
 export async function putBucketEncryption(
   this: TOSBase,
   input: { rule: EncryptionDataRule } & { bucket?: string }
@@ -38,9 +36,6 @@ export async function putBucketEncryption(
   );
 }
 
-/**
- * @private unstable method
- */
 export async function getBucketEncryption(
   this: TOSBase,
   input: { bucket?: string }
@@ -55,9 +50,6 @@ export async function getBucketEncryption(
   );
 }
 
-/**
- * @private unstable method
- */
 export async function deleteBucketEncryption(
   this: TOSBase,
   input: { bucket?: string }

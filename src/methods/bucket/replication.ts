@@ -1,13 +1,19 @@
 import {
+  ACLType,
   StorageClassInheritDirectiveType,
   StorageClassType,
 } from '../../TosExportEnum';
-import { handleEmptyServerError, normalizeHeadersKey } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'replication';
 
-interface ReplicationRule {
+export interface ReplicationTag {
+  Key: string;
+  Value: string;
+}
+
+export interface ReplicationRule {
   ID: string;
   Status: string;
   PrefixSet?: string[];
@@ -18,6 +24,11 @@ interface ReplicationRule {
     StorageClassInheritDirective: StorageClassInheritDirectiveType;
   };
   HistoricalObjectReplication: 'Enabled' | 'Disabled';
+  /** @private unstable */
+  Tags?: ReplicationTag[];
+  AccessControlTranslation?: {
+    Owner: string; //"BucketOwnerEntrusted"
+  };
 }
 
 export interface PutBucketReplicationInput {
@@ -33,6 +44,9 @@ export async function putBucketReplication(
   input: PutBucketReplicationInput
 ) {
   const { bucket, rules, role } = input;
+  if (this.opts.enableOptimizeMethodBehavior && !rules.length) {
+    return deleteBucketReplication.call(this, { bucket });
+  }
 
   return this.fetchBucket<PutBucketReplicationOutput>(
     bucket,
@@ -79,8 +93,12 @@ export async function getBucketReplication(
     );
   } catch (err) {
     return handleEmptyServerError<GetBucketReplicationOutput>(err, {
-      Rules: [],
-      Role: '',
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketReplication',
+      defaultResponse: {
+        Rules: [],
+        Role: '',
+      },
     });
   }
 }

@@ -1,7 +1,5 @@
-import {
-  convertNormalCamelCase2Upper,
-  handleEmptyServerError,
-} from '../../utils';
+import { convertNormalCamelCase2Upper } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase from '../base';
 
 const CommonQueryKey = 'customdomain';
@@ -65,7 +63,9 @@ export async function getBucketCustomDomain(
     );
   } catch (error) {
     return handleEmptyServerError<GetBucketCustomDomainOutput>(error, {
-      CustomDomainRules: [],
+      defaultResponse: { CustomDomainRules: [] },
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketCustomDomain',
     });
   }
 }

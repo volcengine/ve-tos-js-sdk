@@ -59,3 +59,6 @@ export const tosCRRTargetOptions = {
 };
 
 export const specialCharKey = `（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
+
+export const testProjectName = `ve-tos-js-sdk-${targetEnv}-test-project`;
+export const testBucketNameWithProjectName = `ve-tos-js-sdk-${targetEnv}-test-bucket-name`;

@@ -1,17 +1,21 @@
-import { handleEmptyServerError, makeArrayProp } from '../../utils';
+import { makeArrayProp } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase, { TosResponse } from '../base';
 
 export interface BucketPolicyStatement {
   Sid: string;
   Effect: 'Allow' | 'Deny';
-  Action: string[];
+  Action?: string | string[];
+  NotAction?: string | string[];
   Condition?: {
     [key in string]: {
       [key in string]: string[];
     };
   };
-  Principal: string[];
-  Resource: string[];
+  Principal?: string[];
+  NotPrincipal?: string[];
+  Resource?: string | string[];
+  NotResource?: string | string[];
 }
 
 export interface GetBucketPolicyOutput {
@@ -33,7 +37,11 @@ export async function putBucketPolicy(
   this: TOSBase,
   input: PutBucketPolicyInput
 ) {
-  if (!input.policy.Statement.length) {
+  if (
+    (this.opts.enableOptimizeMethodBehavior ||
+      this.opts.enableOptimizeMethodBehavior === undefined) &&
+    !input.policy.Statement.length
+  ) {
     return deleteBucketPolicy.call(this, input.bucket);
   }
 
@@ -64,20 +72,21 @@ export async function getBucketPolicy(
     res.data.Statement.forEach((it: any) => {
       const arrayProp = makeArrayProp(it);
 
-      arrayProp('Action');
       Object.keys(it.Condition || {}).forEach((key) => {
         Object.keys(it.Condition[key]).forEach((key2) => {
           arrayProp(`Condition["${key}"]["${key2}"]`);
         });
       });
-      arrayProp('Principal');
-      arrayProp('Resource');
     });
     return res;
   } catch (error) {
     return handleEmptyServerError<GetBucketPolicyOutput>(error, {
-      Statement: [],
-      Version: '2012-10-17',
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketPolicy',
+      defaultResponse: {
+        Statement: [],
+        Version: '2012-10-17',
+      },
     });
   }
 }

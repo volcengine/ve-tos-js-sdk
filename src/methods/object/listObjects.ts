@@ -15,9 +15,16 @@ export interface ListObjectsInput {
    * use `marker` instead of `startAfter`
    */
   startAfter?: string;
+  /**
+   * equal to listObjectVersions when input
+   */
   versions?: string;
   listType?: string;
   versionIdMarker?: string;
+  /**
+   * only works when pass versions field
+   */
+  keyMarker?: string;
 }
 
 export interface ListObjectsContentItem {

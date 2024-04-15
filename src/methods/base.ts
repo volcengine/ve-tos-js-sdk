@@ -7,7 +7,7 @@ import axios, {
   Method,
 } from 'axios';
 import { ISigV4Credentials, SignersV4 } from '../signatureV4';
-import { Headers } from '../interface';
+import { Headers, StringKeys } from '../interface';
 import TosServerError, { TosServerErrorData } from '../TosServerError';
 import {
   encodeHeadersValue,
@@ -125,6 +125,19 @@ export interface TOSConstructorOptions {
    * if true request will not combine `${bucket}.${endpoint}`
    */
   isCustomDomain?: boolean;
+
+  /**
+   * @private unstable option: false | true | undefined
+   * default value: undefined
+   * true:
+   * Allow SDK to internally catch server errors for 404 and return default values
+   * Allow SDK to internally change some put methods to delete methods when pass empty value
+   */
+  enableOptimizeMethodBehavior?: boolean;
+  /**
+   * @private unstable option
+   */
+  forcePathStyle?: boolean;
 }
 
 interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
@@ -215,6 +228,22 @@ export class TOSBase {
   }
 
   private normalizeOpts(_opts: TOSConstructorOptions) {
+    // 对字符串参数做 trim 操作
+    const trimKeys = [
+      'accessKeyId',
+      'accessKeySecret',
+      'stsToken',
+      'region',
+      'endpoint',
+    ] as const;
+    trimKeys.forEach((key) => {
+      const value = _opts[key];
+      if (typeof value === 'string') {
+        // maybe undefined
+        _opts[key] = value.trim();
+      }
+    });
+
     const mustKeys = ['accessKeyId', 'accessKeySecret', 'region'];
     const mustKeysErrorStr = mustKeys
       .filter((key) => !(_opts as any)[key])
@@ -288,6 +317,9 @@ export class TOSBase {
     }
 
     const [endpoint, newPath] = (() => {
+      if (opts?.subdomainBucket && this.opts.forcePathStyle) {
+        return [this.opts.endpoint, `/${opts.subdomainBucket}${path}`];
+      }
       // if isCustomDomain true, not add subdomainBucket
       if (opts?.subdomainBucket && !this.opts.isCustomDomain) {
         // endpoint is ip address

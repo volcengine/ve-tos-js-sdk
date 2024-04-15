@@ -1,4 +1,4 @@
-import { handleEmptyServerError } from '../../utils';
+import { handleEmptyServerError } from '../../handleEmptyServerError';
 import TOSBase, { TosResponse } from '../base';
 
 /**
@@ -37,8 +37,9 @@ export enum InventoryOptionalFields {
   IsMultipartUploaded = 'IsMultipartUploaded',
   /** Object是否加密 */
   EncryptionStatus = 'EncryptionStatus',
-
   CRC64 = 'CRC64',
+  /** crr复制状态 */
+  ReplicationStatus = 'ReplicationStatus',
 }
 
 /**
@@ -134,7 +135,11 @@ export async function getBucketInventory(
 
     return res;
   } catch (error) {
-    return handleEmptyServerError<GetBucketInventoryOutput>(error, undefined);
+    return handleEmptyServerError<GetBucketInventoryOutput>(error, {
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketInventory',
+      defaultResponse: undefined,
+    });
   }
 }
 
@@ -161,7 +166,11 @@ export async function listBucketInventory(
     return res;
   } catch (error) {
     return handleEmptyServerError<ListBucketInventoryOutput>(error, {
-      InventoryConfigurations: [],
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'listBucketInventory',
+      defaultResponse: {
+        InventoryConfigurations: [],
+      },
     });
   }
 }
