@@ -8,6 +8,7 @@ import {
   checkCRC64WithHeaders,
   fillRequestHeaders,
   isReadable,
+  normalizeHeadersKey,
   safeAwait,
 } from '../../../utils';
 import { retryNamespace } from '../../../axios';
@@ -38,6 +39,11 @@ export interface UploadPartInput {
    * only works for nodejs environment
    */
   rateLimiter?: IRateLimiter;
+
+  ssecAlgorithm?: string;
+  ssecKey?: string;
+  ssecKeyMD5?: string;
+
   headers?: {
     [key: string]: string | undefined;
     'content-length'?: string;
@@ -69,13 +75,19 @@ export interface UploadPartOutput {
 
 export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
   const { uploadId, partNumber, body, enableContentMD5 = false } = input;
-  fillRequestHeaders(input, ['trafficLimit']);
-  const headers = input.headers || {};
+  const headers = normalizeHeadersKey(input.headers);
+  input.headers = headers;
+  fillRequestHeaders(input, [
+    'trafficLimit',
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+  ]);
+
   const size = getSize(body);
   if (size && headers['content-length'] == null) {
     headers['content-length'] = size.toFixed(0);
   }
-
   if (enableContentMD5 && headers['content-md5'] == null) {
     // current only support in nodejs
     if (

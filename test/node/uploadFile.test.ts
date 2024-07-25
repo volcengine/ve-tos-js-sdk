@@ -21,6 +21,7 @@ import {
 } from './utils';
 import { DataTransferType } from '../../src/interface';
 import { streamToBuf } from '../../src/utils';
+import { hashMd5 } from '../../src/universal/crypto';
 
 describe('uploadFile in node.js environment', () => {
   it(
@@ -461,6 +462,33 @@ describe('uploadFile in node.js environment', () => {
           downloadEventChangeCallsLen
         );
       }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'uploadFile by ssec',
+    async () => {
+      const key = `${objectKey100M}-test-uploadFile-by-ssec`;
+      const client = new TOS(tosOptions);
+
+      const ssecKey = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const ssecMd5 = hashMd5(ssecKey, 'base64');
+      await client.uploadFile({
+        file: objectPath100M,
+        key,
+        ssecAlgorithm: 'AES256',
+        ssecKey: Buffer.from(ssecKey).toString('base64'),
+        ssecKeyMD5: ssecMd5,
+      });
+
+      const { data } = await client.headObject({
+        key,
+        ssecAlgorithm: 'AES256',
+        ssecKey: Buffer.from(ssecKey).toString('base64'),
+        ssecKeyMD5: ssecMd5,
+      });
+      expect(+data['content-length'] === 100 * 1024 * 1024).toBeTruthy();
     },
     NEVER_TIMEOUT
   );

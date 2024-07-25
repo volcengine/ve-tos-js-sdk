@@ -23,6 +23,8 @@ import {
   isBuffer,
   isCancelError,
   DEFAULT_PART_SIZE,
+  normalizeHeadersKey,
+  fillRequestHeaders,
 } from '../../../utils';
 import { EmptyReadStream } from '../../../nodejs/EmptyReadStream';
 import { CancelError } from '../../../CancelError';
@@ -187,6 +189,33 @@ export async function uploadFile(
   input: UploadFileInput
 ): Promise<TosResponse<UploadFileOutput>> {
   const { cancelToken, enableContentMD5 = false } = input;
+  const headers = normalizeHeadersKey(input.headers);
+  input.headers = headers;
+  fillRequestHeaders(input, [
+    'encodingType',
+    'cacheControl',
+    'contentDisposition',
+    'contentEncoding',
+    'contentLanguage',
+    'contentType',
+    'expires',
+
+    'acl',
+    'grantFullControl',
+    'grantRead',
+    'grantReadAcp',
+    'grantWriteAcp',
+
+    'ssecAlgorithm',
+    'ssecKey',
+    'ssecKeyMD5',
+    'serverSideEncryption',
+
+    'meta',
+    'websiteRedirectLocation',
+    'storageClass',
+  ]);
+
   const isCancel = () => cancelToken && !!cancelToken.reason;
   validateCheckpoint(input.checkpoint);
 
@@ -589,6 +618,12 @@ export async function uploadFile(
               partNumber: curTask.partNumber,
               headers: {
                 ['content-length']: `${curTask.partSize}`,
+                ['x-tos-server-side-encryption-customer-algorithm']:
+                  headers['x-tos-server-side-encryption-customer-algorithm'],
+                ['x-tos-server-side-encryption-customer-key']:
+                  headers['x-tos-server-side-encryption-customer-key'],
+                ['x-tos-server-side-encryption-customer-key-md5']:
+                  headers['x-tos-server-side-encryption-customer-key-md5'],
               },
               dataTransferStatusChange(status) {
                 if (status.type !== DataTransferType.Rw) {
