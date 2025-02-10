@@ -2,8 +2,10 @@ import TOSBase, { TosResponse } from '../base';
 import {
   checkCRC64WithHeaders,
   fillRequestHeaders,
+  makeRetryStreamAutoClose,
   normalizeHeadersKey,
   safeAwait,
+  tryDestroy,
 } from '../../utils';
 import {
   Acl,
@@ -13,10 +15,10 @@ import {
 } from '../../interface';
 import TosClientError from '../../TosClientError';
 import * as fsp from '../../nodejs/fs-promises';
-import { Stats } from 'fs';
+import { Stats, ReadStream } from 'fs';
 import { getSize, getNewBodyConfig } from './utils';
 import { retryNamespace } from '../../axios';
-import { IRateLimiter } from '../../rate-limiter';
+import { IRateLimiter } from '../../universal/rate-limiter';
 import { StorageClassType } from '../../TosExportEnum';
 
 export interface PutObjectInput {
@@ -48,10 +50,15 @@ export interface PutObjectInput {
   ssecKey?: string;
   ssecKeyMD5?: string;
   serverSideEncryption?: string;
+  /**
+   * @private unstable
+   */
+  serverSideDataEncryption?: string;
 
   meta?: Record<string, string>;
   websiteRedirectLocation?: string;
   storageClass?: StorageClassType;
+  ifMatch?: string;
 
   dataTransferStatusChange?: (status: DataTransferStatus) => void;
 
@@ -74,6 +81,8 @@ export interface PutObjectInput {
    **/
   rateLimiter?: IRateLimiter;
 
+  forbidOverwrite?: boolean;
+
   callback?: string;
   callbackVar?: string;
 
@@ -95,6 +104,8 @@ export interface PutObjectInput {
     'x-tos-website-redirect-location'?: string;
     'x-tos-storage-class'?: string;
     'x-tos-server-side-encryption'?: string;
+    'x-tos-forbid-overwrite'?: string;
+    'If-Match'?: string;
   };
 }
 
@@ -141,12 +152,15 @@ export async function _putObject(
     'ssecKey',
     'ssecKeyMD5',
     'serverSideEncryption',
+    'serverSideDataEncryption',
     'meta',
     'websiteRedirectLocation',
     'storageClass',
     'trafficLimit',
     'callback',
     'callbackVar',
+    'forbidOverwrite',
+    'ifMatch',
   ]);
   this.setObjectContentTypeHeader(input, headers);
 
@@ -277,17 +291,22 @@ export async function putObjectFromFile(
     const stats: Stats = await fsp.stat(input.filePath);
     normalizedHeaders['content-length'] = `${stats.size}`;
   }
-  const makeRetryStream = () => {
-    const stream = fsp.createReadStream(input.filePath);
-    return stream;
-  };
 
-  return _putObject.call(this, {
-    ...input,
-    body: makeRetryStream(),
-    headers: normalizedHeaders,
-    makeRetryStream,
-  });
+  const makeRetryStream = makeRetryStreamAutoClose(() =>
+    fsp.createReadStream(input.filePath)
+  );
+
+  try {
+    return await _putObject.call(this, {
+      ...input,
+      body: makeRetryStream.make(),
+      headers: normalizedHeaders,
+      makeRetryStream: makeRetryStream.make,
+    });
+  } catch (err) {
+    tryDestroy(makeRetryStream.getLastStream(), err);
+    throw err;
+  }
 }
 
 export default putObject;

@@ -5,10 +5,13 @@ import {
   testBucketRenameBucketName,
   testCRRSourceBucketName,
   testCRRTargetBucketName,
+  testNoVersionBucketName,
   testPreSignedPolicyBucketName,
+  testSymlinkBucketName,
   tosCRRSourceOptions,
   tosCRRTargetOptions,
   tosOptions,
+  tosSymlinkOptions,
 } from './options';
 import { clearBucket } from '.';
 
@@ -58,6 +61,13 @@ export async function createAllTestBuckets() {
       bucket: testCRRTargetBucketName,
     });
   });
+  await createBucketIfNotExist(testSymlinkBucketName, async () => {
+    const client = new TOS(tosSymlinkOptions);
+    await client.createBucket({
+      bucket: testSymlinkBucketName,
+    });
+  });
+  await createBucketIfNotExist(testNoVersionBucketName);
 
   // create bucket
   // await client.createBucket({

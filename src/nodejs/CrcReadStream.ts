@@ -1,5 +1,6 @@
 import { Transform } from 'stream';
 import { CRCCls } from '../universal/crc';
+import { makeStreamErrorHandler, pipeStreamWithErrorHandle } from '../utils';
 
 function createReadCbTransformer(readCb: (chunk: Buffer) => void) {
   return new Transform({
@@ -18,8 +19,10 @@ export function createCrcReadStream(
   const readCbTransformer = createReadCbTransformer((chunk: Buffer) =>
     crc.update(chunk)
   );
-  stream.on('error', (err) => {
-    readCbTransformer.destroy(err);
-  });
-  return stream.pipe(readCbTransformer);
+
+  return pipeStreamWithErrorHandle(
+    stream,
+    readCbTransformer,
+    'createCrcReadStream'
+  );
 }

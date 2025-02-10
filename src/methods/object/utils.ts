@@ -4,7 +4,10 @@ import { Headers, SupportObjectBody } from '../../interface';
 import { createReadNReadStream } from '../../nodejs/EmitReadStream';
 import { isBuffer, isBlob, isReadable } from '../../utils';
 import { CRC, CRCCls } from '../../universal/crc';
-import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
+import {
+  IRateLimiter,
+  createRateLimiterStream,
+} from '../../universal/rate-limiter';
 import { Buffer2Stream } from '../../nodejs/buffer2Stream';
 import { createCrcReadStream } from '../../nodejs/CrcReadStream';
 import {

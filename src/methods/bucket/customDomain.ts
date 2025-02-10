@@ -4,13 +4,17 @@ import TOSBase from '../base';
 
 const CommonQueryKey = 'customdomain';
 
-interface CustomDomainRule {
+export interface CustomDomainRule {
   Domain: string;
   Cname: string;
   Forbidden?: boolean;
   ForbiddenReason?: string;
   CertId?: string;
   CertStatus?: string;
+  /**@private unstable
+   * value tos|s3
+   * */
+  Protocol?: string;
 }
 
 export interface PutBucketCustomDomainInput {
@@ -18,6 +22,10 @@ export interface PutBucketCustomDomainInput {
   customDomainRule: {
     Domain: string;
     CertId?: string;
+    /**@private unstable
+     * value tos|s3
+     * */
+    Protocol?: string;
   };
 }
 

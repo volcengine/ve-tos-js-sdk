@@ -142,6 +142,78 @@ describe('getObject data transfer in node.js environment', () => {
   );
 
   it(
+    'getObjectToFile unexpected EOF',
+    async () => {
+      // TODO: maybe need to test it in browser environment
+      const server = await startServer();
+      const address = server.address() as AddressInfo;
+      const endpoint = `${address.address}:${address.port}`;
+      const client = new TOS({
+        ...tosOptions,
+        endpoint,
+        secure: false,
+        requestTimeout: 2_000,
+      });
+
+      const baseFilename = 'getObjectToFile-unexpected-EOF';
+      const [err] = await safeAwait(
+        client.getObjectToFile({
+          key: 'aa',
+          filePath: path.resolve(tmpDir, `${baseFilename}-1.txt`),
+        })
+      );
+      expect(err).toBeTruthy();
+
+      const [err3] = await safeAwait(
+        client.getObjectToFile({
+          key: 'aa',
+          headers: {
+            Range: 'bytes=0-10239',
+          },
+          filePath: path.resolve(tmpDir, `${baseFilename}-2.txt`),
+        })
+      );
+      expect(err3).toBeTruthy();
+
+      server.close();
+      function startServer(): Promise<Server> {
+        return new Promise((res) => {
+          http
+            .createServer(async (req: IncomingMessage, res: ServerResponse) => {
+              const perLength = 10 * 1024;
+              const cnt = 10;
+              let actualCnt = 10;
+              const totalLength = cnt * perLength;
+              if (req.headers['range'] != null) {
+                actualCnt = 1;
+                const actualLength = actualCnt * perLength;
+                // content-range will not be send alone,
+                // content-length will be send too by tos server
+                res.setHeader(
+                  'content-range',
+                  `bytes ${0}-${actualLength - 1}/${totalLength}`
+                );
+                res.setHeader('content-length', actualLength + 1);
+              } else {
+                res.setHeader('content-length', totalLength + 1);
+              }
+
+              for (let i = 0; i < actualCnt; ++i) {
+                await new Promise((r) => setTimeout(r, 100));
+                res.write(Buffer.alloc(perLength, 'a'));
+              }
+              res.end();
+            })
+            .listen(undefined, '0.0.0.0', function (this: Server) {
+              res(this);
+            });
+        });
+      }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
     'getObject dataTransfer and progress',
     async () => {
       const client = new TOS(tosOptions);

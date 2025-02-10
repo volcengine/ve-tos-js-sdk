@@ -18,6 +18,14 @@ export interface AclInterface {
     };
     Permission: PermissionType;
   }[];
+  /**
+   * @private unstable property only for bucket ACL
+   */
+  BucketAclDelivered?: boolean;
+  /**
+   * @private unstable property only for object ACL
+   */
+  IsDefault?: boolean;
 }
 
 export type Acl = ACLType;
@@ -60,6 +68,16 @@ export type SupportObjectBody =
   | undefined;
 
 export type StringKeys<T> = Extract<
-{ [K in keyof T]: T[K] extends string | undefined ? K : never }[keyof T],
-string
+  { [K in keyof T]: T[K] extends string | undefined ? K : never }[keyof T],
+  string
 >;
+
+export interface IRateLimiter {
+  Acquire: (want: number) => Promise<{
+    ok: boolean;
+    /**
+     * unit: milliseconds
+     */
+    timeToWait: number;
+  }>;
+}

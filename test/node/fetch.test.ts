@@ -1,19 +1,8 @@
 import { ACLType, TOS } from '../../src/index';
 import { hashMd5 } from '../../src/universal/crypto';
 import { safeAwait } from '../../src/utils';
-import {
-  NEVER_TIMEOUT,
-  deleteBucket,
-  sleepCache,
-  testCheckErr,
-} from '../utils';
-import {
-  isNeedDeleteBucket,
-  testBucketName,
-  testCallBackUrl,
-  tosOptions,
-} from '../utils/options';
-import { objectPath1K } from './utils';
+import { NEVER_TIMEOUT, sleepCache, testCheckErr } from '../utils';
+import { tosOptions } from '../utils/options';
 
 describe('fetch object in node.js environment', () => {
   it(

@@ -23,6 +23,10 @@ export interface ReplicationRule {
     StorageClass?: StorageClassType;
     StorageClassInheritDirective: StorageClassInheritDirectiveType;
   };
+  /**
+   *  @private unstable: internal(default) |tos_acc
+   */
+  TransferType?: string;
   HistoricalObjectReplication: 'Enabled' | 'Disabled';
   /** @private unstable */
   Tags?: ReplicationTag[];

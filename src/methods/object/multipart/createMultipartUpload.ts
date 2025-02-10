@@ -26,10 +26,13 @@ export interface CreateMultipartUploadInput {
   ssecKeyMD5?: string;
 
   serverSideEncryption?: string;
+  /** @private unstable */
+  serverSideDataEncryption?: string;
 
   meta?: Record<string, string>;
   websiteRedirectLocation?: string;
   storageClass?: StorageClassType;
+  forbidOverwrite?: boolean;
 
   headers?: {
     [key: string]: string | undefined;
@@ -47,6 +50,7 @@ export interface CreateMultipartUploadInput {
     'x-tos-website-redirect-location'?: string;
     'x-tos-storage-class'?: string;
     'x-tos-server-side-encryption'?: string;
+    ['x-tos-forbid-overwrite']?: string;
   };
 }
 
@@ -83,10 +87,12 @@ export async function createMultipartUpload(
     'ssecKey',
     'ssecKeyMD5',
     'serverSideEncryption',
+    'serverSideDataEncryption',
 
     'meta',
     'websiteRedirectLocation',
     'storageClass',
+    'forbidOverwrite',
   ]);
 
   this.setObjectContentTypeHeader(input, headers);

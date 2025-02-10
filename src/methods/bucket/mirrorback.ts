@@ -11,18 +11,30 @@ export interface MirrorBackRule {
     KeySuffix?: string;
     /** private unstable */
     AllowHost?: string[];
+    /** private unstable */
+    HttpMethod?: string[];
   };
   Redirect: {
     RedirectType?: 'Mirror' | 'Async';
     FetchSourceOnRedirect?: boolean;
     /** @private unstable */
     FetchSourceOnRedirectWithQuery?: boolean;
-    PublicSource: {
+    PublicSource?: {
       SourceEndpoint: {
         Primary: string[];
         Follower?: string[];
       };
       FixedEndpoint?: boolean;
+    };
+    /** @private unstable */
+    PrivateSource?: {
+      SourceEndpoint: {
+        Primary: {
+          Endpoint: string;
+          BucketName: string;
+          CredentialProvider: { Role: string };
+        }[];
+      };
     };
     PassQuery?: boolean;
     FollowRedirect?: boolean;

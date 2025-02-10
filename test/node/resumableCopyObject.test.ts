@@ -12,23 +12,27 @@ import {
 } from '../utils/options';
 import * as fsPromises from '../../src/nodejs/fs-promises';
 import path from 'path';
-import {
-  checkpointsDir,
-  objectKey100M,
-  objectKey10M,
-  objectKey1K,
-  objectKeyEmpty,
-  objectPath100M,
-  objectPath10M,
-  objectPath1K,
-  objectPathEmpty,
-} from './utils';
+import * as utils from './utils';
 import {
   ResumableCopyEvent,
   ResumableCopyCheckpointRecord,
 } from '../../src/methods/object/multipart/resumableCopyObject';
 import { StorageClassType } from '../../src';
 import { streamToBuf } from '../../src/utils';
+
+const {
+  checkpointsDir,
+  downloadFileDir,
+  objectPath100M,
+  objectPath10M,
+  objectPath1K,
+  objectPathEmpty,
+} = utils;
+
+const objectKeyEmpty = utils.objectKeyEmpty + ' - resumableCopyObject.test';
+const objectKey1K = utils.objectKey1K + ' - resumableCopyObject.test';
+const objectKey10M = utils.objectKey10M + ' - resumableCopyObject.test';
+const objectKey100M = utils.objectKey100M + ' - resumableCopyObject.test';
 
 const objectKey10MSpecialName = `10M 🍡对象（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
 const objectKey0MSpecialName = `0M 🍡对象（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;

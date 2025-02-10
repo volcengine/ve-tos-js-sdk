@@ -59,8 +59,11 @@ export interface ListObjectDeleteMarkerItem {
   VersionId: string;
 }
 
+export interface ListedCommonPrefix {
+  Prefix: string;
+}
 export interface ListObjectsOutput {
-  CommonPrefixes: string[];
+  CommonPrefixes: ListedCommonPrefix[];
   Contents: ListObjectsContentItem[];
   IsTruncated: boolean;
   Marker: string;
@@ -109,11 +112,47 @@ export async function listObjects(
   return ret;
 }
 
-export type ListObjectVersionsInput = Omit<ListObjectsInput, 'versions'>;
+export type ListObjectVersionsInput = Pick<
+  ListObjectsInput,
+  | 'bucket'
+  | 'prefix'
+  | 'delimiter'
+  | 'keyMarker'
+  | 'versionIdMarker'
+  | 'maxKeys'
+  | 'encodingType'
+>;
+
+export interface listObjectVersionsOutput {
+  Name: string;
+  Prefix: string;
+  KeyMarker?: string;
+  VersionIdMarker?: string;
+  MaxKeys: number;
+  Delimiter?: string;
+  IsTruncated: boolean;
+  EncodingType?: string;
+  NextKeyMarker?: string;
+  NextVersionIdMarker?: string;
+  CommonPrefixes: ListedCommonPrefix[];
+  Versions: ListObjectsVersionItem[];
+  DeleteMarkers: ListObjectDeleteMarkerItem[];
+}
 
 export async function listObjectVersions(
   this: TOSListObjects,
   input: ListObjectVersionsInput = {}
 ) {
-  return this.listObjects({ versions: '', ...input });
+  const { bucket, ...nextQuery } = input;
+  const ret = await this.fetchBucket<listObjectVersionsOutput>(
+    input.bucket,
+    'GET',
+    covertCamelCase2Kebab({ versions: '', ...nextQuery }),
+    {}
+  );
+  const arrayProp = makeArrayProp(ret.data);
+  arrayProp('CommonPrefixes');
+  arrayProp('Versions');
+  arrayProp('DeleteMarkers');
+  return ret;
 }

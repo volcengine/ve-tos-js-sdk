@@ -48,4 +48,21 @@ describe('nodejs bucket basic api', () => {
     },
     NEVER_TIMEOUT
   );
+
+  // it(
+  //   'create posix bucket',
+  //   async () => {
+  //     const client = new TOS(tosOptions);
+  //     const bucketName = 'test-bucket-info-project' + Date.now();
+  //     await client.createBucket({
+  //       bucket: bucketName,
+  //       bucketType: 'POSIX',
+  //     });
+  //     const { data } = await client.headBucket(bucketName);
+  //     expect(data['x-tos-bucket-type']).toBe('POSIX');
+  //     expect(data['x-tos-storage-class']).toBeTruthy();
+  //     expect(data.ProjectName).toBe('default');
+  //   },
+  //   NEVER_TIMEOUT
+  // );
 });

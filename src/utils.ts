@@ -13,6 +13,8 @@ import { TOSConstructorOptions, TosResponse } from './methods/base';
 import qs from 'qs';
 import TosServerError from './TosServerError';
 import { CRCCls } from './universal/crc';
+import * as fsp from './nodejs/fs-promises';
+import { ReadStream, WriteStream } from 'fs';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: unknown) => (key: string) => {
@@ -247,6 +249,7 @@ export const requestHeadersMap: Record<
   grantWriteAcp: 'x-tos-grant-write-acp',
 
   serverSideEncryption: 'x-tos-server-side-encryption',
+  serverSideDataEncryption: 'x-tos-server-side-data-encryption',
   ssecAlgorithm: 'x-tos-server-side-encryption-customer-algorithm',
   ssecKey: 'x-tos-server-side-encryption-customer-key',
   ssecKeyMD5: 'x-tos-server-side-encryption-customer-key-md5',
@@ -279,6 +282,11 @@ export const requestHeadersMap: Record<
   callback: 'x-tos-callback',
   callbackVar: 'x-tos-callback-var',
   allowSameActionOverlap: ['x-tos-allow-same-action-overlap', (v) => String(v)],
+  symLinkTargetKey: 'x-tos-symlink-target',
+  symLinkTargetBucket: 'x-tos-symlink-bucket',
+  forbidOverwrite: 'x-tos-forbid-overwrite',
+  bucketType: 'x-tos-bucket-type',
+  recursiveMkdir: 'x-tos-recursive-mkdir',
 };
 // type RequestHeadersMapKeys = keyof typeof requestHeadersMap;
 
@@ -442,7 +450,100 @@ export function checkCRC64WithHeaders(crc: CRCCls | string, headers: Headers) {
   const crcStr = typeof crc === 'string' ? crc : crc.getCrc64();
   if (crcStr !== serverCRC64) {
     throw new TosClientError(
-      `expect crc64 ${serverCRC64}, actual crc64 ${crcStr}`
+      `validate file crc64 failed. Expect crc64 ${serverCRC64}, actual crc64 ${crcStr}. Please try again.`
     );
   }
 }
+
+export const makeStreamErrorHandler = (prefix?: string) => (err: any) => {
+  console.log(`${prefix || ''} stream error:`, err);
+};
+
+export enum HttpHeader {
+  LastModified = 'last-modified',
+  ContentLength = 'content-length',
+  AcceptEncoding = 'accept-encoding',
+  ContentEncoding = 'content-encoding',
+  ContentMD5 = 'content-md5',
+  TosRawContentLength = 'x-tos-raw-content-length',
+  TosTrailer = 'x-tos-trailer',
+  TosHashCrc64ecma = 'x-tos-hash-crc64ecma',
+  TosContentSha256 = 'x-tos-content-sha256',
+  TosDecodedContentLength = 'x-tos-decoded-content-length',
+  TosEc = 'x-tos-ec',
+  TosRequestId = 'x-tos-request-id',
+}
+
+/**
+ * make async tasks serial
+ * @param makeTask
+ * @returns
+ */
+export const makeSerialAsyncTask = (makeTask: () => Promise<void>) => {
+  let lastTask = Promise.resolve();
+  return async () => {
+    lastTask = lastTask.then(() => makeTask());
+    return lastTask;
+  };
+};
+
+export const safeParseCheckpointFile = async (filePath: string) => {
+  try {
+    return JSON.parse(await fsp.readFile(filePath, 'utf-8'));
+  } catch (err) {
+    console.warn("checkpoint's content is not a valid JSON");
+    return undefined;
+  }
+};
+
+export const makeRetryStreamAutoClose = (
+  makeStream: () => NodeJS.ReadableStream | ReadStream
+) => {
+  let lastStream: ReadStream | NodeJS.ReadableStream | null = null;
+  const makeRetryStream = () => {
+    if (lastStream) {
+      tryDestroy(
+        lastStream,
+        new Error('retry new stream by makeRetryStreamAutoClose')
+      );
+    }
+
+    lastStream = makeStream();
+    return lastStream;
+  };
+
+  return {
+    getLastStream: () => lastStream,
+    make: makeRetryStream,
+  };
+};
+
+export const tryDestroy = (
+  stream:
+    | NodeJS.ReadableStream
+    | ReadStream
+    | NodeJS.WritableStream
+    | WriteStream
+    | null
+    | undefined,
+  err: any
+) => {
+  if (stream && 'destroy' in stream && typeof stream.destroy === 'function') {
+    if ('destroyed' in stream && !stream.destroyed) {
+      stream.destroy(err);
+    }
+  }
+};
+export const pipeStreamWithErrorHandle = <
+  Src extends NodeJS.ReadableStream | ReadStream,
+  Dest extends NodeJS.WritableStream | WriteStream
+>(
+  src: Src,
+  dest: Dest,
+  label: string
+): Dest => {
+  dest.on('error', makeStreamErrorHandler(label));
+  src.on('error', (err) => tryDestroy(dest, err));
+  dest.on('error', (err) => tryDestroy(src, err));
+  return src.pipe(dest) as Dest;
+};

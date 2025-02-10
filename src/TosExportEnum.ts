@@ -7,6 +7,10 @@ export enum ACLType {
   ACLBucketOwnerFullControl = 'bucket-owner-full-control',
   // only works for object ACL
   ACLBucketOwnerEntrusted = 'bucket-owner-entrusted',
+  /**
+   * @private unstable value for object ACL
+   */
+  ACLDefault = 'default',
 }
 
 export enum StorageClassType {
@@ -35,6 +39,10 @@ export enum PermissionType {
   PermissionReadAcp = 'READ_ACP',
   PermissionWriteAcp = 'WRITE_ACP',
   PermissionFullControl = 'FULL_CONTROL',
+  /**
+   * @private unstable value for ACL
+   */
+  PermissionReadNONLIST = 'READ_NON_LIST',
 }
 
 export enum GranteeType {
@@ -101,4 +109,31 @@ export enum VersioningStatusType {
    * @deprecated use `NotSet` instead
    */
   Disable = '',
+}
+
+/**
+ * @private unstable
+ */
+export enum AccessPointStatusType {
+  Ready = 'READY',
+  Creating = 'CREATING',
+  Created = 'CREATED',
+  Deleting = 'DELETING',
+}
+
+/**
+ * @private unstable
+ */
+export enum TransferAccelerationStatusType {
+  Activating = 'AccelerationActivating',
+  Activated = 'AccelerationActivated',
+  Terminated = 'AccelerationTerminated',
+}
+
+/**
+ * @private unstable
+ */
+export enum MRAPMirrorBackRedirectPolicyType {
+  ClosestFirst = 'Closest-First',
+  LatestFirst = 'Latest-First',
 }

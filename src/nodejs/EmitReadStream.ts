@@ -1,4 +1,5 @@
 import { Transform } from 'stream';
+import { makeStreamErrorHandler, pipeStreamWithErrorHandle } from '../utils';
 
 function createReadNCbTransformer(readCb: (n: number) => void) {
   return new Transform({
@@ -16,11 +17,11 @@ export function createReadNReadStream(
   readCb: (n: number) => void
 ) {
   const readCbTransformer = createReadNCbTransformer(readCb);
-  stream.on('error', (err) => {
-    console.log('stream', stream);
-    readCbTransformer.destroy(err);
-  });
-  return stream.pipe(readCbTransformer);
+  return pipeStreamWithErrorHandle(
+    stream,
+    readCbTransformer,
+    'createReadNReadStream'
+  );
 
   /**
    * Don't use the below code.

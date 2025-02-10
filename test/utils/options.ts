@@ -13,12 +13,17 @@ export const testBucketNameBase = `ve-tos-js-sdk-${targetEnv}-test`;
 export const testBucketName = `${testBucketNameBase}-bucket`;
 export const testCRRSourceBucketName = `${testBucketNameBase}-crr-source-bucket`;
 export const testCRRTargetBucketName = `${testBucketNameBase}-crr-target-bucket`;
+export const testSymlinkBucketName = `${testBucketNameBase}-symlink-bucket`;
 // need a bucket that doesn't enable multi-version feature, otherwise maybe throw an error:
 // The rename configuration conflicts with multi-version configuration.
 export const testBucketRenameBucketName = `${testBucketNameBase}-bucket-rename`;
 export const testPreSignedPolicyBucketName = `${testBucketNameBase}-presignedpolicyurl`;
+// this bucket doesn't enable multi-version
+export const testNoVersionBucketName = `${testBucketNameBase}-no-version`;
 export const testCRRTargetRegion = process.env.CRR_TARGET_REGION || '';
 export const testCRRTargetEndpoint = process.env.CRR_TARGET_ENDPOINT || '';
+export const testSymlinkTargetRegion = process.env.SYMLINK_REGION || '';
+export const testSymlinkEndpoint = process.env.SYMLINK_ENDPOINT || '';
 export const testCloudFunctionId =
   process.env.TOS_NODE_SDK_CLOUD_FUNCTION_ID ?? '';
 export const testCallBackUrl = process.env.TOS_NODE_SDK_CALLBACK_URL ?? '';
@@ -44,8 +49,11 @@ export const tosOptions: TOSConstructorOptions & { bucket: string } = {
   region,
   bucket,
   endpoint,
+
+  // proxy for charles
   // proxyHost: '127.0.0.1',
   // proxyPort: 8888,
+  // secure: false,
 };
 export const tosCRRSourceOptions = {
   ...tosOptions,
@@ -58,7 +66,20 @@ export const tosCRRTargetOptions = {
   endpoint: testCRRTargetEndpoint,
 };
 
+export const tosSymlinkOptions = {
+  ...tosOptions,
+  region: testSymlinkTargetRegion,
+  endpoint: testSymlinkEndpoint,
+  bucket: testSymlinkBucketName,
+};
+
 export const specialCharKey = `（!-_.*()/&$@=;:+ ,?\{^}%\`]>[~<#|'"）! ~ * ' ( )%2`;
 
 export const testProjectName = `ve-tos-js-sdk-${targetEnv}-test-project`;
 export const testBucketNameWithProjectName = `ve-tos-js-sdk-${targetEnv}-test-bucket-name`;
+export const testHNSBucketName = `ve-tos-js-sdk-${targetEnv}-test-hns-bucket`;
+
+export const tosHNSOptions = {
+  ...tosOptions,
+  bucket: testHNSBucketName,
+};

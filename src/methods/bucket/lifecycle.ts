@@ -29,6 +29,20 @@ interface LifecycleRule {
     Days?: number;
     Date?: string;
   }[];
+  /**
+   * @private unstable
+   */
+  AccessTimeTransitions?: {
+    StorageClass: StorageClassType;
+    Days?: number;
+  }[];
+  /**
+   * @private unstable
+   */
+  NoncurrentVersionAccessTimeTransitions?: {
+    StorageClass: StorageClassType;
+    NoncurrentDays?: number;
+  }[];
   NoncurrentVersionTransitions?: {
     StorageClass?: StorageClassType;
     NoncurrentDays?: number;

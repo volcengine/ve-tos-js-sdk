@@ -25,11 +25,15 @@ import {
   DEFAULT_PART_SIZE,
   normalizeHeadersKey,
   fillRequestHeaders,
+  makeSerialAsyncTask,
+  safeParseCheckpointFile,
+  makeRetryStreamAutoClose,
+  tryDestroy,
 } from '../../../utils';
 import { EmptyReadStream } from '../../../nodejs/EmptyReadStream';
 import { CancelError } from '../../../CancelError';
 import { hashMd5 } from '../../../universal/crypto';
-import { IRateLimiter } from '../../../rate-limiter';
+import { IRateLimiter } from '../../../interface';
 import { validateCheckpoint } from '../utils';
 import { combineCrc64 } from '../../../universal/crc';
 
@@ -210,7 +214,7 @@ export async function uploadFile(
     'ssecKey',
     'ssecKeyMD5',
     'serverSideEncryption',
-
+    'serverSideDataEncryption',
     'meta',
     'websiteRedirectLocation',
     'storageClass',
@@ -276,7 +280,7 @@ export async function uploadFile(
             path.resolve(checkpoint);
         const dirPath = path.dirname(filePath);
         // ensure directory exist
-        await fsp.mkdir(dirPath, { recursive: true });
+        await fsp.safeMkdirRecursive(dirPath);
 
         if (isDirectory) {
           return {
@@ -287,7 +291,7 @@ export async function uploadFile(
 
         try {
           const record = checkpointStat
-            ? JSON.parse(await fsp.readFile(filePath, 'utf-8'))
+            ? await safeParseCheckpointFile(filePath)
             : undefined;
           return {
             filePath,
@@ -441,19 +445,17 @@ export async function uploadFile(
       totalBytes: fileSize,
     });
   };
-  const writeCheckpointFile = async () => {
+  const writeCheckpointFile = makeSerialAsyncTask(async () => {
     if (
       process.env.TARGET_ENVIRONMENT === 'node' &&
       checkpointRichInfo.filePath
     ) {
       const content = JSON.stringify(getCheckpointContent(), null, 2);
       const dirPath = path.dirname(checkpointRichInfo.filePath); // ensure directory exist
-      await fsp.mkdir(dirPath, {
-        recursive: true,
-      });
+      await fsp.safeMkdirRecursive(dirPath);
       await fsp.writeFile(checkpointRichInfo.filePath, content, 'utf-8');
     }
-  };
+  });
   const rmCheckpointFile = async () => {
     if (
       process.env.TARGET_ENVIRONMENT === 'node' &&
@@ -603,14 +605,32 @@ export async function uploadFile(
 
           const curTask = tasks[currentIndex];
           let consumedBytesThisTask = 0;
+          const makeRetryStream = getMakeRetryStream(input.file, curTask);
           try {
+            function getBody(file: UploadFileInput['file'], task: Task) {
+              const { offset: start, partSize } = task;
+              const end = start + partSize;
+
+              if (makeRetryStream) {
+                return makeRetryStream.make();
+              }
+
+              if (isBlob(file)) {
+                return file.slice(start, end);
+              }
+              if (isBuffer(file)) {
+                return file.slice(start, end);
+              }
+              throw new TosClientError(FILE_PARAM_CHECK_MSG);
+            }
+
             const { data: uploadPartRes } = await _uploadPart.call(this, {
               bucket,
               key,
               uploadId,
               body: getBody(input.file, curTask),
               enableContentMD5,
-              makeRetryStream: getMakeRetryStream(input.file, curTask),
+              makeRetryStream: makeRetryStream?.make,
               beforeRetry: () => {
                 consumedBytes -= consumedBytesThisTask;
                 consumedBytesThisTask = 0;
@@ -645,6 +665,8 @@ export async function uploadFile(
 
             await updateAfterUploadPart(curTask, { res: uploadPartRes });
           } catch (_err) {
+            tryDestroy(makeRetryStream?.getLastStream(), _err);
+
             const err = _err as any;
             consumedBytes -= consumedBytesThisTask;
             consumedBytesThisTask = 0;
@@ -745,30 +767,12 @@ function getAllTasks(totalSize: number, partSize: number) {
   return tasks;
 }
 
-function getBody(file: UploadFileInput['file'], task: Task) {
-  const { offset: start, partSize } = task;
-  const end = start + partSize;
-
-  const makeRetryStream = getMakeRetryStream(file, task);
-  if (makeRetryStream) {
-    return makeRetryStream();
-  }
-
-  if (isBlob(file)) {
-    return file.slice(start, end);
-  }
-  if (isBuffer(file)) {
-    return file.slice(start, end);
-  }
-  throw new TosClientError(FILE_PARAM_CHECK_MSG);
-}
-
 function getMakeRetryStream(file: UploadFileInput['file'], task: Task) {
   const { offset: start, partSize } = task;
   const end = start + partSize;
 
   if (process.env.TARGET_ENVIRONMENT === 'node' && typeof file === 'string') {
-    return () => {
+    return makeRetryStreamAutoClose(() => {
       if (!partSize) {
         return new EmptyReadStream();
       }
@@ -776,7 +780,7 @@ function getMakeRetryStream(file: UploadFileInput['file'], task: Task) {
         start,
         end: end - 1,
       });
-    };
+    });
   }
 
   return undefined;
@@ -791,7 +795,9 @@ function getDefaultCheckpointFilePath(bucket: string, key: string) {
 function combineCRCInParts(cp: CheckpointRecord) {
   const size = cp.file_info?.file_size || 0;
   let res = '0';
-  for (const part of cp.parts_info || []) {
+  const sortedPartsInfo =
+    cp.parts_info?.sort?.((a, b) => a.part_number - b.part_number) ?? [];
+  for (const part of sortedPartsInfo) {
     res = combineCrc64(
       res,
       part.hash_crc64ecma,

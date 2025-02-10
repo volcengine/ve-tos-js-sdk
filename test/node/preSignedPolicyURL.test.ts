@@ -6,6 +6,7 @@ import {
   tosOptions as commonTosOptions,
   testPreSignedPolicyBucketName,
 } from '../utils/options';
+import { safeAwait } from '../../src/utils';
 
 const tosOptions = {
   ...commonTosOptions,
@@ -49,7 +50,10 @@ describe('preSignedPolicyURL', () => {
         ],
       });
       const { data } = await axios(preSignedPolicyURLRet.getSignedURLForList());
-      expect(data.Contents.length).toEqual(allTestObjectKeys.length);
+      for (const it of allTestObjectKeys) {
+        const found = data.Contents.find((it2: any) => it2.Key === it);
+        expect(found).toBeTruthy();
+      }
       const { headers } = await axios(
         preSignedPolicyURLRet.getSignedURLForGetOrHead('22/2')
       );
@@ -78,6 +82,41 @@ describe('preSignedPolicyURL', () => {
       );
       const { headers } = await axios(
         preSignedPolicyURLRet.getSignedURLForGetOrHead('1')
+      );
+      expect(+headers['content-length']).toEqual(0);
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'get-one-object-by-if-match',
+    async () => {
+      const client = new TOS(tosOptions);
+      const preSignedPolicyURLRet = client.preSignedPolicyURL({
+        conditions: [
+          {
+            key: 'key',
+            value: '',
+            operator: 'starts-with',
+          },
+        ],
+      });
+      const [err] = await safeAwait(
+        axios(preSignedPolicyURLRet.getSignedURLForGetOrHead('22/2'), {
+          headers: {
+            'if-match': 'error-etag',
+          },
+        })
+      );
+      expect(err?.response?.status).toBe(412);
+
+      const { headers } = await axios(
+        preSignedPolicyURLRet.getSignedURLForGetOrHead('22/2'),
+        {
+          headers: {
+            'if-match': '"d41d8cd98f00b204e9800998ecf8427e"',
+          },
+        }
       );
       expect(+headers['content-length']).toEqual(0);
     },

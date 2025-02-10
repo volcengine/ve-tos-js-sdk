@@ -1,5 +1,6 @@
 import TOSBase from '../base';
 import { Headers, AclInterface, Acl } from '../../interface';
+import { makeArrayProp } from '../../utils';
 
 export type GetBucketAclOutput = AclInterface;
 
@@ -25,7 +26,7 @@ export async function putBucketAcl(this: TOSBase, input: PutBucketAclInput) {
 }
 
 export async function getBucketAcl(this: TOSBase, bucket?: string) {
-  return this.fetchBucket<GetBucketAclOutput>(
+  const res = await this.fetchBucket<GetBucketAclOutput>(
     bucket,
     'GET',
     {
@@ -33,4 +34,7 @@ export async function getBucketAcl(this: TOSBase, bucket?: string) {
     },
     {}
   );
+  const arrayProp = makeArrayProp(res.data);
+  arrayProp('Grants');
+  return res;
 }

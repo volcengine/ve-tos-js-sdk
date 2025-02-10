@@ -1,8 +1,11 @@
 import axios from 'axios';
 import { Readable } from 'stream';
-import { safeSync } from './utils';
+import { getSortedQueryString, safeSync } from './utils';
+import { ISigV4Credentials, SignersV4 } from './signatureV4';
+import * as log from './log';
 
 export const retryNamespace = '__retryConfig__';
+export const retrySignatureNamespace = '__retrySignature__';
 
 export interface RetryConfig {
   // 对于文件流重试应该重新生成新的文件流
@@ -15,9 +18,15 @@ interface InnerRetryConfig extends RetryConfig {
   retryCount?: number;
 }
 
+interface RetrySignature {
+  signOpt: any;
+  sigInst: SignersV4;
+}
+
 declare module 'axios' {
   interface AxiosRequestConfig {
     __retryConfig__?: RetryConfig;
+    __retrySignature__?: RetrySignature;
   }
 }
 
@@ -180,6 +189,17 @@ export const makeAxiosInst = (maxRetryCount: number) => {
       return Promise.reject(error);
     }
 
+    const retrySignature = config[retrySignatureNamespace] as RetrySignature;
+    if (retrySignature) {
+      const { signOpt, sigInst } = retrySignature;
+      const signatureHeaders = sigInst.signatureHeader(signOpt);
+      signatureHeaders.forEach((value, key) => {
+        config.headers[key] = value;
+      });
+    }
+
+    //console.log('config: ', config)
+    log.TOS('retryConfig: ', config);
     const nextConfig = {
       ...config,
       data: newData,

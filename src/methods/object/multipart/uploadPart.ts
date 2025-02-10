@@ -1,19 +1,21 @@
 import { getNewBodyConfig, getSize } from '../utils';
 import TOSBase from '../../base';
 import TosClientError from '../../../TosClientError';
-import { Stats } from 'fs';
+import { ReadStream, Stats } from 'fs';
 import * as fsp from '../../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../../interface';
 import {
   checkCRC64WithHeaders,
   fillRequestHeaders,
   isReadable,
+  makeRetryStreamAutoClose,
   normalizeHeadersKey,
   safeAwait,
+  tryDestroy,
 } from '../../../utils';
 import { retryNamespace } from '../../../axios';
 import { hashMd5 } from '../../../universal/crypto';
-import { IRateLimiter } from '../../../rate-limiter';
+import { IRateLimiter } from '../../../universal/rate-limiter';
 
 export interface UploadPartInput {
   body: Blob | Buffer | NodeJS.ReadableStream;
@@ -71,6 +73,8 @@ export interface UploadPartOutput {
   hashCrc64ecma: string;
   serverSideEncryption?: string;
   serverSideEncryptionKeyId?: string;
+  /** @private unstable */
+  serverSideDataEncryption?: string;
 }
 
 export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
@@ -183,6 +187,8 @@ export async function _uploadPart(this: TOSBase, input: UploadPartInputInner) {
           partNumber,
           ETag: res.headers.etag,
           serverSideEncryption: res.headers['x-tos-server-side-encryption'],
+          serverSideDataEncryption:
+            res.headers['x-tos-server-side-data-encryption'],
           serverSideEncryptionKeyId:
             res.headers['x-tos-server-side-encryption-kms-key-id'],
           ssecAlgorithm:
@@ -262,21 +268,25 @@ export async function uploadPartFromFile(
   const stats: Stats = await fsp.stat(input.filePath);
   const start = input.offset ?? 0;
   const end = Math.min(stats.size, start + (input.partSize ?? stats.size));
-  const makeRetryStream = () => {
-    const stream = fsp.createReadStream(input.filePath, {
+  const makeRetryStream = makeRetryStreamAutoClose(() =>
+    fsp.createReadStream(input.filePath, {
       start,
       end: end - 1,
-    });
-    return stream;
-  };
+    })
+  );
 
-  return _uploadPart.call(this, {
-    ...input,
-    body: makeRetryStream(),
-    headers: {
-      ...(input.headers || {}),
-      ['content-length']: `${end - start}`,
-    },
-    makeRetryStream,
-  });
+  try {
+    return await _uploadPart.call(this, {
+      ...input,
+      body: makeRetryStream.make(),
+      headers: {
+        ...(input.headers || {}),
+        ['content-length']: `${end - start}`,
+      },
+      makeRetryStream: makeRetryStream.make,
+    });
+  } catch (err) {
+    tryDestroy(makeRetryStream.getLastStream(), err);
+    throw err;
+  }
 }

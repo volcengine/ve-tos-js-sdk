@@ -4,6 +4,10 @@ export interface DeleteObjectInput {
   bucket?: string;
   key: string;
   versionId?: string;
+  /**@private unstable */
+  skipTrash?: string;
+  /**@private unstable */
+  recursive?: string;
 }
 
 export interface DeleteObjectOutput {
@@ -20,6 +24,12 @@ export async function deleteObject(
   const query: Record<string, any> = {};
   if (normalizedInput.versionId) {
     query.versionId = normalizedInput.versionId;
+  }
+  if (normalizedInput.skipTrash) {
+    query.skipTrash = normalizedInput.skipTrash;
+  }
+  if (normalizedInput.recursive) {
+    query.recursive = normalizedInput.recursive;
   }
   const res = await this._fetchObject<DeleteObjectOutput>(
     input,

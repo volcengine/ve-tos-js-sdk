@@ -17,7 +17,11 @@ export interface CompleteMultipartUploadInput {
 
   callback?: string;
   callbackVar?: string;
-  headers?: {};
+  forbidOverwrite?: boolean;
+
+  headers?: {
+    ['x-tos-forbid-overwrite']?: string;
+  };
 }
 
 export type UploadedPart = {
@@ -44,7 +48,7 @@ export async function completeMultipartUpload(
   input: CompleteMultipartUploadInput
 ) {
   input.headers = input.headers ?? {};
-  fillRequestHeaders(input, ['callback', 'callbackVar']);
+  fillRequestHeaders(input, ['callback', 'callbackVar', 'forbidOverwrite']);
 
   const handleResponse = (response: {
     headers: { [x: string]: any };

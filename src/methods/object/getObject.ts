@@ -10,7 +10,10 @@ import {
   safeAwait,
 } from '../../utils';
 import TOSBase, { TosResponse } from '../base';
-import { IRateLimiter, createRateLimiterStream } from '../../rate-limiter';
+import {
+  IRateLimiter,
+  createRateLimiterStream,
+} from '../../universal/rate-limiter';
 import { getRestoreInfoFromHeaders, isValidRateLimiter } from './utils';
 import { createReadNReadStream } from '../../nodejs/EmitReadStream';
 import { RestoreInfo, TosHeader } from './sharedTypes';
@@ -158,19 +161,24 @@ export interface GetObjectV2Output {
   ReplicationStatus?: ReplicationStatusType;
 }
 
-interface GetObjectV2OutputStream extends Omit<GetObjectV2Output, 'content'> {
+export interface GetObjectV2OutputStream
+  extends Omit<GetObjectV2Output, 'content'> {
   content: NodeJS.ReadableStream;
 }
-interface GetObjectV2InputBuffer extends Omit<GetObjectV2Input, 'dataType'> {
+export interface GetObjectV2InputBuffer
+  extends Omit<GetObjectV2Input, 'dataType'> {
   dataType: 'buffer';
 }
-interface GetObjectV2OutputBuffer extends Omit<GetObjectV2Output, 'content'> {
+export interface GetObjectV2OutputBuffer
+  extends Omit<GetObjectV2Output, 'content'> {
   content: Buffer;
 }
-interface GetObjectV2InputBlob extends Omit<GetObjectV2Input, 'dataType'> {
+export interface GetObjectV2InputBlob
+  extends Omit<GetObjectV2Input, 'dataType'> {
   dataType: 'blob';
 }
-interface GetObjectV2OutputBlob extends Omit<GetObjectV2Output, 'content'> {
+export interface GetObjectV2OutputBlob
+  extends Omit<GetObjectV2Output, 'content'> {
   content: Blob;
 }
 
@@ -424,6 +432,7 @@ export async function getObjectToFile(
 
     const fsWriteStream = createWriteStream(input.filePath);
     stream.pipe(fsWriteStream);
+    stream.on('error', (err) => fsWriteStream.destroy(err));
     fsWriteStream.on('error', (err) => reject(err));
     fsWriteStream.on('finish', () => {
       const newData: any = { ...getObjectRes.data };

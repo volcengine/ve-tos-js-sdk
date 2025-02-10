@@ -50,6 +50,8 @@ export interface CopyObjectInput {
   meta?: Record<string, string>;
   websiteRedirectLocation?: string;
   storageClass?: StorageClassType;
+  ifMatch?: string;
+  forbidOverwrite?: boolean;
 
   headers?: {
     [key: string]: string | undefined;
@@ -69,6 +71,8 @@ export interface CopyObjectInput {
     ['x-tos-website-redirect-location']?: string;
     ['x-tos-storage-class']?: StorageClass;
     ['x-tos-server-side-encryption']?: ServerSideEncryption;
+    ['x-tos-forbid-overwrite']?: string;
+    'If-Match'?: string;
   };
 }
 
@@ -116,6 +120,8 @@ export async function copyObject(
     'websiteRedirectLocation',
     'storageClass',
     'trafficLimit',
+    'forbidOverwrite',
+    'ifMatch',
   ]);
   if (input.srcBucket && input.srcKey) {
     let copySource = getCopySourceHeaderValue(input.srcBucket, input.srcKey);

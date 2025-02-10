@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.7.3",
+  "version": "2.7.4",
   "license": "MIT",
   "files": [
     "browser",
@@ -17,8 +17,8 @@
   "scripts": {
     "start": "tsdx watch",
     "build": "node ./scripts/build.js",
-    "build:node": "tsdx build --target node --name TOS",
-    "build:browser": "tsdx build --format cjs,esm,umd --name TOS",
+    "build:node": "tsdx build --target node --name TOS --tsconfig tsconfig-build.json",
+    "build:browser": "tsdx build --format cjs,esm,umd --name TOS --tsconfig tsconfig-build.json",
     "build:proxy": "tsc --esModuleInterop --declaration --outDir ./out ./src/proxy.ts",
     "test": "yarn build && yarn test:node && cp ./coverage/coverage-final.json ./coverage/coverage-node-final.json && yarn test:browser && cp ./coverage/coverage-final.json ./coverage/coverage-browser-final.json && node ./scripts/mapCoverage.js",
     "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --config=test/node/jest.config.js --testEnvironment=node --no-cache -t ",

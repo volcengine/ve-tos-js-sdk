@@ -1,5 +1,5 @@
 import { Acl, AclInterface } from '../../../interface';
-import { fillRequestHeaders, normalizeHeadersKey } from '../../../utils';
+import { fillRequestHeaders, makeArrayProp, normalizeHeadersKey } from '../../../utils';
 import TOSBase from '../../base';
 
 export interface GetObjectAclInput {
@@ -10,6 +10,7 @@ export interface GetObjectAclInput {
 
 export type ObjectAclBody = AclInterface & {
   BucketOwnerEntrusted?: boolean;
+  IsDefault?: boolean;
 };
 
 export type GetObjectAclOutput = ObjectAclBody;
@@ -24,7 +25,12 @@ export async function getObjectAcl(
     query.versionId = normalizedInput.versionId;
   }
 
-  return this._fetchObject<GetObjectAclOutput>(input, 'GET', query, {});
+  const res = await this._fetchObject<GetObjectAclOutput>(input, 'GET', query, {});
+
+  const arrayProp = makeArrayProp(res.data);
+  arrayProp('Grants');
+
+  return res;
 }
 
 export interface PutObjectAclInput {

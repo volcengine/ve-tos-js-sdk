@@ -1,4 +1,5 @@
 import fsp from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
 import TOS, {
   CancelToken,
@@ -8,18 +9,23 @@ import TOS, {
 } from '../../src/browser-index';
 import { NEVER_TIMEOUT, sleepCache } from '../utils';
 import { tosOptions } from '../utils/options';
-import {
+import * as utils from './utils';
+import { DownloadEvent } from '../../src/methods/object/downloadFile';
+import { safeAwait } from '../../src/utils';
+
+const {
+  checkpointsDir,
   downloadFileDir,
-  objectKey100M,
-  objectKey10M,
-  objectKey1K,
-  objectKeyEmpty,
   objectPath100M,
   objectPath10M,
   objectPath1K,
   objectPathEmpty,
-} from './utils';
-import { DownloadEvent } from '../../src/methods/object/downloadFile';
+} = utils;
+
+const objectKeyEmpty = utils.objectKeyEmpty + ' - downloadFile';
+const objectKey1K = utils.objectKey1K + ' - downloadFile';
+const objectKey10M = utils.objectKey10M + ' - downloadFile';
+const objectKey100M = utils.objectKey100M + ' - downloadFile';
 
 describe('downloadFile', () => {
   beforeAll(async (done) => {
@@ -71,6 +77,69 @@ describe('downloadFile', () => {
         path.resolve(downloadFileDir, objectKey100M)
       );
       expect(size).toEqual(100 * 1024 * 1024);
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'download 100M file-pause-resume-right-progress',
+    async () => {
+      const client = new TOS(tosOptions);
+      const checkpointPath = path.resolve(
+        checkpointsDir,
+        `download 100M file - pause - resume.checkpoint.json`
+      );
+      const filePath = path.resolve(
+        downloadFileDir,
+        'download 100M file - pause - resume.txt'
+      );
+      while (true) {
+        const progressFn = jest.fn();
+        const cancelTokenSource = CancelToken.source();
+
+        // sleep 3 ~ 6
+        const sleepTime = (Math.random() * 3 + 3) * 1000;
+        setTimeout(() => {
+          cancelTokenSource.cancel();
+        }, sleepTime);
+        const [err, res] = await safeAwait(
+          client.downloadFile({
+            filePath,
+            key: objectKey100M,
+            checkpoint: checkpointPath,
+            taskNum: 1,
+            progress: progressFn,
+            cancelToken: cancelTokenSource.token,
+            partSize: 5_000_001,
+          })
+        );
+
+        const progressFnCallsLen = progressFn.mock.calls.length;
+        // console.log('progressFnCallsLen: ', progressFnCallsLen);
+        for (let i = 0; i < progressFnCallsLen; ++i) {
+          const oneCall = progressFn.mock.calls[i];
+          if (oneCall[0] <= 1) {
+            // console.log('process: ', oneCall[0]);
+            if (oneCall[0] === 1) {
+              expect(i).toBe(progressFnCallsLen - 1);
+            }
+          } else {
+            expect(oneCall[0]).toBeLessThanOrEqual(1);
+          }
+
+          await sleepCache(sleepTime);
+          // 确保 progress 不会接受新的调用
+          expect(progressFn.mock.calls.length).toBe(progressFnCallsLen);
+        }
+
+        if (err) {
+          expect(err.toString().includes('cancel')).toBe(true);
+        } else {
+          const { size } = await fsp.stat(filePath);
+          expect(size).toEqual(100 * 1024 * 1024);
+          return;
+        }
+      }
     },
     NEVER_TIMEOUT
   );
@@ -321,6 +390,38 @@ describe('downloadFile', () => {
           downloadEventChangeCallsLen
         );
       }
+    },
+    NEVER_TIMEOUT
+  );
+
+  it(
+    'downloadFile with customTempFilePath & customRenameFileAfterDownloadCompleted ',
+    async () => {
+      const client = new TOS(tosOptions);
+
+      const filePath = path.resolve(downloadFileDir, '10M');
+      const tempFilePath = path.resolve(
+        downloadFileDir,
+        '10M-customTempAndRename.temp'
+      );
+      const renamePath = path.resolve(
+        downloadFileDir,
+        '10M-customTempAndRename'
+      );
+      await client.downloadFile({
+        key: objectKey10M,
+        filePath,
+        tempFilePath,
+        taskNum: 10,
+        customRenameFileAfterDownloadCompleted: async (temp, target) => {
+          expect(temp).toBe(tempFilePath);
+          expect(target).toBe(filePath);
+          await fsp.rename(tempFilePath, renamePath);
+        },
+        partSize: 1 * 1024 * 1024,
+      });
+
+      expect(fs.existsSync(renamePath)).toBe(true);
     },
     NEVER_TIMEOUT
   );

@@ -2,6 +2,24 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.4] - 2025-02-10
+
+### Added
+
+- enhance the `user-agent` request header in node.js environment, includes: os_type, arch, nodejs version etc
+
+### Fixed
+
+- feat add symlink
+- fix progress of `downloadFile` will be greater than 1
+- fix crc64 of `downloadFile|uploadFile` might be calculated incorrectly when taskNum bigger than 1
+- fix `getObjectToFile` don't throw error when stream emits `'error'` event
+
+### Changed
+
+- change `GetBucketMirrorBack` method, the `PublicSource` attribute of type `MirrorBackRule` to optional
+- Add an optional field `HttpMethod` to the Condition field of `MirrorBackRule`
+
 ## [2.7.3] - 2024-07-25
 
 ### Fixed

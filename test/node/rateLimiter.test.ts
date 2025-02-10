@@ -1,12 +1,8 @@
 import TOS, { StorageClassType } from '../../src/browser-index';
-import { createDefaultRateLimiter } from '../../src/rate-limiter';
-import { NEVER_TIMEOUT, deleteBucket } from '../utils';
+import { createDefaultRateLimiter } from '../../src/universal/rate-limiter';
+import { NEVER_TIMEOUT } from '../utils';
 import fs from 'fs';
-import {
-  isNeedDeleteBucket,
-  testBucketName,
-  tosOptions,
-} from '../utils/options';
+import { tosOptions } from '../utils/options';
 import { downloadFileDir, objectKey10M, objectPath10M } from './utils';
 
 const commonCapacity = 1024 * 1024;

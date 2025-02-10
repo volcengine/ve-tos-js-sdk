@@ -15,7 +15,11 @@ import {
 import { CancelToken } from 'axios';
 import * as fsp from '../../../nodejs/fs-promises';
 import path from 'path';
-import { safeAwait } from '../../../utils';
+import {
+  makeSerialAsyncTask,
+  safeAwait,
+  safeParseCheckpointFile,
+} from '../../../utils';
 import { CancelError } from '../../../CancelError';
 import headObject from '../headObject';
 import { uploadPartCopy, UploadPartCopyOutput } from './uploadPartCopy';
@@ -23,6 +27,7 @@ import { Headers } from '../../../interface';
 import copyObject from '../copyObject';
 import { getCopySourceHeaderValue, validateCheckpoint } from '../utils';
 import cloneDeep from 'lodash/cloneDeep';
+import TosClientError from '../../../TosClientError';
 
 export interface ResumableCopyObjectInput extends CreateMultipartUploadInput {
   srcBucket: string;
@@ -201,7 +206,7 @@ export async function resumableCopyObject(
           : path.resolve(checkpoint);
         const dirPath = path.dirname(filePath);
         // ensure directory exist
-        await fsp.mkdir(dirPath, { recursive: true });
+        await fsp.safeMkdirRecursive(dirPath);
 
         if (isDirectory) {
           return {
@@ -216,7 +221,7 @@ export async function resumableCopyObject(
           // filePath is json file
           // TODO: validate json schema
           record: checkpointStat
-            ? JSON.parse(await fsp.readFile(filePath, 'utf-8'))
+            ? await safeParseCheckpointFile(filePath)
             : undefined,
         };
       }
@@ -354,19 +359,17 @@ export async function resumableCopyObject(
     }
   };
 
-  const writeCheckpointFile = async () => {
+  const writeCheckpointFile = makeSerialAsyncTask(async () => {
     if (
       process.env.TARGET_ENVIRONMENT === 'node' &&
       checkpointRichInfo.filePath
     ) {
       const content = JSON.stringify(getCheckpointContent(), null, 2);
       const dirPath = path.dirname(checkpointRichInfo.filePath); // ensure directory exist
-      await fsp.mkdir(dirPath, {
-        recursive: true,
-      });
+      await fsp.safeMkdirRecursive(dirPath);
       await fsp.writeFile(checkpointRichInfo.filePath, content, 'utf-8');
     }
-  };
+  });
   const rmCheckpointFile = async () => {
     if (
       process.env.TARGET_ENVIRONMENT === 'node' &&
@@ -605,6 +608,21 @@ export async function resumableCopyObject(
     triggerProgressEvent(
       TriggerProgressEventType.completeMultipartUploadSucceed
     );
+
+    const sourceCRC64 =
+      getCheckpointContent().copy_source_object_info.hash_crc64ecma;
+    const actualCrc64 = res.data.HashCrc64ecma;
+    if (
+      this.opts.enableCRC &&
+      sourceCRC64 &&
+      actualCrc64 &&
+      sourceCRC64 !== actualCrc64
+    ) {
+      throw new TosClientError(
+        `validate file crc64 failed. Expect crc64 ${sourceCRC64}, actual crc64 ${actualCrc64}. Please try again.`
+      );
+    }
+
     await rmCheckpointFile();
 
     return res;

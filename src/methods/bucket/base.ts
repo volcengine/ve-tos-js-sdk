@@ -17,6 +17,7 @@ export interface Bucket {
   Location: string;
   Name: string;
   Owner: { ID: string };
+  BucketType?: string;
 }
 
 export interface ListBucketOutput {
@@ -34,6 +35,7 @@ export interface PutBucketInput {
   storageClass?: StorageClassType;
   azRedundancy?: AzRedundancyType;
   projectName?: string;
+  bucketType?: string;
   headers?: {
     [key: string]: string | undefined;
     ['x-tos-acl']?: Acl;
@@ -50,7 +52,11 @@ export interface ListBucketInput {
 }
 export async function listBuckets(this: TOSBase, input: ListBucketInput = {}) {
   const headers = {};
-  fillRequestHeaders({ ...input, headers }, ['projectName']);
+  /**
+   * empty string is invalid value
+   */
+  input?.projectName &&
+    fillRequestHeaders({ ...input, headers }, ['projectName']);
   const res = await this.fetch<ListBucketOutput>('GET', '/', {}, headers);
   const arrayProp = makeArrayProp(res.data);
   arrayProp('Buckets');
@@ -89,8 +95,13 @@ export async function createBucket(this: TOSBase, input: PutBucketInput) {
     'grantWriteAcp',
     'storageClass',
     'azRedundancy',
-    'projectName',
+    'bucketType',
   ]);
+
+  /**
+   * empty string is invalid value
+   */
+  input?.projectName && fillRequestHeaders(input, ['projectName']);
 
   const res = await this.fetchBucket(input.bucket, 'PUT', {}, headers);
   return res;
@@ -103,6 +114,7 @@ export async function deleteBucket(this: TOSBase, bucket?: string) {
 export interface HeadBucketOutput {
   ['x-tos-bucket-region']: string;
   ['x-tos-storage-class']: StorageClass;
+  ['x-tos-bucket-type']?: string;
   ProjectName?: string;
 }
 

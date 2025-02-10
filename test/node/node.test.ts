@@ -19,6 +19,8 @@ import FormData from 'form-data';
 import { UploadPartOutput } from '../../src/methods/object/multipart';
 import { Bucket, ListBucketOutput } from '../../src/methods/bucket/base';
 import { safeAwait } from '../../src/utils';
+import version from '../../src/version';
+import { TOSConstructorOptions } from '../../src/methods/base';
 
 const testObjectName = '&%&%&%((()))#$U)_@@%%';
 
@@ -587,17 +589,110 @@ describe('nodejs connection params', () => {
     const server = await startServer();
     const address = server.address() as AddressInfo;
     const endpoint = `${address.address}:${address.port}`;
-    const client = new TOS({ ...tosOptions, endpoint, secure: false });
-    const [err] = await safeAwait(client.listBuckets());
-    expect(err).toBeNull();
+
+    type ICheckMoreStrItem = {
+      opts: Pick<
+        TOSConstructorOptions,
+        | 'userAgentProductName'
+        | 'userAgentSoftName'
+        | 'userAgentSoftVersion'
+        | 'userAgentCustomizedKeyValues'
+      >;
+      expectedEnd: string;
+    };
+    const checkMoreStrList: ICheckMoreStrItem[] = [
+      {
+        opts: {},
+        expectedEnd: `nodejs${process.version}`.replaceAll('v', '') + ')',
+      },
+      {
+        opts: {
+          userAgentProductName: 'EMR',
+          userAgentSoftName: 'Hadoop',
+          userAgentSoftVersion: 'v3.0.0',
+          userAgentCustomizedKeyValues: {
+            cloud_type: 'aliyun',
+            cloud_region: 'hangzhou',
+          },
+        },
+        expectedEnd:
+          ') -- EMR/Hadoop/v3.0.0 (cloud_type/aliyun;cloud_region/hangzhou)',
+      },
+      {
+        opts: { userAgentProductName: 'EMR' },
+        expectedEnd: ') -- EMR/undefined/undefined',
+      },
+      {
+        opts: { userAgentSoftName: 'Hadoop' },
+        expectedEnd: ') -- undefined/Hadoop/undefined',
+      },
+      {
+        opts: { userAgentSoftVersion: 'v3.0.0' },
+        expectedEnd: ') -- undefined/undefined/v3.0.0',
+      },
+      {
+        opts: { userAgentSoftName: 'Hadoop', userAgentSoftVersion: 'v3.0.0' },
+        expectedEnd: ') -- undefined/Hadoop/v3.0.0',
+      },
+      {
+        opts: {
+          userAgentCustomizedKeyValues: {
+            cloud_type: 'aliyun',
+            cloud_region: 'hangzhou',
+          },
+        },
+        expectedEnd:
+          ') -- undefined/undefined/undefined (cloud_type/aliyun;cloud_region/hangzhou)',
+      },
+      {
+        opts: {
+          userAgentCustomizedKeyValues: {
+            cloud_type: 'aliyun',
+          },
+        },
+        expectedEnd: ') -- undefined/undefined/undefined (cloud_type/aliyun)',
+      },
+      {
+        opts: {
+          userAgentSoftName: 'Hadoop',
+          userAgentSoftVersion: 'v3.0.0',
+          userAgentCustomizedKeyValues: {
+            cloud_type: 'aliyun',
+          },
+        },
+        expectedEnd: ') -- undefined/Hadoop/v3.0.0 (cloud_type/aliyun)',
+      },
+    ];
+    let serverReqCnt = 0;
+    for (const it of checkMoreStrList) {
+      const client = new TOS({
+        ...tosOptions,
+        ...it.opts,
+        endpoint,
+        secure: false,
+      });
+      const [err] = await safeAwait(client.listBuckets());
+      expect(err).toBeNull();
+    }
 
     server.close();
-
     function startServer(): Promise<Server> {
       return new Promise((res) => {
         http
           .createServer((req: IncomingMessage, res: ServerResponse) => {
-            if (req.headers['user-agent']?.includes('tos')) {
+            const checkItem = checkMoreStrList[serverReqCnt++];
+            const userAgent = req.headers['user-agent'] || '';
+            if (
+              userAgent.includes(`ve-tos-nodejs-sdk/v${version}`) &&
+              'linux/windows/darwin'
+                .split('/')
+                .some((it) => userAgent.includes(it)) &&
+              userAgent.includes(process.arch) &&
+              userAgent.includes(
+                `nodejs${process.version}`.replaceAll('v', '')
+              ) &&
+              userAgent.endsWith(checkItem.expectedEnd)
+            ) {
               res.statusCode = 200;
             } else {
               res.statusCode = 400;

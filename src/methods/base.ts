@@ -30,6 +30,8 @@ import type { CRCCls } from '../universal/crc';
 import * as log from '../log';
 import mpAdapter from '../axios-miniprogram-adapter';
 import uniappAdapter from 'axios-adapter-uniapp';
+import os from 'os';
+import { retrySignatureNamespace } from '../axios';
 
 export interface TOSConstructorOptions {
   accessKeyId: string;
@@ -138,6 +140,11 @@ export interface TOSConstructorOptions {
    * @private unstable option
    */
   forcePathStyle?: boolean;
+
+  userAgentProductName?: string;
+  userAgentSoftName?: string;
+  userAgentSoftVersion?: string;
+  userAgentCustomizedKeyValues?: Record<string, string>;
 }
 
 interface NormalizedTOSConstructorOptions extends TOSConstructorOptions {
@@ -294,10 +301,60 @@ export class TOSBase {
   }
 
   private getUserAgent() {
-    // tos-{language}-sdk/{version}
+    // ve-tos-go-sdk/v2.0.0 (linux/amd64;go1.17.0)
     const language =
-      process.env.TARGET_ENVIRONMENT === 'browser' ? 'js' : 'nodejs';
-    return `tos-${language}-sdk/${version}`;
+      process.env.TARGET_ENVIRONMENT === 'browser' ? 'browserjs' : 'nodejs';
+    const sdkVersion = `ve-tos-${language}-sdk/v${version}`;
+    if (process.env.TARGET_ENVIRONMENT === 'browser') {
+      return sdkVersion;
+    }
+
+    const osType = (() => {
+      const oriType = os.type();
+      const aliasType: Record<string, string> = {
+        Linux: 'linux',
+        Darwin: 'darwin',
+        Windows_NT: 'windows',
+      };
+      return aliasType[oriType] || oriType;
+    })();
+    const nodeVersion = (() => {
+      return process.version.replaceAll('v', '');
+    })();
+    const stdStr = `${sdkVersion} (${osType}/${process.arch};nodejs${nodeVersion})`;
+    const moreStr = (() => {
+      const { userAgentProductName, userAgentSoftName, userAgentSoftVersion } =
+        this.opts;
+      let customStr = Object.entries(
+        this.opts.userAgentCustomizedKeyValues || {}
+      )
+        .map(([k, v]) => {
+          return `${k}/${v}`;
+        })
+        .join(';');
+      customStr = customStr ? `(${customStr})` : '';
+
+      if (
+        !userAgentProductName &&
+        !userAgentSoftName &&
+        !userAgentSoftVersion &&
+        !customStr
+      ) {
+        return '';
+      }
+      const defaultValue = 'undefined';
+      const productSoftStr = [
+        userAgentProductName,
+        userAgentSoftName,
+        userAgentSoftVersion,
+      ]
+        .map((it) => it || defaultValue)
+        .join('/');
+
+      return [productSoftStr, customStr].filter(Boolean).join(' ');
+    })();
+
+    return [stdStr, moreStr].filter(Boolean).join(' -- ');
   }
 
   protected async fetch<Data>(
@@ -417,7 +474,6 @@ export class TOSBase {
       delete logReqOpts.httpAgent;
       delete logReqOpts.httpsAgent;
       log.TOS('reqOpts: ', logReqOpts);
-
       const res = await this.axiosInst({
         ...{
           maxBodyLength: Infinity,
@@ -426,6 +482,10 @@ export class TOSBase {
         },
         ...reqOpts,
         ...(opts?.axiosOpts || {}),
+        [retrySignatureNamespace]: {
+          signOpt,
+          sigInst: sig,
+        },
       });
 
       const data = handleResponse(res);

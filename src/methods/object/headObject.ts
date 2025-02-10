@@ -37,7 +37,7 @@ export interface HeadObjectOutput {
   'last-modified': string;
   'content-md5': string;
   etag: string;
-  'x-tos-object-type'?: 'Appendable';
+  'x-tos-object-type'?: 'Appendable' | 'Symlink';
   'x-tos-delete-marker'?: string;
   'x-tos-server-side-encryption-customer-algorithm'?: string;
   'x-tos-server-side-encryption-customer-key-md5'?: string;
@@ -47,6 +47,7 @@ export interface HeadObjectOutput {
   'x-tos-storage-class': StorageClass;
   'x-tos-server-side-encryption'?: string;
   'x-tos-replication-status'?: ReplicationStatusType;
+  'x-tos-symlink-target-size'?: string;
   RestoreInfo?: RestoreInfo;
   ReplicationStatus?: ReplicationStatusType;
 }

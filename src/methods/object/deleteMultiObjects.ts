@@ -11,6 +11,10 @@ export interface DeleteMultiObjectsInput {
     key: string;
     versionId?: string;
   }[];
+  /**@private unstable */
+  skipTrash?: string;
+  /**@private unstable */
+  recursive?: string;
 }
 
 export interface DeleteMultiObjectsOutput {
@@ -41,10 +45,22 @@ export async function deleteMultiObjects(
     })),
   };
 
+  const query: Record<string, string> = {
+    delete: '',
+  };
+
+  if (input.skipTrash) {
+    query.skipTrash = input.skipTrash;
+  }
+
+  if (input.recursive) {
+    query.recursive = input.recursive;
+  }
+
   const res = await this.fetchBucket<DeleteMultiObjectsOutput>(
     input.bucket,
     'POST',
-    { delete: '' },
+    query,
     {},
     body
   );

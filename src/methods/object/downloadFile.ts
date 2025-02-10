@@ -1,5 +1,10 @@
 import TOSBase, { TosResponse } from '../base';
-import { DEFAULT_PART_SIZE, isCancelError } from '../../utils';
+import {
+  DEFAULT_PART_SIZE,
+  isCancelError,
+  makeSerialAsyncTask,
+  safeParseCheckpointFile,
+} from '../../utils';
 import * as fsp from '../../nodejs/fs-promises';
 import { DataTransferStatus, DataTransferType } from '../../interface';
 import headObject, { HeadObjectInput, HeadObjectOutput } from './headObject';
@@ -10,7 +15,7 @@ import TosClientError from '../../TosClientError';
 import { getObjectV2, GetObjectV2Output } from './getObject';
 import TosServerError from '../../TosServerError';
 import { CancelError } from '../../CancelError';
-import { IRateLimiter } from '../../rate-limiter';
+import { IRateLimiter } from '../../universal/rate-limiter';
 import { validateCheckpoint } from './utils';
 import { createCrcReadStream } from '../../nodejs/CrcReadStream';
 import { CRC } from '../../universal/crc';
@@ -47,6 +52,10 @@ export interface DownloadFileCheckpointRecordPartInfo {
 
 export interface DownloadFileInput extends HeadObjectInput {
   filePath: string;
+  /**
+   * @private unstable tempFilePath
+   */
+  tempFilePath?: string;
 
   /**
    * default is 20 MB
@@ -99,6 +108,15 @@ export interface DownloadFileInput extends HeadObjectInput {
    * only works for nodejs environment
    */
   rateLimiter?: IRateLimiter;
+
+  /**
+   * @private unstable
+   * custom rename file to support not overwrite file
+   */
+  customRenameFileAfterDownloadCompleted?: (
+    tempFilePath: string,
+    filePath: string
+  ) => void;
 }
 export interface DownloadFileOutput extends HeadObjectOutput {}
 
@@ -167,7 +185,11 @@ export async function downloadFile(
   });
   const { data: objectStats } = headObjectRes;
   const etag = objectStats['etag'];
-  const objectSize = +objectStats['content-length'];
+  const symlinkTargetSize = objectStats['x-tos-symlink-target-size'] ?? 0;
+  const objectSize =
+    objectStats['x-tos-object-type'] === 'Symlink'
+      ? +symlinkTargetSize
+      : +objectStats['content-length'];
 
   const checkpointRichInfo = await (async (): Promise<CheckpointRichInfo> => {
     if (process.env.TARGET_ENVIRONMENT === 'node') {
@@ -200,7 +222,7 @@ export async function downloadFile(
           : checkpoint;
         const dirPath = path.dirname(filePath);
         // ensure directory exist
-        await fsp.mkdir(dirPath, { recursive: true });
+        await fsp.safeMkdirRecursive(dirPath);
 
         if (isDirectory) {
           return {
@@ -215,7 +237,7 @@ export async function downloadFile(
           // filePath is json file
           // TODO: validate json schema
           record: checkpointStat
-            ? JSON.parse(await fsp.readFile(filePath, 'utf-8'))
+            ? await safeParseCheckpointFile(filePath)
             : undefined,
         };
       }
@@ -267,18 +289,6 @@ export async function downloadFile(
 
   let bucket = input.bucket || this.opts.bucket || '';
   const key = input.key;
-  let tasks: Task[] = [];
-  const allTasks: Task[] = getAllTasks(objectSize, partSize);
-  const initConsumedBytes = (checkpointRichInfo.record?.parts_info || [])
-    .filter((it) => it.is_completed)
-    .reduce((prev, it) => prev + (it.range_end - it.range_start + 1), 0);
-
-  // recorded tasks
-  const recordedTasks = checkpointRichInfo.record?.parts_info || [];
-  const recordedTaskMap: Map<number, DownloadFileCheckpointRecordPartInfo> =
-    new Map();
-  recordedTasks.forEach((it) => recordedTaskMap.set(it.part_number, it));
-
   const filePath = await (async () => {
     let filePathStats: Stats | null = null;
     try {
@@ -303,15 +313,17 @@ export async function downloadFile(
       : input.filePath;
 
     const dirPath = path.dirname(filePath);
-    await fsp.mkdir(dirPath, { recursive: true });
+    await fsp.safeMkdirRecursive(dirPath);
+
     return filePath;
   })();
-  // TODO: there can check temp fileSize
   const [tempFilePath, isExist] = await (async () => {
-    const tempFilePath = filePath + '.temp';
+    const tempFilePath = input.tempFilePath
+      ? input.tempFilePath
+      : filePath + '.temp';
     let isExist = true;
     try {
-      await fsp.stat(input.filePath);
+      await fsp.stat(tempFilePath);
     } catch (_err) {
       const err = _err as any;
       if (err.code === 'ENOENT') {
@@ -332,6 +344,18 @@ export async function downloadFile(
       delete checkpointRichInfo.record;
     }
   }
+
+  let tasks: Task[] = [];
+  const allTasks: Task[] = getAllTasks(objectSize, partSize);
+  const initConsumedBytes = (checkpointRichInfo.record?.parts_info || [])
+    .filter((it) => it.is_completed)
+    .reduce((prev, it) => prev + (it.range_end - it.range_start + 1), 0);
+
+  // recorded tasks
+  const recordedTasks = checkpointRichInfo.record?.parts_info || [];
+  const recordedTaskMap: Map<number, DownloadFileCheckpointRecordPartInfo> =
+    new Map();
+  recordedTasks.forEach((it) => recordedTaskMap.set(it.part_number, it));
 
   const nextEnsureCloseFd = async () => {
     const getCheckpointContent = () => {
@@ -423,19 +447,18 @@ export async function downloadFile(
         totalBytes: objectSize,
       });
     };
-    const writeCheckpointFile = async () => {
+    const writeCheckpointFile = makeSerialAsyncTask(async () => {
       if (
         process.env.TARGET_ENVIRONMENT === 'node' &&
         checkpointRichInfo.filePath
       ) {
         const content = JSON.stringify(getCheckpointContent(), null, 2);
         const dirPath = path.dirname(checkpointRichInfo.filePath); // ensure directory exist
-        await fsp.mkdir(dirPath, {
-          recursive: true,
-        });
+
+        await fsp.safeMkdirRecursive(dirPath);
         await fsp.writeFile(checkpointRichInfo.filePath, content, 'utf-8');
       }
-    };
+    });
     const rmCheckpointFile = async () => {
       if (
         process.env.TARGET_ENVIRONMENT === 'node' &&
@@ -622,17 +645,28 @@ export async function downloadFile(
                   flags: 'r+',
                 });
 
-                writeStream.on('finish', () => {
-                  resolve(undefined);
+                let isErr = false;
+                let err: any = null;
+                writeStream.on('close', () => {
+                  if (isErr) {
+                    reject(err);
+                  } else {
+                    resolve(undefined);
+                  }
                 });
-                dataStream.on('error', (err) => {
-                  reject(err);
+
+                writeStream.on('error', (_err) => {
+                  isErr = true;
+                  err = _err;
                 });
 
                 dataStream.pipe(writeStream);
+                dataStream.on('error', (err) => writeStream.destroy(err));
                 function handleOnceCancel() {
                   if (isCancel()) {
                     reject(new CancelError('cancel downloadFile'));
+                    // fix windows
+                    writeStream.end();
                     dataStream.unpipe(writeStream);
                     dataStream.off('data', handleOnceCancel);
                   }
@@ -678,7 +712,7 @@ export async function downloadFile(
         const actualCrc64 = combineCRCInParts(getCheckpointContent());
         if (actualCrc64 !== serverCRC64) {
           throw new TosClientError(
-            `expect crc64 ${serverCRC64}, actual crc64 ${actualCrc64}`
+            `validate file crc64 failed. Expect crc64 ${serverCRC64}, actual crc64 ${actualCrc64}. Please try again.`
           );
         }
       }
@@ -690,7 +724,14 @@ export async function downloadFile(
     objectSize === 0 ? await handleEmptyObj() : await handleTasks();
 
     try {
-      await fsp.rename(tempFilePath, filePath);
+      if (typeof input.customRenameFileAfterDownloadCompleted === 'function') {
+        await input.customRenameFileAfterDownloadCompleted(
+          tempFilePath,
+          filePath
+        );
+      } else {
+        await fsp.rename(tempFilePath, filePath);
+      }
     } catch (_err) {
       const err = _err as any;
       triggerDownloadEvent({
@@ -755,7 +796,9 @@ function getDefaultCheckpointFilePath(
 
 function combineCRCInParts(cp: DownloadFileCheckpointRecord) {
   let res = '0';
-  for (const part of cp.parts_info || []) {
+  const sortedPartsInfo =
+    cp.parts_info?.sort?.((a, b) => a.part_number - b.part_number) ?? [];
+  for (const part of sortedPartsInfo) {
     res = combineCrc64(
       res,
       part.hash_crc64ecma,

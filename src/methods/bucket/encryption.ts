@@ -6,9 +6,11 @@ export interface EncryptionData {
 }
 export interface EncryptionDataRule {
   ApplyServerSideEncryptionByDefault: {
-    // SSEAlgorithm support 'kms' and 'AES256'
+    // SSEAlgorithm support 'kms' and 'AES256' and 'sm4'
     SSEAlgorithm: string;
     KMSMasterKeyID?: string;
+    /** @private unstable */
+    KMSDataEncryption?: string;
   };
 }
 

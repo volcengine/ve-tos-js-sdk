@@ -1,47 +1,8 @@
-import TOSBase from './methods/base';
-import {
-  listBuckets,
-  createBucket,
-  deleteBucket,
-  headBucket,
-  putBucketStorageClass,
-} from './methods/bucket/base';
-import { getBucketAcl, putBucketAcl } from './methods/bucket/acl';
 import axios from 'axios';
 import { TosServerError, TosServerCode } from './TosServerError';
 import { TosClientError } from './TosClientError';
 import { isCancelError as isCancel } from './utils';
-import {
-  getObject,
-  getObjectV2,
-  getObjectToFile,
-} from './methods/object/getObject';
-import putObject, { putObjectFromFile } from './methods/object/putObject';
-import { fetchObject, putFetchTask } from './methods/object/fetch';
-import { listObjectVersions, listObjects } from './methods/object/listObjects';
-import getPreSignedUrl from './methods/object/getPreSignedUrl';
-import headObject from './methods/object/headObject';
-import deleteObject from './methods/object/deleteObject';
-import renameObject from './methods/object/renameObject';
-import deleteMultiObjects from './methods/object/deleteMultiObjects';
-import copyObject from './methods/object/copyObject';
-import { getObjectAcl, putObjectAcl } from './methods/object/acl';
-import {
-  abortMultipartUpload,
-  completeMultipartUpload,
-  createMultipartUpload,
-  listParts,
-  uploadPart,
-  listMultipartUploads,
-  uploadPartFromFile,
-} from './methods/object/multipart';
-import appendObject from './methods/object/appendObject';
-import setObjectMeta from './methods/object/setObjectMeta';
-import { uploadPartCopy } from './methods/object/multipart/uploadPartCopy';
-import uploadFile, {
-  UploadEventType,
-} from './methods/object/multipart/uploadFile';
-import { calculatePostSignature } from './methods/object/calculatePostSignature';
+import { UploadEventType } from './methods/object/multipart/uploadFile';
 import {
   ACLType,
   StorageClassType,
@@ -58,132 +19,21 @@ import {
   TierType,
   VersioningStatusType,
   ReplicationStatusType,
+  AccessPointStatusType,
+  TransferAccelerationStatusType,
+  MRAPMirrorBackRedirectPolicyType
 } from './TosExportEnum';
 import { CancelError } from './CancelError';
-import {
-  ResumableCopyEventType,
-  resumableCopyObject,
-} from './methods/object/multipart/resumableCopyObject';
-import {
-  deleteBucketPolicy,
-  getBucketPolicy,
-  putBucketPolicy,
-} from './methods/bucket/policy';
-import {
-  getBucketVersioning,
-  putBucketVersioning,
-} from './methods/bucket/versioning';
-import { preSignedPolicyURL } from './methods/object/preSignedPolicyURL';
-import downloadFile, { DownloadEventType } from './methods/object/downloadFile';
-import { getBucketLocation } from './methods/bucket/getBucketLocation';
-import {
-  deleteBucketCORS,
-  getBucketCORS,
-  putBucketCORS,
-} from './methods/bucket/cors';
-import { listObjectsType2 } from './methods/object/listObjectsType2';
-import {
-  deleteBucketLifecycle,
-  getBucketLifecycle,
-  putBucketLifecycle,
-} from './methods/bucket/lifecycle';
-import {
-  putBucketEncryption,
-  getBucketEncryption,
-  deleteBucketEncryption,
-} from './methods/bucket/encryption';
-import {
-  deleteBucketMirrorBack,
-  getBucketMirrorBack,
-  putBucketMirrorBack,
-} from './methods/bucket/mirrorback';
-import {
-  deleteObjectTagging,
-  getObjectTagging,
-  putObjectTagging,
-} from './methods/object/tagging';
-import {
-  deleteBucketReplication,
-  getBucketReplication,
-  putBucketReplication,
-} from './methods/bucket/replication';
-import {
-  deleteBucketWebsite,
-  getBucketWebsite,
-  putBucketWebsite,
-} from './methods/bucket/website';
-import {
-  getBucketNotification,
-  putBucketNotification,
-} from './methods/bucket/notification';
-import {
-  deleteBucketCustomDomain,
-  getBucketCustomDomain,
-  putBucketCustomDomain,
-} from './methods/bucket/customDomain';
-import {
-  deleteBucketRealTimeLog,
-  getBucketRealTimeLog,
-  putBucketRealTimeLog,
-} from './methods/bucket/realTimeLog';
-import {
-  deleteBucketInventory,
-  getBucketInventory,
-  listBucketInventory,
-  putBucketInventory,
-} from './methods/bucket/inventory';
-import {
-  createJob,
-  deleteJob,
-  describeJob,
-  updateJobStatus,
-  updateJobPriority,
-  listJobs,
-} from './methods/batch';
-import {
-  deleteBucketTagging,
-  getBucketTagging,
-  putBucketTagging,
-} from './methods/bucket/tag';
-import {
-  getBucketPayByTraffic,
-  putBucketPayByTraffic,
-} from './methods/bucket/payByTraffic';
-import {
-  getBucketImageStyle,
-  getBucketImageStyleList,
-  getBucketImageStyleListByName,
-  getImageStyleBriefInfo,
-  deleteBucketImageStyle,
-  putBucketImageStyle,
-  putBucketImageStyleSeparator,
-  putBucketImageProtect,
-  getBucketImageProtect,
-  getBucketImageStyleSeparator,
-} from './methods/bucket/img';
-import { getBucketIntelligenttiering } from './methods/bucket/intelligenttiering';
-import {
-  putBucketRename,
-  getBucketRename,
-  deleteBucketRename,
-} from './methods/bucket/rename';
-import restoreObject from './methods/object/restoreObject';
-import {
-  deleteStorageLens,
-  getStorageLens,
-  listStorageLens,
-  putStorageLens,
-} from './methods/storageLens';
-import { createDefaultRateLimiter } from './rate-limiter';
-import {
-  putBucketNotificationType2,
-  getBucketNotificationType2,
-} from './methods/bucket/notificationType2';
+import { ResumableCopyEventType } from './methods/object/multipart/resumableCopyObject';
+import { DownloadEventType } from './methods/object/downloadFile';
 import { DataTransferType } from './interface';
+import { ShareLinkClient } from './ShareLinkClient';
+import { InnerClient } from './InnerClient';
+import { createDefaultRateLimiter } from './universal/rate-limiter';
 
 const CancelToken = axios.CancelToken;
-// refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
-class TosClient extends TOSBase {
+// for export
+class TosClient extends InnerClient {
   // for umd bundle
   static TosServerError = TosServerError;
   static isCancel = isCancel;
@@ -211,175 +61,14 @@ class TosClient extends TOSBase {
   static DownloadEventType = DownloadEventType;
   static ResumableCopyEventType = ResumableCopyEventType;
   static ReplicationStatusType = ReplicationStatusType;
-
-  // bucket base
-  createBucket = createBucket;
-  headBucket = headBucket;
-  deleteBucket = deleteBucket;
-  listBuckets = listBuckets;
-  getBucketLocation = getBucketLocation;
-  putBucketStorageClass = putBucketStorageClass;
-
-  // bucket acl
-  getBucketAcl = getBucketAcl;
-  putBucketAcl = putBucketAcl;
-
-  // bucket policy
-  getBucketPolicy = getBucketPolicy;
-  putBucketPolicy = putBucketPolicy;
-  deleteBucketPolicy = deleteBucketPolicy;
-
-  // bucket versioning
-  getBucketVersioning = getBucketVersioning;
-  putBucketVersioning = putBucketVersioning;
-
-  // bucket cors
-  getBucketCORS = getBucketCORS;
-  putBucketCORS = putBucketCORS;
-  deleteBucketCORS = deleteBucketCORS;
-
-  // bucket lifecycle
-  putBucketLifecycle = putBucketLifecycle;
-  getBucketLifecycle = getBucketLifecycle;
-  deleteBucketLifecycle = deleteBucketLifecycle;
-
-  //bucket encryption
-  putBucketEncryption = putBucketEncryption;
-  getBucketEncryption = getBucketEncryption;
-  deleteBucketEncryption = deleteBucketEncryption;
-
-  // bucket mirror back
-  putBucketMirrorBack = putBucketMirrorBack;
-  getBucketMirrorBack = getBucketMirrorBack;
-  deleteBucketMirrorBack = deleteBucketMirrorBack;
-
-  // bucket replication
-  putBucketReplication = putBucketReplication;
-  getBucketReplication = getBucketReplication;
-  deleteBucketReplication = deleteBucketReplication;
-
-  // bucket website
-  putBucketWebsite = putBucketWebsite;
-  getBucketWebsite = getBucketWebsite;
-  deleteBucketWebsite = deleteBucketWebsite;
-
-  // bucket notification
-  putBucketNotification = putBucketNotification;
-  getBucketNotification = getBucketNotification;
-
-  // bucket customdomain
-  putBucketCustomDomain = putBucketCustomDomain;
-  getBucketCustomDomain = getBucketCustomDomain;
-  deleteBucketCustomDomain = deleteBucketCustomDomain;
-
-  // bucket timelog
-  putBucketRealTimeLog = putBucketRealTimeLog;
-  getBucketRealTimeLog = getBucketRealTimeLog;
-  deleteBucketRealTimeLog = deleteBucketRealTimeLog;
-
-  // bucket Inventory
-  getBucketInventory = getBucketInventory;
-  listBucketInventory = listBucketInventory;
-  putBucketInventory = putBucketInventory;
-  deleteBucketInventory = deleteBucketInventory;
-
-  // bucket tag
-  putBucketTagging = putBucketTagging;
-  getBucketTagging = getBucketTagging;
-  deleteBucketTagging = deleteBucketTagging;
-
-  // bucket pay by traffic
-  putBucketPayByTraffic = putBucketPayByTraffic;
-  getBucketPayByTraffic = getBucketPayByTraffic;
-
-  // bucket imgStyle
-  getBucketImageStyle = getBucketImageStyle;
-  getBucketImageStyleList = getBucketImageStyleList;
-  getBucketImageStyleListByName = getBucketImageStyleListByName;
-  getImageStyleBriefInfo = getImageStyleBriefInfo;
-  deleteBucketImageStyle = deleteBucketImageStyle;
-  putBucketImageStyle = putBucketImageStyle;
-  putBucketImageStyleSeparator = putBucketImageStyleSeparator;
-  putBucketImageProtect = putBucketImageProtect;
-  getBucketImageProtect = getBucketImageProtect;
-  getBucketImageStyleSeparator = getBucketImageStyleSeparator;
-
-  // bucket tag
-  putBucketRename = putBucketRename;
-  getBucketRename = getBucketRename;
-  deleteBucketRename = deleteBucketRename;
-
-  // object base
-  copyObject = copyObject;
-  resumableCopyObject = resumableCopyObject;
-  deleteObject = deleteObject;
-  deleteMultiObjects = deleteMultiObjects;
-  getObject = getObject;
-  getObjectV2 = getObjectV2;
-  getObjectToFile = getObjectToFile;
-  getObjectAcl = getObjectAcl;
-  headObject = headObject;
-  appendObject = appendObject;
-  listObjects = listObjects;
-  renameObject = renameObject;
-  fetchObject = fetchObject;
-  putFetchTask = putFetchTask;
-
-  listObjectsType2 = listObjectsType2;
-
-  listObjectVersions = listObjectVersions;
-  putObject = putObject;
-  putObjectFromFile = putObjectFromFile;
-  putObjectAcl = putObjectAcl;
-  setObjectMeta = setObjectMeta;
-
-  // object multipart
-  createMultipartUpload = createMultipartUpload;
-  uploadPart = uploadPart;
-  uploadPartFromFile = uploadPartFromFile;
-  completeMultipartUpload = completeMultipartUpload;
-  abortMultipartUpload = abortMultipartUpload;
-  uploadPartCopy = uploadPartCopy;
-  listMultipartUploads = listMultipartUploads;
-  listParts = listParts;
-  downloadFile = downloadFile;
-
-  // object tagging
-  putObjectTagging = putObjectTagging;
-  getObjectTagging = getObjectTagging;
-  deleteObjectTagging = deleteObjectTagging;
-
-  // batch job
-  listJobs = listJobs;
-  createJob = createJob;
-  deleteJob = deleteJob;
-  describeJob = describeJob;
-  updateJobStatus = updateJobStatus;
-  updateJobPriority = updateJobPriority;
-
-  // restore object
-  restoreObject = restoreObject;
-  // object others
-  uploadFile = uploadFile;
-  getPreSignedUrl = getPreSignedUrl;
-  /**
-   * alias to preSignedPostSignature
-   */
-  calculatePostSignature = calculatePostSignature;
-  preSignedPostSignature = calculatePostSignature;
-  preSignedPolicyURL = preSignedPolicyURL;
-  // object intelligenttiering
-  getBucketIntelligenttiering = getBucketIntelligenttiering;
-
-  // storageLens
-  listStorageLens = listStorageLens;
-  deleteStorageLens = deleteStorageLens;
-  getStorageLens = getStorageLens;
-  putStorageLens = putStorageLens;
-
-  // bucket notificationV2
-  putBucketNotificationType2 = putBucketNotificationType2;
-  getBucketNotificationType2 = getBucketNotificationType2;
+  /** @private unstable */
+  static AccessPointStatusType = AccessPointStatusType;
+  /** @private unstable */
+  static TransferAccelerationStatusType = TransferAccelerationStatusType;
+  /** @private unstable */
+  static MRAPMirrorBackRedirectPolicyType = MRAPMirrorBackRedirectPolicyType;
+  /** @private unstable */
+  static ShareLinkClient = ShareLinkClient;
 }
 
 export default TosClient;
@@ -412,6 +101,10 @@ export {
   DownloadEventType,
   ResumableCopyEventType,
   ReplicationStatusType,
+  AccessPointStatusType,
+  TransferAccelerationStatusType,
+  ShareLinkClient,
+  MRAPMirrorBackRedirectPolicyType
 };
 
 // TODO: hack for umd

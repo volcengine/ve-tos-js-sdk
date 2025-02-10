@@ -6,7 +6,7 @@ import {
   safeAwait,
 } from '../../utils';
 import { Acl, DataTransferStatus, DataTransferType } from '../../interface';
-import { IRateLimiter } from '../../rate-limiter';
+import { IRateLimiter } from '../../universal/rate-limiter';
 import { getNewBodyConfig, getSize } from './utils';
 import { StorageClassType } from '../../TosExportEnum';
 import { retryNamespace } from '../../axios';
