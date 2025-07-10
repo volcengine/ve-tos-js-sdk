@@ -18,11 +18,29 @@ export interface DestinationRocketMQ {
   InstanceId: string;
   Topic: string;
   AccessKeyId: string;
+  Region?: string;
+}
+
+/**
+ *  @private unstable
+ */
+export interface DestinationKafka {
+  Role: string;
+  InstanceId: string;
+  Topic: string;
+  User: string;
+  Region?: string;
+}
+
+interface DestinationHttpServer {
+  Url: string;
 }
 
 export interface NotificationDestination {
   RocketMQ?: DestinationRocketMQ[];
   VeFaaS?: { FunctionId: string }[];
+  Kafka?: DestinationKafka[];
+  HttpServer?: DestinationHttpServer[];
 }
 
 export interface NotificationRule {

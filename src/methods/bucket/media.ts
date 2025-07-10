@@ -64,3 +64,65 @@ export async function getBucketPrivateM3U8(
     });
   }
 }
+
+interface PutBucketBlindWatermarkInput {
+  bucket: string;
+  enable: boolean;
+}
+
+/**
+ * @private unstable
+ */
+export async function putBucketBlindWatermark(
+  this: TOSBase,
+  input: PutBucketBlindWatermarkInput
+) {
+  const { bucket, enable } = input;
+  return await this.fetchBucket(
+    bucket,
+    'PUT',
+    {
+      blindWatermark: '',
+    },
+    {},
+    {
+      Enable: enable,
+    }
+  );
+}
+
+export interface GetBucketBlindWatermarkInput {
+  bucket: string;
+}
+
+export interface GetBucketBlindWatermarkOutput {
+  Enable: boolean;
+}
+
+/**
+ * @private unstable
+ */
+export async function getBucketBlindWatermark(
+  this: TOSBase,
+  input: GetBucketBlindWatermarkInput
+) {
+  const { bucket } = input;
+  try {
+    return await this.fetchBucket<GetBucketBlindWatermarkOutput>(
+      bucket,
+      'GET',
+      {
+        blindWatermark: '',
+      },
+      {}
+    );
+  } catch (error) {
+    return handleEmptyServerError(error, {
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketBlindWatermark',
+      defaultResponse: {
+        Enable: false,
+      },
+    });
+  }
+}

@@ -3,13 +3,20 @@ import TOSBase from '../base';
 
 const CommonQueryKey = 'trash';
 
-export interface PutBucketTrashInput {
-  bucket?: string;
-  Trash: {
+interface BucketTrash {
+  TrashPath: string;
+  CleanInterval: number;
+  Status: 'Enabled' | 'Disabled';
+  PrefixMatchRules?: Array<{
+    PrefixList: string[];
     TrashPath: string;
     CleanInterval: number;
-    Status: 'Enabled' | 'Disabled';
-  };
+  }>
+}
+
+export interface PutBucketTrashInput {
+  bucket?: string;
+  Trash: BucketTrash;
 }
 
 export interface PutBucketTrashOutput {}
@@ -37,11 +44,7 @@ export interface GetBucketTrashInput {
 }
 
 export interface GetBucketTrashOutput {
-  Trash: {
-    TrashPath: string;
-    CleanInterval: number;
-    Status: 'Enabled' | 'Disabled';
-  };
+  Trash: BucketTrash;
 }
 
 export async function getBucketTrash(

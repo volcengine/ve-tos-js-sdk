@@ -19,7 +19,7 @@ const listBucketsDom = document.querySelector('#list-buckets');
 const jsonDom = document.querySelector('#json');
 listBucketsDom.addEventListener('click', async () => {
   const res = await client.listBuckets({
-    projectName:'default'
+    projectName: 'default',
   });
   jsonDom.innerHTML = JSON.stringify(res, null, 2);
 });
@@ -149,6 +149,7 @@ uploadObjectDom.addEventListener('click', async () => {
     client.uploadFile({
       key,
       file,
+      taskNum: 3,
       dataTransferStatusChange: (status) => {
         addContent(
           `type: ${status.type}, rwOnceBytes: ${status.rwOnceBytes}, consumedBytes: ${status.consumedBytes}, totalBytes: ${status.totalBytes}`

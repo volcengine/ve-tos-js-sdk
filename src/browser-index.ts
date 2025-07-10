@@ -21,7 +21,14 @@ import {
   ReplicationStatusType,
   AccessPointStatusType,
   TransferAccelerationStatusType,
-  MRAPMirrorBackRedirectPolicyType
+  MRAPMirrorBackRedirectPolicyType,
+  WorkflowExecutionStateType,
+  FileUncompressPrefixReplaced,
+  FileCompressFlatten,
+  AccessPointStatus,
+  AcceleratorPrefetchJobStatus,
+  AuditJobStateType,
+  AuditScanType,
 } from './TosExportEnum';
 import { CancelError } from './CancelError';
 import { ResumableCopyEventType } from './methods/object/multipart/resumableCopyObject';
@@ -54,6 +61,10 @@ class TosClient extends InnerClient {
   static RedirectType = RedirectType;
   static StorageClassInheritDirectiveType = StorageClassInheritDirectiveType;
   static TierType = TierType;
+  /** @private unstable */
+  static FileUncompressPrefixReplaced = FileUncompressPrefixReplaced;
+  /** @private unstable */
+  static FileCompressFlatten = FileCompressFlatten;
   static VersioningStatusType = VersioningStatusType;
   static createDefaultRateLimiter = createDefaultRateLimiter;
   static DataTransferType = DataTransferType;
@@ -64,11 +75,21 @@ class TosClient extends InnerClient {
   /** @private unstable */
   static AccessPointStatusType = AccessPointStatusType;
   /** @private unstable */
+  static AccessPointStatus = AccessPointStatus;
+  /** @private unstable */
+  static AcceleratorPrefetchJobStatus = AcceleratorPrefetchJobStatus;
+  /** @private unstable */
   static TransferAccelerationStatusType = TransferAccelerationStatusType;
   /** @private unstable */
   static MRAPMirrorBackRedirectPolicyType = MRAPMirrorBackRedirectPolicyType;
   /** @private unstable */
+  static WorkflowExecutionStateType = WorkflowExecutionStateType;
+  /** @private unstable */
   static ShareLinkClient = ShareLinkClient;
+  /** @private unstable */
+  static AuditJobStateType = AuditJobStateType;
+  /** @private unstable */
+  static AuditScanType = AuditScanType;
 }
 
 export default TosClient;
@@ -102,9 +123,16 @@ export {
   ResumableCopyEventType,
   ReplicationStatusType,
   AccessPointStatusType,
+  AccessPointStatus,
+  AcceleratorPrefetchJobStatus,
   TransferAccelerationStatusType,
   ShareLinkClient,
-  MRAPMirrorBackRedirectPolicyType
+  MRAPMirrorBackRedirectPolicyType,
+  WorkflowExecutionStateType,
+  FileUncompressPrefixReplaced,
+  FileCompressFlatten,
+  AuditJobStateType,
+  AuditScanType,
 };
 
 // TODO: hack for umd

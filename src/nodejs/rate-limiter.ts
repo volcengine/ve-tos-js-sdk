@@ -1,5 +1,5 @@
 import { Readable, Transform } from 'stream';
-import { makeStreamErrorHandler, pipeStreamWithErrorHandle } from '../utils';
+import { pipeStreamWithErrorHandle } from '../utils';
 import { IRateLimiter } from '../interface';
 
 export interface DefaultRateLimiter {

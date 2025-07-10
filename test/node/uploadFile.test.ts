@@ -109,7 +109,7 @@ describe('uploadFile in node.js environment', () => {
   );
 
   it(
-    'pause and resume with checkpoint',
+    'uploadFile pause and resume with checkpoint',
     async () => {
       const key = `${objectKey100M}-pause-and-resume-with-checkpoint`;
       const client = new TOS(tosOptions);
@@ -151,8 +151,9 @@ describe('uploadFile in node.js environment', () => {
         expect(isCancel(err)).toBeTruthy();
       });
       const checkpointFileContent: CheckpointRecord = require(cpFilepath);
-      const uploadedPartCount = checkpointFileContent.parts_info?.length || 0;
-
+      const uploadedPartCount = (checkpointFileContent.parts_info || []).filter(
+        (it) => it.is_completed
+      ).length;
       // first write file, then call callback
       // so there maybe be more part
       expect(uploadedPartCount).toBeGreaterThanOrEqual(pausePartCount);
@@ -184,7 +185,7 @@ describe('uploadFile in node.js environment', () => {
   );
 
   it(
-    'pause and resume with checkpoint when partNum is 3',
+    'uploadFile pause and resume with checkpoint when partNum is 3',
     async () => {
       const key = `${objectKey100M}-pause-and-resume-with-checkpoint-when-partNum-is-3`;
       const client = new TOS(tosOptions);
@@ -227,7 +228,9 @@ describe('uploadFile in node.js environment', () => {
         expect(isCancel(err)).toBeTruthy();
       });
       const checkpointFileContent: CheckpointRecord = require(cpFilepath);
-      const uploadedPartCount = checkpointFileContent.parts_info?.length || 0;
+      const uploadedPartCount = (checkpointFileContent.parts_info || []).filter(
+        (it) => it.is_completed
+      ).length;
 
       // first write file, then call callback
       // so there maybe be more part

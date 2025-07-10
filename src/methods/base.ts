@@ -14,6 +14,7 @@ import {
   getEndpoint,
   getNormalDataFromError,
   getSortedQueryString,
+  isValidBucketName,
   normalizeProxy,
 } from '../utils';
 import version from '../version';
@@ -319,7 +320,7 @@ export class TOSBase {
       return aliasType[oriType] || oriType;
     })();
     const nodeVersion = (() => {
-      return process.version.replaceAll('v', '');
+      return process.version.replace('v', '');
     })();
     const stdStr = `${sdkVersion} (${osType}/${process.arch};nodejs${nodeVersion})`;
     const moreStr = (() => {
@@ -429,7 +430,8 @@ export class TOSBase {
       url: path,
       params: query,
       headers: reqHeaders,
-      data: body,
+      // axios xhr 会在请求体 === undefined 时删掉 content-type，通过空字符串绕过该逻辑
+      data: body || '',
     };
 
     signatureHeaders.forEach((value, key) => {
@@ -526,6 +528,9 @@ export class TOSBase {
     if (!actualBucket) {
       throw new TosClientError('Must provide bucket param');
     }
+
+    isValidBucketName(actualBucket, this.opts.isCustomDomain);
+
     return this.fetch(method, '/', query, headers, body, {
       ...opts,
       subdomainBucket: actualBucket,
@@ -546,6 +551,8 @@ export class TOSBase {
     if (!actualBucket) {
       throw new TosClientError('Must provide bucket param');
     }
+
+    isValidBucketName(actualBucket, this.opts.isCustomDomain);
     validateObjectName(actualKey);
 
     return this.fetch(

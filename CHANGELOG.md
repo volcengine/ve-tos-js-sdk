@@ -2,6 +2,47 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.4] - 2025-07-10
+
+### Breaking Changes
+- **Bucket name validation moved to client-side**:
+  - **Affected scope**: All users creating or modifying buckets.
+  - **Details**:
+    - Previously, bucket name validation was handled by the server. Invalid names would trigger `TosServerError`.
+    - Now the client validates bucket names first. If invalid, it throws `TosClientError` directly, reducing network requests.
+  - **Migration guide**:
+    ```diff
+    // Old code (relied on server validation)
+    try {
+      await client.headBucket("invalid-bucket!");
+    } catch (e) {
+      if (e instanceof TosServerError) {
+        console.error("Server returned error:", e.message);
+      }
+    }
+
+    // New code (handle client validation errors)
+    try {
+      await client.headBucket("invalid-bucket!");
+    } catch (e) {
+    -  if (e instanceof TosServerError) {
+    +  if (e instanceof TosClientError) {
+        console.error("Client validation failed:", e.message);
+      } else if (e instanceof TosServerError) {
+        console.error("Server returned error:", e.message);
+      }
+    }
+
+### Added
+
+- retry if statusCode is 408
+- optimize error handlin logic of `uploadFile`
+
+### Fixed
+
+- fix missed content-type header in `setObjectMeta` method and in browser environment
+- fix `replaceAll is not a function` in nodejs environment
+
 ## [2.7.4] - 2025-02-10
 
 ### Added

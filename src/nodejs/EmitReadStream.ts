@@ -1,5 +1,5 @@
 import { Transform } from 'stream';
-import { makeStreamErrorHandler, pipeStreamWithErrorHandle } from '../utils';
+import { pipeStreamWithErrorHandle } from '../utils';
 
 function createReadNCbTransformer(readCb: (n: number) => void) {
   return new Transform({

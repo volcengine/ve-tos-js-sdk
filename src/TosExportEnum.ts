@@ -137,3 +137,78 @@ export enum MRAPMirrorBackRedirectPolicyType {
   ClosestFirst = 'Closest-First',
   LatestFirst = 'Latest-First',
 }
+
+/**
+ * @private unstable
+ */
+export enum WorkflowExecutionStateType {
+  Success = 'Success',
+  Running = 'Running',
+  Submitted = 'Submitted',
+  Failed = 'Failed',
+}
+
+/** @private unstable */
+export enum FileCompressFlatten {
+  /** Preserve directory structure */
+  KeepStructure = 0,
+  /** Flatten all directory structures */
+  FlattenAll = 1,
+  /** Create directory based on Prefix (Prefix mode only) */
+  PrefixAsDirectory = 2,
+  /** Only package contents under Prefix (Prefix mode only) */
+  PrefixContentsOnly = 3,
+}
+
+/**
+ * @private unstable
+ */
+export enum FileUncompressPrefixReplaced {
+  /** No extra prefix added */
+  NoExtraPrefix = 0,
+  /** Use the archive name as the prefix */
+  WithArchiveName = 1,
+  /** Preserve the full archive path */
+  FullArchivePath = 2,
+}
+
+/**
+ * @private unstable
+ */
+export enum AccessPointStatus {
+  Enable = 'enable',
+  Disable = 'disable',
+  Creating = 'creating',
+  Deleting = 'deleting',
+}
+
+/**
+ * @private unstable
+ */
+export enum AcceleratorPrefetchJobStatus {
+  Null = 'NULL',
+  Idle = 'IDLE',
+  Running = 'RUNNING',
+  Stopping = 'STOPPING',
+  Complete = 'COMPLETE',
+}
+
+/**
+ * @private unstable
+ */
+export enum AuditJobStateType {
+  Submitted = 'Submitted',
+  Running = 'Running',
+  Success = 'Success',
+  Failed = 'Failed',
+  Paused = 'Paused',
+  Canceled = 'Canceled',
+}
+
+/**
+ * @private unstable
+ */
+export enum AuditScanType {
+  Manifest = 'Manifest',
+  Scan = 'Scan',
+}

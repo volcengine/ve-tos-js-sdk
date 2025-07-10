@@ -206,3 +206,102 @@ export async function submitMultiRegionAccessPointRoutes(
   );
   return res;
 }
+
+
+export interface BindAcceleratorWithMultiRegionAccessPointInput {
+  AccountId: string;
+  MultiRegionAccessPointAlias: string;
+  AcceleratorId: string;
+}
+
+export interface BindAcceleratorWithMultiRegionAccessPointOutput {}
+
+/**
+ * @private unstable method
+ */
+export async function bindAcceleratorWithMultiRegionAccessPoint(
+  this: TOSBase,
+  input: BindAcceleratorWithMultiRegionAccessPointInput
+) {
+  const { AccountId, MultiRegionAccessPointAlias, AcceleratorId } = input;
+
+  const res = await this.fetch<BindAcceleratorWithMultiRegionAccessPointOutput>(
+    'PUT',
+    `/accelerator/${AcceleratorId}/mrap/${MultiRegionAccessPointAlias}`,
+    {
+    },
+    {
+      'x-tos-account-id': AccountId,
+    },
+    {},
+    {}
+  );
+  return res;
+}
+
+export interface UnbindAcceleratorWithMultiRegionAccessPointInput {
+  AccountId: string;
+  MultiRegionAccessPointAlias: string;
+  AcceleratorId: string;
+}
+
+export interface UnbindAcceleratorWithMultiRegionAccessPointOutput {}
+
+/**
+ * @private unstable method
+ */
+export async function unbindAcceleratorWithMultiRegionAccessPoint(
+  this: TOSBase,
+  input: UnbindAcceleratorWithMultiRegionAccessPointInput
+) {
+  const { AccountId, MultiRegionAccessPointAlias, AcceleratorId } = input;
+
+  const res = await this.fetch<UnbindAcceleratorWithMultiRegionAccessPointOutput>(
+    'DELETE',
+    `/accelerator/${AcceleratorId}/mrap/${MultiRegionAccessPointAlias}`,
+    {
+    },
+    {
+      'x-tos-account-id': AccountId,
+    },
+    {
+    },
+    {}
+  );
+
+  return res;
+}
+
+export interface ListBindAccessPointForMultiRegionAcceleratorInput {
+  AccountId: string;
+  AcceleratorId: string;
+}
+
+export interface ListBindAccessPointForMultiRegionAcceleratorOutput {
+  AccessPoints: Array<{ Alias: string; Endpoint: string }>
+}
+
+/**
+ * @private unstable method
+ */
+export async function listBindAccessPointForMultiRegionAccelerator(
+  this: TOSBase,
+  input: ListBindAccessPointForMultiRegionAcceleratorInput
+) {
+  const { AccountId, AcceleratorId } = input;
+
+  const res = await this.fetch<ListBindAccessPointForMultiRegionAcceleratorOutput>(
+    'GET',
+    `/accelerator/${AcceleratorId}/mrap`,
+    {
+    },
+    {
+      'x-tos-account-id': AccountId,
+    },
+    {
+    },
+    {}
+  );
+
+  return res;
+}

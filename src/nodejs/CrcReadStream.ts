@@ -1,6 +1,6 @@
 import { Transform } from 'stream';
 import { CRCCls } from '../universal/crc';
-import { makeStreamErrorHandler, pipeStreamWithErrorHandle } from '../utils';
+import { pipeStreamWithErrorHandle } from '../utils';
 
 function createReadCbTransformer(readCb: (chunk: Buffer) => void) {
   return new Transform({

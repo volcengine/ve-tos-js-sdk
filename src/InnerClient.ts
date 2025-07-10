@@ -8,6 +8,10 @@ import {
 } from './methods/bucket/base';
 import { getBucketAcl, putBucketAcl } from './methods/bucket/acl';
 import {
+  getBucketHttpsConfig,
+  putBucketHttpsConfig,
+} from './methods/bucket/httpsConfig';
+import {
   getObject,
   getObjectV2,
   getObjectToFile,
@@ -175,7 +179,31 @@ import {
   getMultiRegionAccessPointRoutes,
   deleteMultiRegionAccessPoint,
   submitMultiRegionAccessPointRoutes,
+  listBindAccessPointForMultiRegionAccelerator,
+  bindAcceleratorWithMultiRegionAccessPoint,
+  unbindAcceleratorWithMultiRegionAccessPoint,
 } from './methods/mrap';
+import {
+  createAccessPoint,
+  getAccessPoint,
+  listAccessPoints,
+  deleteAccessPoint,
+  listBindAccessPointForAccelerator,
+  bindAcceleratorWithAccessPoint,
+  unbindAcceleratorWithAccessPoint,
+} from './methods/accesspoint';
+import {
+  putAccelerator,
+  getAccelerator,
+  deleteAccelerator,
+  listAccelerators,
+  listAcceleratorAzs,
+  putAcceleratorPrefetchJob,
+  getAcceleratorPrefetchJob,
+  deleteAcceleratorPrefetchJob,
+  listAcceleratorPrefetchJobs,
+  listAcceleratorPrefetchJobRecords,
+} from './methods/accelerator';
 import {
   putMultiRegionAccessPointMirrorBack,
   getMultiRegionAccessPointMirrorBack,
@@ -184,8 +212,60 @@ import {
 import {
   putBucketPrivateM3U8,
   getBucketPrivateM3U8,
+  putBucketBlindWatermark,
+  getBucketBlindWatermark,
 } from './methods/bucket/media';
 import { getBucketTrash, putBucketTrash } from './methods/bucket/trash';
+import {
+  putBucketObjectLockConfiguration,
+  getBucketObjectLockConfiguration,
+} from './methods/bucket/lock';
+import {
+  putObjectRetention,
+  getObjectRetention,
+} from './methods/object/retention';
+import {
+  putBucketCdnNotification,
+  getBucketCdnNotification,
+  deleteBucketCdnNotification,
+} from './methods/bucket/cdnNotification';
+import {
+  getBucketWorkflow,
+  putBucketWorkflow,
+  deleteBucketWorkflow,
+  getBucketWorkflowExecution,
+  listBucketWorkflowExecution,
+} from './methods/bucket/workflow';
+import { createFileCompress } from './methods/fileCompress';
+import { createFileUncompress } from './methods/fileUncompress';
+import {
+  deleteBucketLogging,
+  getBucketLogging,
+  putBucketLogging,
+} from './methods/bucket/logging';
+import {
+  putAccessPointPolicy,
+  getAccessPointPolicy,
+  deleteAccessPointPolicy,
+  putMultiRegionAccessPointPolicy,
+  getMultiRegionAccessPointPolicy,
+  deleteMultiRegionAccessPointPolicy,
+} from './methods/mrap/policy';
+import {
+  putBucketAudit,
+  getBucketAudit,
+  listBucketAuditJob,
+  getBucketAuditJob,
+  postBucketAuditJob,
+  listBucketAuditBizType,
+} from './methods/bucket/audit';
+import { listBucketJob, getBucketJob } from './methods/bucket/listJob';
+import { createBucketAudioConvert } from './methods/bucket/audioConvert';
+import { getObjectAITag } from './methods/object/getObjectAITag';
+import {
+  getBucketRequestPayment,
+  putBucketRequestPayment,
+} from './methods/bucket/requestPayment';
 
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
 export class InnerClient extends TOSBase {
@@ -200,6 +280,10 @@ export class InnerClient extends TOSBase {
   // bucket acl
   getBucketAcl = getBucketAcl;
   putBucketAcl = putBucketAcl;
+
+  // bucket https config
+  putBucketHttpsConfig = putBucketHttpsConfig;
+  getBucketHttpsConfig = getBucketHttpsConfig;
 
   // bucket policy
   getBucketPolicy = getBucketPolicy;
@@ -383,16 +467,99 @@ export class InnerClient extends TOSBase {
   deleteMultiRegionAccessPoint = deleteMultiRegionAccessPoint;
   submitMultiRegionAccessPointRoutes = submitMultiRegionAccessPointRoutes;
 
+  // mrap-accelerator
+  bindAcceleratorWithMultiRegionAccessPoint =
+    bindAcceleratorWithMultiRegionAccessPoint;
+  unbindAcceleratorWithMultiRegionAccessPoint =
+    unbindAcceleratorWithMultiRegionAccessPoint;
+  listBindAccessPointForMultiRegionAccelerator =
+    listBindAccessPointForMultiRegionAccelerator;
+
   // mrap mirror back
   putMultiRegionAccessPointMirrorBack = putMultiRegionAccessPointMirrorBack;
   getMultiRegionAccessPointMirrorBack = getMultiRegionAccessPointMirrorBack;
   deleteMultiRegionAccessPointMirrorBack =
     deleteMultiRegionAccessPointMirrorBack;
 
+  // mrap policy
+  putMultiRegionAccessPointPolicy = putMultiRegionAccessPointPolicy;
+  getMultiRegionAccessPointPolicy = getMultiRegionAccessPointPolicy;
+  deleteMultiRegionAccessPointPolicy = deleteMultiRegionAccessPointPolicy;
+
+  putAccessPointPolicy = putAccessPointPolicy;
+  getAccessPointPolicy = getAccessPointPolicy;
+  deleteAccessPointPolicy = deleteAccessPointPolicy;
+  // accesspoint
+  createAccessPoint = createAccessPoint;
+  getAccessPoint = getAccessPoint;
+  listAccessPoints = listAccessPoints;
+  deleteAccessPoint = deleteAccessPoint;
+  bindAcceleratorWithAccessPoint = bindAcceleratorWithAccessPoint;
+  unbindAcceleratorWithAccessPoint = unbindAcceleratorWithAccessPoint;
+  listBindAccessPointForAccelerator = listBindAccessPointForAccelerator;
+
+  // accelerator
+  listAcceleratorAzs = listAcceleratorAzs;
+  putAccelerator = putAccelerator;
+  getAccelerator = getAccelerator;
+  listAccelerators = listAccelerators;
+  deleteAccelerator = deleteAccelerator;
+  putAcceleratorPrefetchJob = putAcceleratorPrefetchJob;
+  getAcceleratorPrefetchJob = getAcceleratorPrefetchJob;
+  deleteAcceleratorPrefetchJob = deleteAcceleratorPrefetchJob;
+  listAcceleratorPrefetchJobs = listAcceleratorPrefetchJobs;
+  listAcceleratorPrefetchJobRecords = listAcceleratorPrefetchJobRecords;
+
   // pm3u8
   putBucketPrivateM3U8 = putBucketPrivateM3U8;
   getBucketPrivateM3U8 = getBucketPrivateM3U8;
+  // 盲水印
+  putBucketBlindWatermark = putBucketBlindWatermark;
+  getBucketBlindWatermark = getBucketBlindWatermark;
   // hns trash
   putBucketTrash = putBucketTrash;
   getBucketTrash = getBucketTrash;
+
+  // bucket lock
+  putBucketObjectLockConfiguration = putBucketObjectLockConfiguration;
+  getBucketObjectLockConfiguration = getBucketObjectLockConfiguration;
+
+  // object retention
+  putObjectRetention = putObjectRetention;
+  getObjectRetention = getObjectRetention;
+  // cdn notification
+  putBucketCdnNotification = putBucketCdnNotification;
+  getBucketCdnNotification = getBucketCdnNotification;
+  deleteBucketCdnNotification = deleteBucketCdnNotification;
+
+  // workflow
+  putBucketWorkflow = putBucketWorkflow;
+  getBucketWorkflow = getBucketWorkflow;
+  deleteBucketWorkflow = deleteBucketWorkflow;
+  getBucketWorkflowExecution = getBucketWorkflowExecution;
+  listBucketWorkflowExecution = listBucketWorkflowExecution;
+
+  // audit
+  putBucketAudit = putBucketAudit;
+  getBucketAudit = getBucketAudit;
+  listBucketAuditJob = listBucketAuditJob;
+  getBucketAuditJob = getBucketAuditJob;
+  postBucketAuditJob = postBucketAuditJob;
+  listBucketAuditBizType = listBucketAuditBizType;
+
+  // bucket file compress
+  createFileCompress = createFileCompress;
+  // bucket file uncompress
+  createFileUncompress = createFileUncompress;
+  createBucketAudioConvert = createBucketAudioConvert;
+  listBucketJob = listBucketJob;
+  getBucketJob = getBucketJob;
+  // logging
+  putBucketLogging = putBucketLogging;
+  getBucketLogging = getBucketLogging;
+  deleteBucketLogging = deleteBucketLogging;
+  getObjectAITag = getObjectAITag;
+  // requestPayment
+  putBucketRequestPayment = putBucketRequestPayment;
+  getBucketRequestPayment = getBucketRequestPayment;
 }

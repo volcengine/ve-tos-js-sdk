@@ -45,6 +45,15 @@ export interface MirrorBackRule {
       /** private unstable */
       Set?: { Key: string; Value: string }[];
     };
+    /** @private unstable */
+    PassHeaderFromSource?: string[];
+    /** @private unstable */
+    PassStatusCodeFromSource?: string[];
+
+    /** @private unstable */
+    DisableUploadSourceForNoneRangeMirror?: boolean;
+    /** @private unstable */
+    DisableUploadSourceForRangeMirror?: boolean;
 
     Transform?: {
       WithKeyPrefix?: string;

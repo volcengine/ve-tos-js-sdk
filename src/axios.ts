@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Readable } from 'stream';
-import { getSortedQueryString, safeSync } from './utils';
-import { ISigV4Credentials, SignersV4 } from './signatureV4';
+import { safeSync } from './utils';
+import { SignersV4 } from './signatureV4';
 import * as log from './log';
 
 export const retryNamespace = '__retryConfig__';
@@ -44,7 +44,7 @@ function isCanRetryStatusCode(error: any) {
   }
 
   const { status } = error.response;
-  if (status === 429 || status >= 500) {
+  if (status === 429 || status === 408 || status >= 500) {
     return true;
   }
   return false;

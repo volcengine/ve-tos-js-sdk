@@ -21,7 +21,6 @@ import {
   safeAwait,
   isBlob,
   isBuffer,
-  isCancelError,
   DEFAULT_PART_SIZE,
   normalizeHeadersKey,
   fillRequestHeaders,
@@ -36,6 +35,7 @@ import { hashMd5 } from '../../../universal/crypto';
 import { IRateLimiter } from '../../../interface';
 import { validateCheckpoint } from '../utils';
 import { combineCrc64 } from '../../../universal/crc';
+import * as log from '../../../log';
 
 export interface UploadFileInput extends CreateMultipartUploadInput {
   /**
@@ -592,21 +592,26 @@ export async function uploadFile(
   triggerProgressEvent(TriggerProgressEventType.start);
   const handleTasks = async () => {
     let firstErr: Error | null = null;
+    const isCancelOrFirstError = () => isCancel() || !!firstErr;
     let index = 0;
 
     // TODO: how to test parallel does work, measure time is not right
     await Promise.all(
       Array.from({ length: input.taskNum || 1 }).map(async () => {
-        while (true) {
-          const currentIndex = index++;
-          if (currentIndex >= tasks.length) {
-            return;
-          }
+        let makeRetryStream: ReturnType<typeof getMakeRetryStream> = undefined;
+        let consumedBytesThisTask = 0;
+        let curTask: Task | null = null;
+        let curErr: any = null;
 
-          const curTask = tasks[currentIndex];
-          let consumedBytesThisTask = 0;
-          const makeRetryStream = getMakeRetryStream(input.file, curTask);
-          try {
+        try {
+          while (true) {
+            const currentIndex = index++;
+            if (currentIndex >= tasks.length) {
+              return;
+            }
+
+            curTask = tasks[currentIndex];
+            makeRetryStream = getMakeRetryStream(input.file, curTask);
             function getBody(file: UploadFileInput['file'], task: Task) {
               const { offset: start, partSize } = task;
               const end = start + partSize;
@@ -649,7 +654,7 @@ export async function uploadFile(
                 if (status.type !== DataTransferType.Rw) {
                   return;
                 }
-                if (isCancel()) {
+                if (isCancelOrFirstError()) {
                   return;
                 }
                 consumedBytesThisTask += status.rwOnceBytes;
@@ -662,28 +667,37 @@ export async function uploadFile(
             if (isCancel()) {
               throw new CancelError('cancel uploadFile');
             }
+            if (firstErr) {
+              // this error is only internal
+              throw new CancelError(
+                'cancel uploadFile by internal error(`firstErr`)'
+              );
+            }
 
             await updateAfterUploadPart(curTask, { res: uploadPartRes });
-          } catch (_err) {
-            tryDestroy(makeRetryStream?.getLastStream(), _err);
+          }
+        } catch (_err) {
+          curErr = _err as any;
+          if (!firstErr) {
+            firstErr = curErr;
+          }
+        }
 
-            const err = _err as any;
+        try {
+          if (curErr) {
+            if (curTask) {
+              await updateAfterUploadPart(curTask, { err: curErr });
+            }
+          } else {
+            tryDestroy(makeRetryStream?.getLastStream(), curErr);
             consumedBytes -= consumedBytesThisTask;
             consumedBytesThisTask = 0;
-
-            if (isCancelError(err)) {
-              throw err;
-            }
-
-            if (isCancel()) {
-              throw new CancelError('cancel uploadFile');
-            }
-
-            if (!firstErr) {
-              firstErr = err;
-            }
-            await updateAfterUploadPart(curTask, { err });
           }
+        } catch (err) {
+          log.TOS(
+            'error while clearing resources of `uploadFile` task, err:',
+            err
+          );
         }
       })
     );

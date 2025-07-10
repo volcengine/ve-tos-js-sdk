@@ -271,8 +271,9 @@ describe('resumableCopyObject in node.js environment', () => {
         (err) => err.toString().toLowerCase().includes('cancel')
       );
       const checkpointFileContent: ResumableCopyCheckpointRecord = require(cpFilepath);
-      const uploadedPartCount = checkpointFileContent.parts_info?.length || 0;
-
+      const uploadedPartCount = (checkpointFileContent.parts_info || []).filter(
+        (it) => it.is_completed
+      ).length;
       // first write file, then call callback
       // so there maybe be more part
       expect(uploadedPartCount).toBeGreaterThanOrEqual(pausePartCount);
@@ -353,8 +354,9 @@ describe('resumableCopyObject in node.js environment', () => {
         (err) => err.toString().toLowerCase().includes('cancel')
       );
       const checkpointFileContent: ResumableCopyCheckpointRecord = require(cpFilepath);
-      const uploadedPartCount = checkpointFileContent.parts_info?.length || 0;
-
+      const uploadedPartCount = (checkpointFileContent.parts_info || []).filter(
+        (it) => it.is_completed
+      ).length;
       // first write file, then call callback
       // so there maybe be more part
       expect(uploadedPartCount).toBeGreaterThanOrEqual(pausePartCount);

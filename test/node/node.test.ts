@@ -603,7 +603,7 @@ describe('nodejs connection params', () => {
     const checkMoreStrList: ICheckMoreStrItem[] = [
       {
         opts: {},
-        expectedEnd: `nodejs${process.version}`.replaceAll('v', '') + ')',
+        expectedEnd: `nodejs${process.version}`.replace('v', '') + ')',
       },
       {
         opts: {
@@ -688,9 +688,7 @@ describe('nodejs connection params', () => {
                 .split('/')
                 .some((it) => userAgent.includes(it)) &&
               userAgent.includes(process.arch) &&
-              userAgent.includes(
-                `nodejs${process.version}`.replaceAll('v', '')
-              ) &&
+              userAgent.includes(`nodejs${process.version}`.replace('v', '')) &&
               userAgent.endsWith(checkItem.expectedEnd)
             ) {
               res.statusCode = 200;

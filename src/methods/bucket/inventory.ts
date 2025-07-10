@@ -40,6 +40,16 @@ export enum InventoryOptionalFields {
   CRC64 = 'CRC64',
   /** crr复制状态 */
   ReplicationStatus = 'ReplicationStatus',
+  /** 
+   * @private unstable
+   * 保留模式 
+   */
+  RetentionMode = 'RetentionMode',
+  /**
+   * @private unstable  
+   * 保留时间 
+   */
+  RetainUntilTimestamp = 'RetainUntilTimestamp',
 }
 
 /**

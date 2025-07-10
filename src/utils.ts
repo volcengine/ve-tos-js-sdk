@@ -15,6 +15,7 @@ import TosServerError from './TosServerError';
 import { CRCCls } from './universal/crc';
 import * as fsp from './nodejs/fs-promises';
 import { ReadStream, WriteStream } from 'fs';
+import * as log from './log';
 
 // obj[key] must be a array
 export const makeArrayProp = (obj: unknown) => (key: string) => {
@@ -455,9 +456,17 @@ export function checkCRC64WithHeaders(crc: CRCCls | string, headers: Headers) {
   }
 }
 
-export const makeStreamErrorHandler = (prefix?: string) => (err: any) => {
-  console.log(`${prefix || ''} stream error:`, err);
-};
+export const bindStreamErrorHandler = (
+  stream:
+    | NodeJS.ReadableStream
+    | ReadStream
+    | NodeJS.WritableStream
+    | WriteStream,
+  prefix?: string
+) =>
+  stream.on('error', (err: any) => {
+    log.TOS('bindStreamErrorHandler: ', `${prefix || ''} stream error:`, err);
+  });
 
 export enum HttpHeader {
   LastModified = 'last-modified',
@@ -502,6 +511,8 @@ export const makeRetryStreamAutoClose = (
   let lastStream: ReadStream | NodeJS.ReadableStream | null = null;
   const makeRetryStream = () => {
     if (lastStream) {
+      bindStreamErrorHandler(lastStream, 'retry new stream');
+
       tryDestroy(
         lastStream,
         new Error('retry new stream by makeRetryStreamAutoClose')
@@ -542,8 +553,33 @@ export const pipeStreamWithErrorHandle = <
   dest: Dest,
   label: string
 ): Dest => {
-  dest.on('error', makeStreamErrorHandler(label));
+  bindStreamErrorHandler(dest, label);
   src.on('error', (err) => tryDestroy(dest, err));
   dest.on('error', (err) => tryDestroy(src, err));
   return src.pipe(dest) as Dest;
 };
+
+export const isValidBucketName = (bucket: string, isCustomDomain?: boolean) => {
+  if (isCustomDomain) {
+    return;
+  }
+
+  if (bucket) {
+    if (bucket.length < 3 || bucket.length > 63) {
+      throw new TosClientError(
+        'invalid bucket name, the length must be [3, 63]'
+      );
+    }
+    if (!/^([a-z]|-|\d)+$/.test(bucket)) {
+      throw new TosClientError(
+        'invalid bucket name, the character set is illegal'
+      );
+    }
+    if (/^-/.test(bucket) || /-$/.test(bucket)) {
+      throw new TosClientError(
+        `invalid bucket name, the bucket name can be neither starting with '-' nor ending with '-'`
+      );
+    }
+  }
+
+}
