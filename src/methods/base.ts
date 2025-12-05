@@ -268,7 +268,13 @@ export class TOSBase {
       );
     }
 
-    if (endpoint.includes('s3')) {
+    const S3_REGION_LIST = [
+      'tos-s3-cn-beijing.volces.com',
+      'tos-s3-cn-guangzhou.volces.com',
+      'tos-s3-cn-shanghai.volces.com',
+      'tos-s3-ap-southeast-1.volces.com',
+    ];
+    if (S3_REGION_LIST.includes(endpoint)) {
       throw new TosClientError(
         `do not support s3 endpoint, please use tos endpoint.`
       );
