@@ -2,15 +2,24 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.6] - 2025-12-05
+
+### Fixed
+
+fix s3 endpoint validation
+
 ## [2.7.5] - 2025-07-10
 
 ### Breaking Changes
+
 - **Bucket name validation moved to client-side**:
+
   - **Affected scope**: All users creating or modifying buckets.
   - **Details**:
     - Previously, bucket name validation was handled by the server. Invalid names would trigger `TosServerError`.
     - Now the client validates bucket names first. If invalid, it throws `TosClientError` directly, reducing network requests.
   - **Migration guide**:
+
     ```diff
     // Old code (relied on server validation)
     try {
@@ -32,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
         console.error("Server returned error:", e.message);
       }
     }
+    ```
 
 ### Added
 
