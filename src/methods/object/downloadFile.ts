@@ -117,6 +117,22 @@ export interface DownloadFileInput extends HeadObjectInput {
     tempFilePath: string,
     filePath: string
   ) => void;
+
+  /**
+   * @private unstable
+   * enable sparse file when object size is greater than part size
+   * only works on nodejs environment & windows platform
+   * mac & linux os  support sparse file by default
+   */
+  enableSparseFile?: boolean;
+
+  /**
+   * @private unstable
+   * write stream watermark
+   * only works on nodejs environment
+   * unit: byte
+   */
+  writeStreamHighWaterMark?: number;
 }
 export interface DownloadFileOutput extends HeadObjectOutput {}
 
@@ -174,7 +190,7 @@ export async function downloadFile(
       '`downloadFile` is not supported in browser environment'
     );
   }
-  const { cancelToken, versionId } = input;
+  const { cancelToken, versionId, enableSparseFile, writeStreamHighWaterMark } = input;
   const isCancel = () => cancelToken && !!cancelToken.reason;
   validateCheckpoint(input.checkpoint);
 
@@ -562,6 +578,36 @@ export async function downloadFile(
         await fsp.writeFile(tempFilePath, '', {
           flag: 'w+',
         });
+        if (process.env.TARGET_ENVIRONMENT === 'node') {
+          // 3. [仅 Windows] 设置文件为稀疏文件
+          if (
+            process.platform === 'win32' &&
+            enableSparseFile &&
+            objectSize > partSize
+          ) {
+            const { execFile } = require('child_process');
+            await new Promise((resolve) => {
+              execFile(
+                'fsutil',
+                ['sparse', 'setflag', tempFilePath],
+                (err: any, _stdout: any, stderr: any) => {
+                  if (err) {
+                    console.warn(
+                      '设置稀疏文件标志失败:',
+                      tempFilePath,
+                      err,
+                      stderr
+                    );
+                    // 非致命错误，继续执行
+                  } else {
+                    console.warn('设置稀疏文件标志成功:', tempFilePath);
+                  }
+                  resolve('成功');
+                }
+              );
+            });
+          }
+        }
       } catch (_err) {
         const err = _err as any;
         triggerDownloadEvent({
@@ -643,6 +689,7 @@ export async function downloadFile(
                 const writeStream = fsp.createWriteStream(tempFilePath, {
                   start: curTask.offset,
                   flags: 'r+',
+                  highWaterMark: writeStreamHighWaterMark,
                 });
 
                 let isErr = false;

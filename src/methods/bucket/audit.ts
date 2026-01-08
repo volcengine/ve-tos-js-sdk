@@ -1,5 +1,11 @@
 import { handleEmptyServerError } from '../../handleEmptyServerError';
-import { AuditJobStateType, AuditScanType } from '../../TosExportEnum';
+import {
+  AuditJobStateType,
+  AuditScanType,
+  AuditType,
+  CallbackTriggerModeType,
+  FreezeModeType,
+} from '../../TosExportEnum';
 import TOSBase from '../base';
 
 export interface GetBucketAuditInput {
@@ -110,6 +116,36 @@ export interface ScanConf {
   TimestampEnd?: number;
 }
 
+export interface CallbackBizs {
+  BizType: string;
+  LabelTexts?: string[];
+  AuditType: AuditType;
+}
+
+export interface CallbackConf {
+  EnableCallback: boolean;
+  CallbackTriggerMode?: CallbackTriggerModeType;
+  CallbackURL?: {
+    URL: string;
+    Schema: 'https' | 'http';
+  };
+  CallbackBizs?: CallbackBizs[];
+}
+
+export interface FreezeBizs {
+  BizType: string;
+  LabelTexts?: string[];
+  AuditType: AuditType;
+}
+
+export interface ContentFreezeConf {
+  Enable: boolean;
+  FreezeBizs?: FreezeBizs[];
+  FreezeMode?: FreezeModeType;
+  FreezePathPrefix?: string;
+  CdnRefresh?: boolean;
+}
+
 export interface AuditItem {
   JobID: string;
   State: AuditJobStateType;
@@ -123,6 +159,8 @@ export interface AuditItem {
   VideoAudit?: VideoAudit;
   AudioAudit?: AudioAudit;
   ScanConf: ScanConf;
+  ContenFreezeConfig?: ContentFreezeConf;
+  CallbackConfig?: CallbackConf;
 }
 
 export interface ListBucketAuditJobInput {
@@ -220,12 +258,14 @@ export async function getBucketAuditJob(
 }
 
 export interface PostBucketAuditJobInput {
-  bucket: string;
+  bucket?: string;
   job: {
     ImageAudit?: ImageAudit;
     VideoAudit?: VideoAudit;
     AudioAudit?: AudioAudit;
     ScanConf: ScanConf;
+    CallbackConfig?: CallbackConf;
+    ContenFreezeConfig?: ContentFreezeConf;
   };
 }
 
@@ -253,7 +293,7 @@ export async function postBucketAuditJob(
 
 interface ConfigItem {
   Name: string;
-  BizType: number;
+  BizType: string;
   Scene: string;
   SceneText: string;
   LabelTexts: string[];
@@ -284,6 +324,162 @@ export async function listBucketAuditBizType(
     {
       type: audit_type,
       audits: '',
+    },
+    {}
+  );
+}
+
+export interface IncrementScanConf {
+  ObjectPrefixAllowed?: string[];
+  ObjectPrefixDenied?: string[];
+}
+
+export interface PostBucketIncrementAuditInput {
+  bucket?: string;
+  job: {
+    ImageAudit?: ImageAudit;
+    VideoAudit?: VideoAudit;
+    AudioAudit?: AudioAudit;
+    ScanConf: IncrementScanConf;
+    Callback?: CallbackConf;
+    ContentFreezeConf?: ContentFreezeConf;
+  };
+}
+
+export interface PostBucketIncrementAuditOutput {}
+
+/**
+ * @private unstable method
+ */
+export async function postBucketIncrementAudit(
+  this: TOSBase,
+  input: PostBucketIncrementAuditInput
+) {
+  const { bucket, job } = input;
+  const res = await this.fetchBucket<PostBucketIncrementAuditOutput>(
+    bucket,
+    'POST',
+    {
+      increment_audit: '',
+    },
+    {},
+    {
+      AuditConfiguration: job,
+    }
+  );
+  return res;
+}
+
+export interface ListBucketIncrementAuditsInput {
+  bucket?: string;
+  pageSize: number;
+  /**
+   * The starting token for pagination.
+   */
+  pageToken?: string;
+  audiType: AuditType;
+}
+
+export interface IncrementAuditItem {
+  RuleId: string;
+  ImageAudit?: ImageAudit;
+  VideoAudit?: VideoAudit;
+  AudioAudit?: AudioAudit;
+  ScanConf: IncrementScanConf;
+  Callback?: CallbackConf;
+  ContentFreezeConf?: ContentFreezeConf;
+}
+
+export interface ListBucketIncrementAuditsOutput {
+  Items: IncrementAuditItem[];
+  NextPageToken?: string;
+}
+
+/**
+ * @private unstable method
+ */
+export async function listBucketIncrementAudits(
+  this: TOSBase,
+  input: ListBucketIncrementAuditsInput
+) {
+  const { bucket, pageSize, pageToken, audiType } = input;
+  const query: Record<string, string> = {
+    increment_audits: '',
+    audit_type: audiType,
+  };
+
+  if (pageSize !== undefined) {
+    query['page_size'] = pageSize.toString();
+  }
+  if (pageToken !== undefined) {
+    query['page_token'] = pageToken;
+  }
+
+  const res = await this.fetchBucket<ListBucketIncrementAuditsOutput>(
+    bucket,
+    'GET',
+    query,
+    {}
+  );
+  return res;
+}
+
+export interface GetBucketIncrementAuditsInput {
+  bucket?: string;
+  ruleId: string;
+}
+
+export type GetBucketIncrementAuditsOutput = IncrementAuditItem | null;
+
+/**
+ * @private unstable method
+ */
+export async function getBucketIncrementAudit(
+  this: TOSBase,
+  input: GetBucketIncrementAuditsInput
+) {
+  const { bucket, ruleId } = input;
+  try {
+    const res = await this.fetchBucket<GetBucketIncrementAuditsOutput>(
+      bucket,
+      'GET',
+      {
+        increment_audit: '',
+        rule_id: ruleId,
+      },
+      {}
+    );
+    return res;
+  } catch (e) {
+    return handleEmptyServerError<GetBucketIncrementAuditsOutput>(e, {
+      enableCatchEmptyServerError: this.opts.enableOptimizeMethodBehavior,
+      methodKey: 'getBucketIncrementAudits',
+      defaultResponse: null,
+    });
+  }
+}
+
+export interface DeleteBucketIncrementAuditInput {
+  bucket?: string;
+  ruleId: string;
+}
+
+export type DeleteBucketIncrementAuditOutput = {};
+
+/**
+ * @private unstable method
+ */
+export async function deleteBucketIncrementAudit(
+  this: TOSBase,
+  input: DeleteBucketIncrementAuditInput
+) {
+  const { bucket, ruleId } = input;
+  return this.fetchBucket<DeleteBucketIncrementAuditOutput>(
+    bucket,
+    'DELETE',
+    {
+      increment_audit: '',
+      rule_id: ruleId,
     },
     {}
   );

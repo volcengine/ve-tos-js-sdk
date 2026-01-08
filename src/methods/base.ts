@@ -7,7 +7,7 @@ import axios, {
   Method,
 } from 'axios';
 import { ISigV4Credentials, SignersV4 } from '../signatureV4';
-import { Headers, StringKeys } from '../interface';
+import { Headers, StringKeys, TosClientCommonOptions } from '../interface';
 import TosServerError, { TosServerErrorData } from '../TosServerError';
 import {
   encodeHeadersValue,
@@ -34,7 +34,7 @@ import uniappAdapter from 'axios-adapter-uniapp';
 import os from 'os';
 import { retrySignatureNamespace } from '../axios';
 
-export interface TOSConstructorOptions {
+export interface TOSConstructorOptions extends TosClientCommonOptions {
   accessKeyId: string;
   accessKeySecret: string;
   stsToken?: string;
@@ -188,6 +188,7 @@ interface FetchOpts<T> {
   needMd5?: boolean;
   handleResponse?: (response: AxiosResponse<T>) => T;
   subdomainBucket?: string;
+  serviceName?: string;
   axiosOpts?: AxiosRequestConfig;
 }
 
@@ -420,7 +421,7 @@ export class TOSBase {
       {
         algorithm: 'TOS4-HMAC-SHA256',
         region: this.opts.region,
-        serviceName: 'tos',
+        serviceName: opts?.serviceName || 'tos',
         bucket: '',
         securityToken: this.opts.stsToken,
       },
@@ -507,7 +508,8 @@ export class TOSBase {
     } catch (err) {
       if (
         axios.isAxiosError(err) &&
-        err.response?.headers?.['x-tos-request-id']
+        (err.response?.headers?.['x-tos-request-id'] ||
+          err.response?.data?.requestId)
       ) {
         // it's ServerError only if `RequestId` exists
         const response: AxiosResponse<TosServerErrorData> = err.response;

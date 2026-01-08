@@ -3,6 +3,24 @@ import TOSBase from '../base';
 
 const CommonQueryKey = 'mirror';
 
+export interface FetchCondition {
+  /**
+   * 优先判断deny，如果被任何一个规则拒绝，都不会异步抓取该对象
+   */
+  PrefixNotFetch?: string[];
+  SuffixNotFetch?: string[];
+  /**
+   * 单位为B
+   */
+  SizeRangeNotFetch?: string[];
+  /**
+   * 以下所有配置过的条件都通过才会去抓取
+   */
+  PrefixFetch?: string[];
+  SuffixFetch?: string[];
+  SizeRangeFetch?: string[];
+}
+
 export interface MirrorBackRule {
   ID: string;
   Condition: {
@@ -14,6 +32,8 @@ export interface MirrorBackRule {
     /** private unstable */
     HttpMethod?: string[];
   };
+  /** @private unstable */
+  FetchCondition?: FetchCondition;
   Redirect: {
     RedirectType?: 'Mirror' | 'Async';
     FetchSourceOnRedirect?: boolean;
@@ -30,6 +50,11 @@ export interface MirrorBackRule {
     PrivateSource?: {
       SourceEndpoint: {
         Primary: {
+          Endpoint: string;
+          BucketName: string;
+          CredentialProvider: { Role: string };
+        }[];
+        Follower?: {
           Endpoint: string;
           BucketName: string;
           CredentialProvider: { Role: string };

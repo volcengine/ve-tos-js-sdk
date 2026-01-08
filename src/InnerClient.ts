@@ -4,6 +4,8 @@ import {
   createBucket,
   deleteBucket,
   headBucket,
+  doesBucketExist,
+  getBucketInfo,
   putBucketStorageClass,
 } from './methods/bucket/base';
 import { getBucketAcl, putBucketAcl } from './methods/bucket/acl';
@@ -17,10 +19,11 @@ import {
   getObjectToFile,
 } from './methods/object/getObject';
 import putObject, { putObjectFromFile } from './methods/object/putObject';
-import { fetchObject, putFetchTask } from './methods/object/fetch';
+import { fetchObject, getFetchTask, putFetchTask } from './methods/object/fetch';
 import { listObjectVersions, listObjects } from './methods/object/listObjects';
 import getPreSignedUrl from './methods/object/getPreSignedUrl';
 import headObject from './methods/object/headObject';
+import { doesObjectExist } from './methods/object/doesObjectExist';
 import deleteObject from './methods/object/deleteObject';
 import renameObject from './methods/object/renameObject';
 import deleteMultiObjects from './methods/object/deleteMultiObjects';
@@ -203,6 +206,8 @@ import {
   deleteAcceleratorPrefetchJob,
   listAcceleratorPrefetchJobs,
   listAcceleratorPrefetchJobRecords,
+  getAcceleratorCapacityQuota,
+  listBindAcceleratorForAccessPoint,
 } from './methods/accelerator';
 import {
   putMultiRegionAccessPointMirrorBack,
@@ -258,6 +263,10 @@ import {
   getBucketAuditJob,
   postBucketAuditJob,
   listBucketAuditBizType,
+  postBucketIncrementAudit,
+  listBucketIncrementAudits,
+  getBucketIncrementAudit,
+  deleteBucketIncrementAudit,
 } from './methods/bucket/audit';
 import { listBucketJob, getBucketJob } from './methods/bucket/listJob';
 import { createBucketAudioConvert } from './methods/bucket/audioConvert';
@@ -267,14 +276,73 @@ import {
   putBucketRequestPayment,
 } from './methods/bucket/requestPayment';
 
+import {
+  createDataset,
+  deleteDataset,
+  listDataset,
+  getDataset,
+} from './methods/datasetSearch/dataset';
+
+import {
+  createDatasetBinding,
+  deleteDatasetBinding,
+  listDatasetBindings,
+  getDatasetBinding,
+} from './methods/datasetSearch/binding';
+
+import {
+  datasetSimpleQuery,
+  datasetSemanticQuery,
+} from './methods/datasetSearch/query';
+
+import {
+  putBucketDataProcessTemplate,
+  getBucketDataProcessTemplate,
+  deleteBucketDataProcessTemplate,
+  listBucketDataProcessTemplates,
+} from './methods/bucket/template';
+import {
+  putAudioConvertTemplate,
+  getAudioConvertTemplate,
+  deleteAudioConvertTemplate,
+  listAudioConvertTemplates,
+  getVideoConvertTemplate,
+  deleteVideoConvertTemplate,
+  putVideoConvertTemplate,
+  listVideoConvertTemplates,
+} from './methods/bucket/templatesV2';
+import {
+  createVideoConvertJob,
+  getVideoConvertJob,
+  createAudioConvertJob,
+  getAudioConvertJob,
+} from './methods/bucket/mediaJob';
+
+import { listTemplates } from './methods/datasetSearch/template';
+import {
+  createBucketDataRedundancyTransition,
+  deleteBucketDataRedundancyTransition,
+  getBucketDataRedundancyTransition,
+  getBucketTransitionEstimatedRemainingTime,
+  listBucketDataRedundancyTransition,
+  listUserDataRedundancyTransition,
+} from './methods/bucket/dataRedundancy';
+import { putConvertWorkflow, getConvertWorkflow, deleteConvertWorkflow } from './methods/bucket/workflowV2';
+
+import { putAnyPrivateAccessPoint, listAnyPrivateAccessPoints, listAnyPrivateAccessPointSupportAz, listAnyPrivateAccessPointEndpoints } from './methods/apap';
+
+
+
 // refer https://stackoverflow.com/questions/23876782/how-do-i-split-a-typescript-class-into-multiple-files
 export class InnerClient extends TOSBase {
   // bucket base
   createBucket = createBucket;
   headBucket = headBucket;
+  doesBucketExist = doesBucketExist;
   deleteBucket = deleteBucket;
   listBuckets = listBuckets;
   getBucketLocation = getBucketLocation;
+  getBucketInfo = getBucketInfo;
   putBucketStorageClass = putBucketStorageClass;
 
   // bucket acl
@@ -384,11 +452,13 @@ export class InnerClient extends TOSBase {
   getObjectToFile = getObjectToFile;
   getObjectAcl = getObjectAcl;
   headObject = headObject;
+  doesObjectExist = doesObjectExist;
   appendObject = appendObject;
   listObjects = listObjects;
   renameObject = renameObject;
   fetchObject = fetchObject;
   putFetchTask = putFetchTask;
+  getFetchTask = getFetchTask;
 
   listObjectsType2 = listObjectsType2;
 
@@ -504,11 +574,14 @@ export class InnerClient extends TOSBase {
   getAccelerator = getAccelerator;
   listAccelerators = listAccelerators;
   deleteAccelerator = deleteAccelerator;
+  listBindAcceleratorForAccessPoint = listBindAcceleratorForAccessPoint;
+
   putAcceleratorPrefetchJob = putAcceleratorPrefetchJob;
   getAcceleratorPrefetchJob = getAcceleratorPrefetchJob;
   deleteAcceleratorPrefetchJob = deleteAcceleratorPrefetchJob;
   listAcceleratorPrefetchJobs = listAcceleratorPrefetchJobs;
   listAcceleratorPrefetchJobRecords = listAcceleratorPrefetchJobRecords;
+  getAcceleratorCapacityQuota = getAcceleratorCapacityQuota;
 
   // pm3u8
   putBucketPrivateM3U8 = putBucketPrivateM3U8;
@@ -538,6 +611,9 @@ export class InnerClient extends TOSBase {
   deleteBucketWorkflow = deleteBucketWorkflow;
   getBucketWorkflowExecution = getBucketWorkflowExecution;
   listBucketWorkflowExecution = listBucketWorkflowExecution;
+  putConvertWorkflow = putConvertWorkflow;
+  getConvertWorkflow = getConvertWorkflow;
+  deleteConvertWorkflow = deleteConvertWorkflow;
 
   // audit
   putBucketAudit = putBucketAudit;
@@ -546,12 +622,18 @@ export class InnerClient extends TOSBase {
   getBucketAuditJob = getBucketAuditJob;
   postBucketAuditJob = postBucketAuditJob;
   listBucketAuditBizType = listBucketAuditBizType;
+  postBucketIncrementAudit = postBucketIncrementAudit;
+  listBucketIncrementAudits = listBucketIncrementAudits;
+  getBucketIncrementAudit = getBucketIncrementAudit;
+  deleteBucketIncrementAudit = deleteBucketIncrementAudit;
 
   // bucket file compress
   createFileCompress = createFileCompress;
   // bucket file uncompress
   createFileUncompress = createFileUncompress;
   createBucketAudioConvert = createBucketAudioConvert;
+  getAudioConvertJob = getAudioConvertJob;
+  createAudioConvertJob = createAudioConvertJob;
   listBucketJob = listBucketJob;
   getBucketJob = getBucketJob;
   // logging
@@ -562,4 +644,48 @@ export class InnerClient extends TOSBase {
   // requestPayment
   putBucketRequestPayment = putBucketRequestPayment;
   getBucketRequestPayment = getBucketRequestPayment;
+
+  // dataset search
+  createDataset = createDataset;
+  deleteDataset = deleteDataset;
+  listDataset = listDataset;
+  getDataset = getDataset;
+  createDatasetBinding = createDatasetBinding;
+  deleteDatasetBinding = deleteDatasetBinding;
+  listDatasetBindings = listDatasetBindings;
+  getDatasetBinding = getDatasetBinding;
+  datasetSimpleQuery = datasetSimpleQuery;
+  listTemplates = listTemplates;
+  datasetSemanticQuery = datasetSemanticQuery;
+
+  // bucket data process template
+  putBucketDataProcessTemplate = putBucketDataProcessTemplate;
+  putAudioConvertTemplate = putAudioConvertTemplate;
+  getBucketDataProcessTemplate = getBucketDataProcessTemplate;
+  deleteBucketDataProcessTemplate = deleteBucketDataProcessTemplate;
+  listBucketDataProcessTemplates = listBucketDataProcessTemplates;
+  getAudioConvertTemplate = getAudioConvertTemplate;
+  deleteAudioConvertTemplate = deleteAudioConvertTemplate;
+  listAudioConvertTemplates = listAudioConvertTemplates;
+  putVideoConvertTemplate = putVideoConvertTemplate;
+  getVideoConvertTemplate = getVideoConvertTemplate;
+  deleteVideoConvertTemplate = deleteVideoConvertTemplate;
+  listVideoConvertTemplates = listVideoConvertTemplates;
+  // video convert job
+  createVideoConvertJob = createVideoConvertJob;
+  getVideoConvertJob = getVideoConvertJob;
+  // data redundancy transition
+  createBucketDataRedundancyTransition = createBucketDataRedundancyTransition;
+  getBucketDataRedundancyTransition = getBucketDataRedundancyTransition;
+  listBucketDataRedundancyTransition = listBucketDataRedundancyTransition;
+  deleteBucketDataRedundancyTransition = deleteBucketDataRedundancyTransition;
+  listUserDataRedundancyTransition = listUserDataRedundancyTransition;
+  getBucketTransitionEstimatedRemainingTime =
+    getBucketTransitionEstimatedRemainingTime;
+
+  // apap
+  putAnyPrivateAccessPoint = putAnyPrivateAccessPoint;
+  listAnyPrivateAccessPoints = listAnyPrivateAccessPoints;
+  listAnyPrivateAccessPointSupportAz = listAnyPrivateAccessPointSupportAz;
+  listAnyPrivateAccessPointEndpoints = listAnyPrivateAccessPointEndpoints;
 }

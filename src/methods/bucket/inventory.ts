@@ -9,6 +9,7 @@ export enum ScheduleFrequency {
   Daily = 'Daily',
   /** 按周 */
   Weekly = 'Weekly',
+  Once = 'Once',
 }
 
 /**
@@ -40,16 +41,9 @@ export enum InventoryOptionalFields {
   CRC64 = 'CRC64',
   /** crr复制状态 */
   ReplicationStatus = 'ReplicationStatus',
-  /** 
-   * @private unstable
-   * 保留模式 
-   */
   RetentionMode = 'RetentionMode',
-  /**
-   * @private unstable  
-   * 保留时间 
-   */
   RetainUntilTimestamp = 'RetainUntilTimestamp',
+  IntelligentTieringAccessTier = 'IntelligentTieringAccessTier',
 }
 
 /**
@@ -64,6 +58,33 @@ export interface BucketInventoryItem {
   Filter?: {
     /** 筛选规则的匹配前缀 */
     Prefix?: string;
+    // unstable
+    And?: {
+      /** 筛选规则的最后修改时间开始时间 */
+      LastModifyBeginTimeStamp?: number;
+      LastModifyEndTimeStamp?: number;
+      CreateBeginTimeStamp?: number;
+      CreateEndTimeStamp?: number;
+      LowerSizeBound?: number;
+      UpperSizeBound?: number;
+      FilterTag?: {
+        Tags?: { Key: string; Value: string }[];
+      };
+      FilterStorageClass?: {
+        StorageClass: (
+          | 'STANDARD'
+          | 'IA'
+          | 'ARCHIVE_FR'
+          | 'INTELLIGENT_TIERING'
+          | 'ARCHIVE'
+          | 'COLD_ARCHIVE'
+          | 'DEEP_COLD_ARCHIVE'
+        )[];
+      };
+      FilterObjectType?: {
+        ObjectType: ('Normal' | 'Multipart')[];
+      };
+    }
   };
   /** 存放清单结果 */
   Destination: {
@@ -85,7 +106,9 @@ export interface BucketInventoryItem {
   Schedule: {
     /** 导出的周期 */
     Frequency: ScheduleFrequency;
+    Instant?: boolean;
   };
+  UpdateTime?: number;
   /** 是否在清单中包含 Object 版本信息 */
   IncludedObjectVersions: string;
   /** 配置项 */

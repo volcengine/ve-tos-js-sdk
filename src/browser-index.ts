@@ -29,6 +29,14 @@ import {
   AcceleratorPrefetchJobStatus,
   AuditJobStateType,
   AuditScanType,
+  AuditType,
+  CallbackTriggerModeType,
+  FreezeModeType,
+  TemplateTagType,
+  AudioContainerFormatType,
+  SampleFormatType,
+  DataType,
+  DistanceMetricType,
 } from './TosExportEnum';
 import { CancelError } from './CancelError';
 import { ResumableCopyEventType } from './methods/object/multipart/resumableCopyObject';
@@ -90,6 +98,18 @@ class TosClient extends InnerClient {
   static AuditJobStateType = AuditJobStateType;
   /** @private unstable */
   static AuditScanType = AuditScanType;
+  /** @private unstable */
+  static AuditType = AuditType;
+  /** @private unstable */
+  static CallbackTriggerModeType = CallbackTriggerModeType;
+  /** @private unstable */
+  static FreezeModeType = FreezeModeType;
+  /** @private unstable */
+  static TemplateTagType = TemplateTagType;
+  /** @private unstable */
+  static AudioContainerFormatType = AudioContainerFormatType;
+  /** @private unstable */
+  static SampleFormatType = SampleFormatType;
 }
 
 export default TosClient;
@@ -133,7 +153,17 @@ export {
   FileCompressFlatten,
   AuditJobStateType,
   AuditScanType,
+  AuditType,
+  CallbackTriggerModeType,
+  FreezeModeType,
+  TemplateTagType,
+  AudioContainerFormatType,
+  SampleFormatType,
+  DataType,
+  DistanceMetricType,
 };
+
+export { TosVectorsClient } from './TosVectorsClient';
 
 // TODO: hack for umd
 if (

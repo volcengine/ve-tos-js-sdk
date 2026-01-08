@@ -7,11 +7,27 @@ interface BucketTrash {
   TrashPath: string;
   CleanInterval: number;
   Status: 'Enabled' | 'Disabled';
+  /**
+   * @private unstable
+   */
+  ForbiddenOverWrite?: 'Enabled' | 'Disabled';
+  /**
+   * @private unstable
+   */
+  [x: string]: any;
   PrefixMatchRules?: Array<{
     PrefixList: string[];
     TrashPath: string;
     CleanInterval: number;
-  }>
+    /**
+     * @private unstable
+     */
+    ForbiddenOverWrite?: 'Enabled' | 'Disabled';
+    /**
+     * @private unstable
+     */
+    [x: string]: any;
+  }>;
 }
 
 export interface PutBucketTrashInput {

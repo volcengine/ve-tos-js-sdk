@@ -1,6 +1,9 @@
 import path from 'path';
 import fs from 'fs';
 import { CRC } from '../../src/universal/crc';
+import { TosVectorsClient } from '../../src/TosVectorsClient';
+import { TosResponse } from '../../src/methods/base';
+import { ListIndexesOutput } from '../../src/vectors-methods/vector-index';
 
 export const assetsPath = path.resolve(__dirname, '../assets');
 export const tmpDir = path.resolve(__dirname, 'tmp');
@@ -89,3 +92,37 @@ export async function calcFileCrc(filePath: string): Promise<string> {
     stream.on('end', () => resolve(crcInst.getCrc64()));
   });
 }
+
+export const deleteVectorBucket = async (
+  client: TosVectorsClient,
+  vectorBucketName: string,
+  accountID: string
+) => {
+  let nextToken;
+  while (true) {
+    const res: TosResponse<ListIndexesOutput> = await client.listIndexes({
+      vectorBucketName,
+      accountID,
+      nextToken: nextToken,
+    });
+
+    for (const index of res.data.indexes) {
+      await client.deleteIndex({
+        vectorBucketName,
+        accountID,
+        indexName: index.indexName,
+      });
+    }
+
+    if (res.data.nextToken) {
+      nextToken = res.data.nextToken;
+    } else {
+      break;
+    }
+  }
+
+  await client.deleteVectorBucket({
+    vectorBucketName,
+    accountID,
+  });
+};

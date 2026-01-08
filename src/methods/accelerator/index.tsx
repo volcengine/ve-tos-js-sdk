@@ -19,7 +19,11 @@ import {
   ListAcceleratorPrefetchJobsInput,
   ListAcceleratorPrefetchJobsOutput,
   ListAcceleratorPrefetchJobRecordsInput,
-  ListAcceleratorPrefetchJobRecordsOutput
+  ListAcceleratorPrefetchJobRecordsOutput,
+  GetAcceleratorCapacityQuotaInput,
+  GetAcceleratorCapacityQuotaOutput,
+  ListBindAcceleratorForAccessPointInput,
+  ListBindAcceleratorForAccessPointOutput,
 } from './interface';
 
 /**
@@ -251,5 +255,44 @@ export async function listAcceleratorPrefetchJobRecords(
     {}
   );
 
+  return res;
+}
+
+/**
+ * @private unstable method
+ */
+export async function getAcceleratorCapacityQuota(
+  this: TOSBase,
+  input: GetAcceleratorCapacityQuotaInput
+) {
+  const { AccountId, Az } = input;
+  const res = await this.fetch<GetAcceleratorCapacityQuotaOutput>(
+    'GET',
+    '/accelerator/capacity',
+    {  az: Az },
+    {
+      'x-tos-account-id': AccountId,
+    },
+    {},
+    {}
+  );
+  return res;
+}
+
+export async function listBindAcceleratorForAccessPoint(
+  this: TOSBase,
+  input: ListBindAcceleratorForAccessPointInput
+) {
+  const { AccountId, AccessPointName } = input;
+  const res = await this.fetch<ListBindAcceleratorForAccessPointOutput>(
+    'GET',
+    `/accesspoint/${AccessPointName}/accelerator`,
+    {},
+    {
+      'x-tos-account-id': AccountId,
+    },
+    {},
+    {}
+  );
   return res;
 }

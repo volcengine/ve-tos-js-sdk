@@ -539,6 +539,7 @@ export const mimeTypes: Record<string, string | undefined> = {
   xyz: 'chemical/x-xyz',
   xz: 'application/x-xz',
   zip: 'application/zip',
+  webp: 'image/webp',
 };
 
 export default mimeTypes;

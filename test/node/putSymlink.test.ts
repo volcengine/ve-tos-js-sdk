@@ -6,7 +6,7 @@ import { objectPath10M, objectKey10M } from './utils';
 const key = `source-${objectKey10M}`;
 const encodeKey = 'source-中文-2Mfile.txt';
 const symlinkKey = `symlink-${objectKey10M}`;
-const targetBucket = 'symlink-target-bucket';
+const targetBucket = 'symlink-test-target-bucket';
 
 describe('putSymlink', () => {
   beforeAll(async (done) => {

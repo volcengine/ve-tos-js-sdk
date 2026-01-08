@@ -288,6 +288,7 @@ export const requestHeadersMap: Record<
   forbidOverwrite: 'x-tos-forbid-overwrite',
   bucketType: 'x-tos-bucket-type',
   recursiveMkdir: 'x-tos-recursive-mkdir',
+  tagging: 'x-tos-tagging',
 };
 // type RequestHeadersMapKeys = keyof typeof requestHeadersMap;
 
@@ -583,3 +584,34 @@ export const isValidBucketName = (bucket: string, isCustomDomain?: boolean) => {
   }
 
 }
+
+export const isValidVectorBucketName = (bucket: string) => {
+  if (bucket) {
+    if (bucket.length < 3 || bucket.length > 32) {
+      throw new TosClientError(
+        'invalid vector bucket name, the length must be [3, 32]'
+      );
+    }
+    if (!/^([a-z]|-|\d)+$/.test(bucket)) {
+      throw new TosClientError(
+        'invalid vector bucket name, the character set is illegal'
+      );
+    }
+    if (/^-/.test(bucket) || /-$/.test(bucket)) {
+      throw new TosClientError(
+        `invalid vector bucket name, the vector bucket name can be neither starting with '-' nor ending with '-'`
+      );
+    }
+  }
+
+}
+
+export const isValidAccountId = (accountId: string) => {
+  if (accountId === '') {
+    throw new TosClientError('invalid account id, the account id must be non-empty');
+  }
+  
+  if (!/^\d+$/.test(accountId)) {
+    throw new TosClientError('invalid account id, the account id must be a number');
+  }
+};

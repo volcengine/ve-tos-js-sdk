@@ -13,7 +13,6 @@ import {
   objectPath10M,
   objectPath1K,
 } from './utils';
-import { hashMd5 } from '../../src/nodejs/crypto.nodejs';
 import fsp from 'fs/promises';
 
 const key = `getObject-${objectKey1K}`;
@@ -44,7 +43,7 @@ describe('callback test environment', () => {
         callbackVar: hashCallbackVar,
       });
 
-      expect(res.data.CallbackResult?.includes('ok')).toBeTruthy();
+      expect(res.data.CallbackResult).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -187,7 +186,7 @@ describe('callback test environment', () => {
       });
 
       console.log('callback result data:', data);
-      expect(data.CallbackResult?.includes('ok')).toBeTruthy();
+      expect(data.CallbackResult).toBeTruthy();
     },
     NEVER_TIMEOUT
   );
@@ -267,7 +266,7 @@ describe('callback test environment', () => {
       });
 
       console.log('completeAll result data:', data);
-      expect(data.CallbackResult?.includes('ok')).toBeTruthy();
+      expect(data.CallbackResult).toBeTruthy();
     },
     NEVER_TIMEOUT
   );

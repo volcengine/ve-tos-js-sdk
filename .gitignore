@@ -18,3 +18,4 @@ test/node/tmp
 
 # avoid company's domains
 example/yarn.lock
+log/

@@ -40,6 +40,8 @@ export class TosServerError extends Error {
    */
   public id2: string;
 
+  public ec?: string
+
   constructor(response: AxiosResponse<TosServerErrorData>) {
     const { data } = response;
     super(data.Message);
@@ -51,8 +53,9 @@ export class TosServerError extends Error {
     this.code = data.Code;
     this.statusCode = response.status;
     this.headers = response.headers;
-    this.requestId = response.headers['x-tos-request-id'];
+    this.requestId = response.headers['x-tos-request-id'] || response.data.RequestId;
     this.id2 = response.headers['x-tos-id-2'];
+    this.ec = response.headers['x-tos-ec'] || response.data.EC;
   }
 }
 

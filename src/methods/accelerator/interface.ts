@@ -1,19 +1,32 @@
-import { AcceleratorPrefetchJobStatus } from "../../TosExportEnum";
+import { AcceleratorPrefetchJobStatus } from '../../TosExportEnum';
+
+export enum AcceleratorType {
+  ReadOnly = 'RO',
+  ReadWrite = 'RW',
+}
 
 /**
  * 加速器
  */
 export interface Accelerator {
+  Type?: AcceleratorType;
   Name: string;
   Region: string;
   AZ: string;
   CacheCapacity: {
     Value: number;
     Unit: string;
-  };
+  } | null | undefined;
+  ProvisionedBandwidth: {
+    Enable: boolean;
+    Value: number;
+    Unit: string;
+  } | null | undefined;
   CachePolicy: Array<{
     CachePath: string;
     IsSync: boolean;
+    IsPinned?: boolean;
+    TTL?: number;
   }>;
   Id: string;
   CreateTime: number;
@@ -24,7 +37,8 @@ export interface Accelerator {
 /**
  * 创建/编辑加速器入参
  */
-export interface PutAcceleratorInput extends Omit<Accelerator, 'Account' | 'Id' | 'CreateTime' | 'UpdateTime'> {
+export interface PutAcceleratorInput
+  extends Omit<Accelerator, 'Account' | 'Id' | 'CreateTime' | 'UpdateTime'> {
   AccountId: string;
 }
 
@@ -140,7 +154,8 @@ export interface GetAcceleratorPrefetchJobInput {
 /**
  * 获取加速器预热任务出参
  */
-export interface GetAcceleratorPrefetchJobOutput extends AcceleratorPrefetchJob {}
+export interface GetAcceleratorPrefetchJobOutput
+  extends AcceleratorPrefetchJob {}
 
 /**
  * 删除加速器预热任务入参
@@ -199,4 +214,31 @@ export interface ListAcceleratorPrefetchJobRecordsInput {
 export interface ListAcceleratorPrefetchJobRecordsOutput {
   JobRecords: AcceleratorPrefetchJobRecord[];
   NextToken?: string;
+}
+
+export interface GetAcceleratorCapacityQuotaInput {
+  Az: string;
+  AccountId: string;
+}
+
+export interface GetAcceleratorCapacityQuotaOutput {
+  Account: string;
+  Az: string;
+  Capacity: string;
+}
+
+export interface RelateAccelerator {
+  Name: string;
+  AZ: string;
+  Id: string;
+}
+
+
+export interface ListBindAcceleratorForAccessPointInput {
+  AccountId: string;
+  AccessPointName: string;
+}
+
+export interface ListBindAcceleratorForAccessPointOutput {
+  Accelerators: RelateAccelerator[];
 }

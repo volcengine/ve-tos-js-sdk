@@ -5,6 +5,7 @@ import {
   testBucketRenameBucketName,
   testCRRSourceBucketName,
   testCRRTargetBucketName,
+  testFileCompressBucketName,
   testNoVersionBucketName,
   testPreSignedPolicyBucketName,
   testSymlinkBucketName,
@@ -49,6 +50,7 @@ export async function createAllTestBuckets() {
   await createBucketIfNotExist(testBucketName);
   await createBucketIfNotExist(testBucketRenameBucketName);
   await createBucketIfNotExist(testPreSignedPolicyBucketName);
+  await createBucketIfNotExist(testFileCompressBucketName);
   await createBucketIfNotExist(testCRRSourceBucketName, async () => {
     const client = new TOS(tosCRRSourceOptions);
     await client.createBucket({

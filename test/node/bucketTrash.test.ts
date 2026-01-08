@@ -1,9 +1,9 @@
 import TOS from '../../src/browser-index';
 import { NEVER_TIMEOUT } from '../utils';
 import { tosHNSOptions } from '../utils/options';
-
+// 线上的桶
 describe('bucketTrash', () => {
-  it(
+  it.skip(
     'open trash',
     async () => {
       const client = new TOS(tosHNSOptions);
@@ -22,7 +22,7 @@ describe('bucketTrash', () => {
     },
     NEVER_TIMEOUT
   );
-  it(
+  it.skip(
     'close trash',
     async () => {
       const client = new TOS(tosHNSOptions);

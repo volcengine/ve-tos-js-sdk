@@ -1,4 +1,5 @@
 import { TOSConstructorOptions } from '../../src/methods/base';
+import { TosVectorsClientOptions } from '../../src/TosVectorsClient';
 
 require('dotenv').config();
 
@@ -7,10 +8,11 @@ if (!process.env.ACCESS_KEY_ID || !process.env.ACCESS_KEY_SECRET) {
     'Need environment variables: ACCESS_KEY_ID and ACCESS_KEY_SECRET, but not found.'
   );
 }
-
+export const testAccountId = process.env.TOS_NODE_SDK_ACCOUNT_ID ?? '';
 const targetEnv = process.env.TARGET_ENVIRONMENT || 'node';
-export const testBucketNameBase = `ve-tos-js-sdk-${targetEnv}-test`;
+export const testBucketNameBase = `ve-tos-js-sdk-${targetEnv}-${testAccountId}-ut-1`;
 export const testBucketName = `${testBucketNameBase}-bucket`;
+export const testFileCompressBucketName = `${testBucketNameBase}-file-compress-bucket`;
 export const testCRRSourceBucketName = `${testBucketNameBase}-crr-source-bucket`;
 export const testCRRTargetBucketName = `${testBucketNameBase}-crr-target-bucket`;
 export const testSymlinkBucketName = `${testBucketNameBase}-symlink-bucket`;
@@ -27,8 +29,6 @@ export const testSymlinkEndpoint = process.env.SYMLINK_ENDPOINT || '';
 export const testCloudFunctionId =
   process.env.TOS_NODE_SDK_CLOUD_FUNCTION_ID ?? '';
 export const testCallBackUrl = process.env.TOS_NODE_SDK_CALLBACK_URL ?? '';
-
-export const testAccountId = process.env.TOS_NODE_SDK_ACCOUNT_ID ?? '';
 
 // because one account has at most 100 buckets,
 // we delete some bucket when there can't create more buckets.
@@ -55,6 +55,23 @@ export const tosOptions: TOSConstructorOptions & { bucket: string } = {
   // proxyPort: 8888,
   // secure: false,
 };
+
+export const tosVectorsOptions: TosVectorsClientOptions = {
+  accessKeyId: process.env.ACCESS_KEY_ID || '',
+  accessKeySecret: process.env.ACCESS_KEY_SECRET || '',
+  stsToken: process.env.SESSION_TOKEN || '',
+  region,
+  endpoint: process.env.VECTORS_ENDPOINT || '',
+};
+
+export const tosControlOptions: TOSConstructorOptions = {
+  accessKeyId: process.env.ACCESS_KEY_ID || '',
+  accessKeySecret: process.env.ACCESS_KEY_SECRET || '',
+  stsToken: process.env.SESSION_TOKEN || '',
+  region,
+  endpoint: `${testAccountId}.${process.env.CONTROL_ENDPOINT}`,
+};
+
 export const tosCRRSourceOptions = {
   ...tosOptions,
   region,

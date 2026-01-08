@@ -21,6 +21,7 @@ export enum StorageClassType {
   StorageClassColdArchive = 'COLD_ARCHIVE',
   StorageClassIntelligentTiering = 'INTELLIGENT_TIERING',
   StorageClassArchive = 'ARCHIVE',
+  StorageClassDeepColdArchive = 'DEEP_COLD_ARCHIVE',
 }
 
 export enum MetadataDirectiveType {
@@ -211,4 +212,79 @@ export enum AuditJobStateType {
 export enum AuditScanType {
   Manifest = 'Manifest',
   Scan = 'Scan',
+}
+
+/**
+ * @private unstable
+ */
+export enum AuditType {
+  Image = 'image',
+  Video = 'video',
+  Audio = 'audio',
+}
+
+/**
+ * @private unstable
+ */
+export enum CallbackTriggerModeType {
+  Freeze = 'freeze',
+  Sensitive = 'sensitive',
+  Failure = 'failure',
+}
+
+/**
+ * @private unstable
+ */
+export enum FreezeModeType {
+  Archive = 'archive',
+  Private = 'private',
+}
+
+/**
+ * @private unstable
+ */
+export enum TemplateTagType {
+  AudioConvert = 'AudioConvert',
+  Transcode = 'Transcode',
+}
+
+/**
+ * @private unstable
+ */
+export enum AudioContainerFormatType {
+  Wav = 'wav',
+  Mp3 = 'mp3',
+  Aac = 'aac',
+  Flac = 'flac',
+  Oga = 'oga',
+  Ac3 = 'ac3',
+  Opus = 'opus',
+}
+
+/**
+ * @private unstable
+ */
+export enum ContainerFormatType {
+  Mp4 = 'mp4',
+  Ts = 'ts',
+}
+
+/**
+ * @private unstable
+ */
+export enum SampleFormatType {
+  Fltp = 'fltp',
+  S16p = 's16p',
+  S32p = 's32p',
+  S16 = 's16',
+  S32 = 's32',
+}
+
+export enum DataType {
+  DataTypeFloat32 = 'float32',
+}
+
+export enum DistanceMetricType {
+  DistanceMetricEuclidean = 'euclidean',
+  DistanceMetricCosine = 'cosine',
 }

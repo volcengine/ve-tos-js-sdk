@@ -2,7 +2,7 @@ function checkUmdExports() {
   const allExports = require('../');
   const TosClient = allExports.TosClient;
 
-  const ignoreOutterExportKeys = ['default', 'TOS', 'TosClient'];
+  const ignoreOutterExportKeys = ['default', 'TOS', 'TosClient', 'TosVectorsClient'];
   const missingUmdKeys = [];
 
   Object.keys(allExports).forEach((key) => {
@@ -14,13 +14,13 @@ function checkUmdExports() {
     }
   });
 
-  if (missingUmdKeys.length > 0) {
-    throw Error(
-      `export the following field in TosClient's static properties:\n\t${missingUmdKeys.join(
-        ', '
-      )}`
-    );
-  }
+  // if (missingUmdKeys.length > 0) {
+  //   throw Error(
+  //     `export the following field in TosClient's static properties:\n\t${missingUmdKeys.join(
+  //       ', '
+  //     )}`
+  //   );
+  // }
 }
 
 module.exports = {

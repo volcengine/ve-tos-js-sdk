@@ -2,68 +2,53 @@ import { VersioningStatusType } from '../../src/TosExportEnum';
 import TOS from '../../src/browser-index';
 import { BucketVersioningStatus } from '../../src/methods/bucket/versioning';
 import { NEVER_TIMEOUT, deleteBucket, sleepCache } from '../utils';
-import {
-  tosOptions as commonTosOptions,
-  testBucketNameBase,
-} from '../utils/options';
-const CommonTestCasePrefix = 'versioning';
+import { tosOptions } from '../utils/options';
 
-const bucketNamePrefix = `${testBucketNameBase}-test-bucket-versioning`;
-const bucketName = `${bucketNamePrefix}-${new Date().valueOf()}`;
-const tosOptions = {
-  ...commonTosOptions,
-  bucket: bucketName,
-};
+const TEST_BUCKET = 'version-' + Date.now();
+const client = new TOS(tosOptions);
 
-describe(`bucket ${CommonTestCasePrefix} methods`, () => {
+describe(`bucket versioning methods`, () => {
   beforeAll(async (done) => {
-    const client = new TOS(tosOptions);
-    const { data: buckets } = await client.listBuckets();
-    for (const bucket of buckets.Buckets) {
-      if (bucket.Name.startsWith(bucketNamePrefix)) {
-        await deleteBucket(bucket);
-      }
-    }
-    await client.createBucket({ bucket: bucketName });
+    await client.createBucket({ bucket: TEST_BUCKET });
+    done();
+  }, NEVER_TIMEOUT);
+
+  afterAll(async (done) => {
+    await client.deleteBucket(TEST_BUCKET);
     done();
   }, NEVER_TIMEOUT);
 
   it(
     'bucket versioning',
     async () => {
-      // wait bucket exist
-      await sleepCache(60_000);
+      const res1 = await client.getBucketVersioning(TEST_BUCKET);
+      expect(res1.data.Status).toEqual(BucketVersioningStatus.NotSet);
 
-      const client = new TOS({
-        ...tosOptions,
+      let putRes = await client.putBucketVersioning({
+        bucket: TEST_BUCKET,
+        status: BucketVersioningStatus.Enabled,
       });
+      expect(putRes.statusCode).toEqual(200);
 
-      {
-        const { data } = await client.getBucketVersioning();
-        expect(data.Status).toEqual(BucketVersioningStatus.Disable);
-        expect(data.Status).toEqual(BucketVersioningStatus.NotSet);
+      const res2 = await client.getBucketVersioning(TEST_BUCKET);
+      expect(res2.data.Status).toEqual(BucketVersioningStatus.Enabled);
+
+      // wait for the status to be updated
+      while (true) {
+        try {
+          putRes = await client.putBucketVersioning({
+            bucket: TEST_BUCKET,
+            status: BucketVersioningStatus.Suspended,
+          });
+          expect(putRes.statusCode).toEqual(200);
+          break;
+        } catch (e) {
+          await sleepCache(1000);
+        }
       }
 
-      {
-        await client.putBucketVersioning({
-          status: BucketVersioningStatus.Enable,
-        });
-        await sleepCache();
-        const { data } = await client.getBucketVersioning();
-        expect(data.Status).toEqual(BucketVersioningStatus.Enable);
-        expect(data.Status).toEqual(BucketVersioningStatus.Enabled);
-      }
-
-      {
-        // more wait, maybe cache
-        await sleepCache(60_000);
-        await client.putBucketVersioning({
-          status: BucketVersioningStatus.Suspended,
-        });
-        await sleepCache();
-        const { data } = await client.getBucketVersioning();
-        expect(data.Status).toEqual(BucketVersioningStatus.Suspended);
-      }
+      const res3 = await client.getBucketVersioning(TEST_BUCKET);
+      expect(res3.data.Status).toEqual(BucketVersioningStatus.Suspended);
     },
     NEVER_TIMEOUT
   );

@@ -276,4 +276,33 @@ describe('fetch object in node.js environment', () => {
     },
     NEVER_TIMEOUT
   );
+
+  it('fetch task', async () => {
+    const bucket = 'test-bucket' + Date.now();
+    const key = 'test-key' + Date.now();
+    const url = 'https://xxxxx';
+    const client = new TOS(tosOptions);
+    await client.createBucket({
+      bucket,
+    });
+    const res = await client.putFetchTask({
+      bucket,
+      key,
+      url,
+      meta: {
+        abc: '123',
+      },
+    });
+
+    const taskId = res.data.TaskId;
+    const getRes = await client.getFetchTask({
+      bucket,
+      taskId,
+    });
+
+    expect(getRes.data.Task.URL).toBe(url);
+    expect(getRes.data.Task.Object).toBe(key);
+    expect(getRes.data.Task.Meta?.[0].Key).toBe('abc');
+    expect(getRes.data.Task.Meta?.[0].Value).toBe('123');
+  })
 });

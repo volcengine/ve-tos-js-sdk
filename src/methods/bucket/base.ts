@@ -2,12 +2,18 @@ import TOSBase from '../base';
 import { Acl, Headers, StorageClass } from '../../interface';
 import {
   fillRequestHeaders,
+  isValidBucketName,
   makeArrayProp,
   normalizeHeadersKey,
 } from '../../utils';
 import TosClientError from '../../TosClientError';
-import { AzRedundancyType, StorageClassType } from '../../TosExportEnum';
+import {
+  AzRedundancyType,
+  StatusType,
+  StorageClassType,
+} from '../../TosExportEnum';
 import { TosHeader } from '../object/sharedTypes';
+import TosServerError from '../../TosServerError';
 
 export interface Bucket {
   // '2021-07-20T09:22:05.000Z'
@@ -36,6 +42,7 @@ export interface PutBucketInput {
   azRedundancy?: AzRedundancyType;
   projectName?: string;
   bucketType?: string;
+  tagging?: string;
   headers?: {
     [key: string]: string | undefined;
     ['x-tos-acl']?: Acl;
@@ -96,6 +103,7 @@ export async function createBucket(this: TOSBase, input: PutBucketInput) {
     'storageClass',
     'azRedundancy',
     'bucketType',
+    'tagging',
   ]);
 
   /**
@@ -129,6 +137,34 @@ export async function headBucket(this: TOSBase, bucket?: string) {
   });
 }
 
+export interface DoesBucketExistInput {
+  bucket: string;
+}
+
+export async function doesBucketExist(
+  this: TOSBase,
+  input: DoesBucketExistInput
+): Promise<boolean> {
+  if (!input) {
+    throw new TosClientError('input is required');
+  }
+
+  const { bucket } = input;
+  isValidBucketName(bucket, this.opts.isCustomDomain);
+
+  try {
+    const res = await headBucket.call(this, bucket);
+    return res.statusCode === 200;
+  } catch (err) {
+    if (err instanceof TosServerError) {
+      if (err.ec === '0006-00000001') {
+        return false;
+      }
+    }
+    throw err;
+  }
+}
+
 export interface PutBucketStorageClassInput {
   bucket: string;
   storageClass: StorageClassType;
@@ -149,5 +185,57 @@ export async function putBucketStorageClass(
     {
       'x-tos-storage-class': storageClass,
     }
+  );
+}
+
+export interface GetBucketInfoInput {
+  bucket: string;
+}
+
+export interface BucketInfoOwner {
+  ID: string;
+}
+
+export interface ServerSideEncryptionConfiguration {
+  Rule?: {
+    ApplyServerSideEncryptionByDefault?: {
+      SSEAlgorithm: string;
+      KMSMasterKeyID?: string;
+      KMSDataEncryption?: string;
+    };
+  };
+}
+
+export interface BucketInfo {
+  Name: string;
+  Owner: BucketInfoOwner;
+  CreationDate: string;
+  StorageClass: StorageClassType;
+  ProjectName: string;
+  Type: string;
+  Location: string;
+  AzRedundancy: AzRedundancyType;
+  ExtranetEndpoint: string;
+  IntranetEndpoint: string;
+  ExtranetS3Endpoint: string;
+  IntranetS3Endpoint: string;
+  Versioning: string;
+  CrossRegionReplication: StatusType;
+  TransferAcceleration: StatusType;
+  AccessMonitor: StatusType;
+  ServerSideEncryptionConfiguration: ServerSideEncryptionConfiguration;
+}
+
+export interface GetBucketInfoOutput {
+  Bucket: BucketInfo;
+}
+
+export async function getBucketInfo(this: TOSBase, input: GetBucketInfoInput) {
+  const { bucket } = input;
+  return this.fetchBucket<GetBucketInfoOutput>(
+    bucket,
+    'GET',
+    { bucketInfo: '' },
+    {}
   );
 }

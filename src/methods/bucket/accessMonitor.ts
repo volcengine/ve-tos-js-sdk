@@ -9,9 +9,6 @@ export interface PutBucketAccessMonitorInput {
 
 export interface PutBucketAccessMonitorOutput {}
 
-/**
- * @private unstable method
- */
 export async function putBucketAccessMonitor(
   this: TOSBase,
   input: PutBucketAccessMonitorInput
@@ -37,9 +34,7 @@ export interface GetBucketAccessMonitorOutput {
   Status?: 'Enabled' | 'Disabled';
 }
 
-/**
- * @private unstable method
- */
+
 export async function getBucketAccessMonitor(
   this: TOSBase,
   input: GetBucketLifecycleInput

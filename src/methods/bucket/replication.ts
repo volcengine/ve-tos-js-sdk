@@ -33,6 +33,10 @@ export interface ReplicationRule {
   AccessControlTranslation?: {
     Owner: string; //"BucketOwnerEntrusted"
   };
+  /** @private unstable */
+  DeleteMarkerReplication?: 'Enabled' | 'Disabled';
+  /** @private unstable */
+  DeleteObjectReplication?: 'Enabled' | 'Disabled';  
 }
 
 export interface PutBucketReplicationInput {

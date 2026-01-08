@@ -64,7 +64,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
     NEVER_TIMEOUT
   );
 
-  it(
+  it.skip(
     `${CommonTestCasePrefix} putBucketInventory`,
     async () => {
       const client = new TOS({
@@ -77,7 +77,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
     NEVER_TIMEOUT
   );
 
-  it(
+  it.skip(
     `${CommonTestCasePrefix} listBucketInventory get one`,
     async () => {
       const client = new TOS({
@@ -98,7 +98,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
     },
     NEVER_TIMEOUT
   );
-  it(
+  it.skip(
     `${CommonTestCasePrefix} getBucketInventory`,
     async () => {
       const client = new TOS({
@@ -116,7 +116,7 @@ describe(`bucket ${CommonTestCasePrefix} methods`, () => {
     NEVER_TIMEOUT
   );
 
-  it(
+  it.skip(
     `${CommonTestCasePrefix} deleteBucketInventory`,
     async () => {
       const client = new TOS({

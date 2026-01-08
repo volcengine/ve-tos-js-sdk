@@ -11,9 +11,6 @@ export interface CustomDomainRule {
   ForbiddenReason?: string;
   CertId?: string;
   CertStatus?: string;
-  /**@private unstable
-   * value tos|s3
-   * */
   Protocol?: string;
 }
 
@@ -22,9 +19,6 @@ export interface PutBucketCustomDomainInput {
   customDomainRule: {
     Domain: string;
     CertId?: string;
-    /**@private unstable
-     * value tos|s3
-     * */
     Protocol?: string;
   };
 }

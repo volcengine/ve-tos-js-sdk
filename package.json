@@ -1,6 +1,6 @@
 {
   "name": "@volcengine/tos-sdk",
-  "version": "2.7.6",
+  "version": "2.9.0",
   "license": "MIT",
   "files": [
     "browser",
@@ -22,6 +22,9 @@
     "build:proxy": "tsc --esModuleInterop --declaration --outDir ./out ./src/proxy.ts",
     "test": "yarn build && yarn test:node && cp ./coverage/coverage-final.json ./coverage/coverage-node-final.json && yarn test:browser && cp ./coverage/coverage-final.json ./coverage/coverage-browser-final.json && node ./scripts/mapCoverage.js",
     "test:node": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --config=test/node/jest.config.js --testEnvironment=node --no-cache -t ",
+    "test:node-single": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test --coverage --config=test/node/jest.config.js --testEnvironment=node --no-cache ",
+    "test:node-with-output": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --config=test/node/jest.config.js --testEnvironment=node --no-cache -t --json --outputFile=test-results.json",
+    "test:node-failed-only": "NODE_ENV=development TARGET_ENVIRONMENT=node tsdx test test/node/** --coverage --config=test/node/jest.config.js --testEnvironment=node --no-cache -t --json --outputFile=test-results.json && node -e \"const fs = require('fs'); const results = JSON.parse(fs.readFileSync('test-results.json', 'utf8')); const failedTests = results.testResults.filter(test => test.status === 'failed'); const failedOnly = {...results, testResults: failedTests, numFailedTestSuites: failedTests.length, numPassedTestSuites: 0, numPassedTests: 0, numTotalTestSuites: failedTests.length, numTotalTests: failedTests.reduce((sum, test) => sum + test.assertionResults.filter(a => a.status === 'failed').length, 0)}; fs.writeFileSync('test-results-failed-only.json', JSON.stringify(failedOnly, null, 2)); console.log('Failed tests saved to test-results-failed-only.json');\"",
     "test:browser": "NODE_ENV=development TARGET_ENVIRONMENT=browser tsdx test test/browser/** --coverage --config=test/browser/jest.config.js --testEnvironment=node --no-cache -t ",
     "docs": "npx typedoc src/*",
     "deploy:docs": "./scripts/deployDocs.sh",
@@ -67,9 +70,9 @@
   "miniprogram": "miniprogram_dist",
   "author": "chengang.07@bytedance.com",
   "devDependencies": {
-    "@types/debug": "^4.1.7",
     "@rollup/plugin-alias": "^3.1.5",
     "@types/crypto-js": "^4.1.1",
+    "@types/debug": "^4.1.7",
     "@types/express": "^4.17.13",
     "@types/lodash": "^4.14.172",
     "@types/node": "^17.0.24",
@@ -80,16 +83,15 @@
     "husky": "^4.3.6",
     "istanbul-api": "^3.0.0",
     "miniprogram-api-typings": "^2.10.1-1",
+    "prettier": "^2.8.8",
     "rollup-plugin-node-builtins": "^2.1.2",
     "rollup-plugin-node-globals": "^1.4.0",
     "tsdx2": "^0.14.1",
     "tslib": "^2.3.0",
     "typedoc": "^0.21.9",
-    "prettier": "^2.8.8",
     "typescript": "^4.3.5"
   },
   "dependencies": {
-    "tos-crc64-js": "0.0.1",
     "axios": "^0.21.1",
     "axios-adapter-uniapp": "^0.1.4",
     "crypto-js": "^4.2.0",
@@ -97,6 +99,7 @@
     "http-proxy-middleware": "^2.0.1",
     "lodash": "^4.17.21",
     "qs": "^6.11.2",
+    "tos-crc64-js": "0.0.1",
     "type-fest": "^1.4.0"
   },
   "resolutions": {

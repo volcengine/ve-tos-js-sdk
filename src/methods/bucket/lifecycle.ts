@@ -14,6 +14,16 @@ interface LifecycleRule {
     ObjectSizeGreaterThan?: number;
     /** unit bit */
     ObjectSizeLessThan?: number;
+    /**
+     * @private unstable
+     */
+    Not?: {
+      Prefix?: string;
+      Tags?: {
+        Key?: string;
+        Value?: string;
+      }[];
+    }[];
   };
   Expiration?: { Date?: string; Days?: number };
   Days?: number;
@@ -29,29 +39,17 @@ interface LifecycleRule {
     Days?: number;
     Date?: string;
   }[];
-  /**
-   * @private unstable
-   */
   AccessTimeTransitions?: {
     StorageClass: StorageClassType;
     Days?: number;
   }[];
-  /**
-   * @private unstable
-   */
   AccessTimeExpiration?: {
     Days: number;
   };
-  /**
-   * @private unstable
-   */
   NoncurrentVersionAccessTimeTransitions?: {
     StorageClass: StorageClassType;
     NoncurrentDays?: number;
   }[];
-  /**
-   * @private unstable
-   */
   NoncurrentVersionAccessTimeExpiration?: {
     NoncurrentDays: number;
   };

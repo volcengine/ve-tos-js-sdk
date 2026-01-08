@@ -1,4 +1,4 @@
-import { StorageClassType } from '../../TosExportEnum';
+import { ACLType, StorageClassType } from '../../TosExportEnum';
 import { Acl } from '../../interface';
 import { fillRequestHeaders, normalizeHeadersKey } from '../../utils';
 import TOSBase from '../base';
@@ -131,5 +131,67 @@ export async function putFetchTask(this: TOSBase, input: PutFetchTaskInput) {
       needMd5: true,
     }
   );
+  return res;
+}
+
+export interface GetFetchTaskInput {
+  bucket?: string;
+  taskId: string;
+}
+
+interface UserMeta {
+  Key?: string;
+  Value?: string;
+}
+
+export interface FetchTask {
+  URL?: string;
+  IgnoreSameKey?: boolean;
+  ContentMD5?: string;
+  Bucket?: string;
+  Object?: string;
+  CallbackURL?: string;
+  CallbackHost?: string;
+  CallbackBodyType?: string;
+  CallbackBody?: string;
+  StorageClass?: StorageClassType;
+  Acl?: ACLType;
+  GrantFullControl?: string;
+  GrantRead?: string;
+  GrantReadAcp?: string;
+  GrantWrite?: string;
+  GrantWriteAcp?: string;
+  SSECAlgorithm?: string;
+  SSECKey?: string;
+  SSECKeyMD5?: string;
+  Meta?: UserMeta[];
+  UserMeta?: UserMeta[];
+}
+
+export interface GetFetchTaskOutput {
+  State: string;
+  Err: string;
+  Task: FetchTask;
+}
+
+export async function getFetchTask(this: TOSBase, input: GetFetchTaskInput) {
+  const res = await this.fetchBucket<GetFetchTaskOutput>(
+    input.bucket,
+    'GET',
+    {
+      fetchTask: '',
+      taskId: input.taskId,
+    },
+    {},
+    {},
+    {
+      needMd5: true,
+    }
+  );
+
+  if (res.data.Task) {
+    res.data.Task.Meta = res.data.Task.UserMeta;
+  }
+
   return res;
 }

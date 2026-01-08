@@ -1,8 +1,10 @@
 /** TODO @fangzhou 接口上预发后 完善单测 */
 import TOS from '../../src/browser-index';
 import { sleepCache, NEVER_TIMEOUT } from '../utils';
-import { testAccountId, tosOptions } from '../utils/options';
+import { tosOptions } from '../utils/options';
 import { PutQosPolicyInput } from '../../src/methods/qosPolicy';
+
+const testAccountId = `${process.env.TOS_NODE_SDK_ACCOUNT_ID}`;
 
 const optionsForQos = {
   ...tosOptions,
@@ -51,12 +53,7 @@ describe('qosPolicy in node.js environment', () => {
               'trn:iam::AccountId2:user/tos_user',
               'trn:iam::*',
             ],
-            Condition: {
-              StringEquals: {
-                AccessPoint: ['BktB.tos-cn-beijing.volces.com'],
-                NetPlane: ['public'],
-              },
-            },
+            Condition: {},
           },
           {
             Sid: 'statement2',
