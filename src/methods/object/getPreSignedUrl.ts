@@ -1,5 +1,9 @@
 import TosClientError from '../../TosClientError';
-import { covertCamelCase2Kebab, normalizeProxy } from '../../utils';
+import {
+  covertCamelCase2Kebab,
+  isValidBucketName,
+  normalizeProxy,
+} from '../../utils';
 import TOSBase from '../base';
 import { validateObjectName } from './utils';
 
@@ -33,6 +37,11 @@ export function getPreSignedUrl(
   input: GetPreSignedUrlInput | string
 ) {
   validateObjectName(input);
+  if (typeof input !== 'string') {
+    if (input.bucket) {
+      isValidBucketName(input.bucket, input.isCustomDomain);
+    }
+  }
   const normalizedInput = typeof input === 'string' ? { key: input } : input;
   const endpoint = normalizedInput.alternativeEndpoint || this.opts.endpoint;
   const subdomain =
