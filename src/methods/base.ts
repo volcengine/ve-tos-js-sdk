@@ -588,7 +588,7 @@ export class TOSBase {
     const sig = new SignersV4(
       {
         algorithm: 'TOS4-HMAC-SHA256',
-        region: this.opts.endpoint,
+        region: this.opts.region,
         serviceName: 'tos',
         // SignV4 uses this.options.bucket, so set it here
         bucket: input.bucket,
