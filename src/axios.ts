@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Readable } from 'stream';
 import { safeSync } from './utils';
 import { SignersV4 } from './signatureV4';
@@ -17,6 +17,61 @@ export interface RetryConfig {
 interface InnerRetryConfig extends RetryConfig {
   retryCount?: number;
 }
+
+// Headers that carry the caller's credentials: the signed `authorization`
+// value contains the access key ID and `x-tos-security-token` the STS token.
+const credentialHeaders = ['authorization', 'x-tos-security-token'];
+
+/**
+ * Drop client credentials from a request that is being rejected.
+ *
+ * The rejected error keeps its axios `config`, and that config carries the
+ * signer (`__retrySignature__` -> sigInst.credentials) plus the signed headers.
+ * Serializing the error -- `JSON.stringify(err)`, a deep log, an error tracker,
+ * `cause` on an API response -- would otherwise write out the access key,
+ * secret and STS token.
+ */
+const stripCredentials = (error: AxiosError): AxiosError => {
+  const config = error.config as (typeof error.config & Record<string, unknown>) | undefined;
+  if (!config) {
+    return error;
+  }
+
+  // Copy rather than mutate: `config` is the request config axios built for
+  // this call, and the agent/sigInst it points at may still be in use.
+  const sanitized: Record<string, unknown> = { ...(config as unknown as Record<string, unknown>) };
+  delete sanitized[retrySignatureNamespace];
+  // Basic-auth credentials, and the Node agents whose pooled sockets keep the
+  // ClientRequest (`_httpMessage._header`) -- a raw header block that includes
+  // the signed authorization value and the STS token.
+  delete sanitized.auth;
+  delete sanitized.httpAgent;
+  delete sanitized.httpsAgent;
+
+  const headers = config.headers as unknown as
+    | (Record<string, unknown> & { toJSON?: () => Record<string, unknown> })
+    | undefined;
+  if (headers) {
+    const plainHeaders: Record<string, unknown> = headers.toJSON ? headers.toJSON() : { ...headers };
+    credentialHeaders.forEach((name) => {
+      Object.keys(plainHeaders).forEach((key) => {
+        if (key.toLowerCase() === name) {
+          delete plainHeaders[key];
+        }
+      });
+    });
+    sanitized.headers = plainHeaders;
+  }
+
+  // On Node the error also keeps the ClientRequest itself.
+  const withRequest = error as AxiosError & { request?: unknown };
+  if (withRequest.request !== undefined) {
+    delete withRequest.request;
+  }
+
+  (error as AxiosError & { config?: unknown }).config = sanitized;
+  return error;
+};
 
 interface RetrySignature {
   signOpt: any;
@@ -186,7 +241,7 @@ export const makeAxiosInst = (maxRetryCount: number) => {
       canRetryData;
 
     if (!canRetry) {
-      return Promise.reject(error);
+      return Promise.reject(stripCredentials(error));
     }
 
     const retrySignature = config[retrySignatureNamespace] as RetrySignature;
