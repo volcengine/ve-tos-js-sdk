@@ -426,11 +426,14 @@ export async function getObjectToFile(
     );
   }
 
-  return new Promise(async (resolve, reject) => {
-    const getObjectRes = await getObjectV2.call(this, input);
-    const stream = getObjectRes.data.content;
+  // Keep the asynchronous setup outside the Promise constructor. A rejection
+  // from an `async` executor is not forwarded to the promise being constructed,
+  // so a failed fetch used to leave callers waiting forever (issue #10).
+  const getObjectRes = await getObjectV2.call(this, input);
+  const stream = getObjectRes.data.content;
+  const fsWriteStream = createWriteStream(input.filePath);
 
-    const fsWriteStream = createWriteStream(input.filePath);
+  return new Promise((resolve, reject) => {
     stream.pipe(fsWriteStream);
     stream.on('error', (err) => fsWriteStream.destroy(err));
     fsWriteStream.on('error', (err) => reject(err));
