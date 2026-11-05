@@ -114,6 +114,7 @@ interface PutObjectInputInner extends PutObjectInput {
 }
 
 export interface PutObjectOutput {
+  etag?: string;
   'x-tos-server-side-encryption-customer-algorithm'?: string;
   'x-tos-server-side-encryption-customer-key-md5'?: string;
   'x-tos-version-id'?: string;
