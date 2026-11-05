@@ -1,5 +1,9 @@
 import { TosClientError } from './browser-index';
-import { TOSBase, type TOSConstructorOptions } from './methods/base';
+// Keep this a plain named import. The inline `type` modifier (TS >= 4.5) is
+// copied verbatim into the emitted .d.ts and cannot be parsed by consumers on
+// older TypeScript versions (issue #12). TypeScript elides the type-only name
+// from the emitted JavaScript either way.
+import { TOSBase, TOSConstructorOptions } from './methods/base';
 import { paramsSerializer } from './utils';
 import { getObjectV2 } from './methods/object/getObject';
 import headObject from './methods/object/headObject';
